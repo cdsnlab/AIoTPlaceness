@@ -1,0 +1,40 @@
+<html>
+<head>
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.5.1/dist/leaflet.css" />
+	<script src="https://unpkg.com/leaflet@1.5.1/dist/leaflet.js"></script>
+	<script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+	<style>
+		#map { height: 100%; }
+	</style>
+</head>
+<body>
+	<div id='map'></div>
+
+	<script>
+	var maplat = 37.557115;
+	var maplon = 126.925842;
+	var map = L.map('map').setView([maplat, maplon], 16);
+	L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+		attribution: '&copy; <a href=\'https://www.openstreetmap.org/copyright\'>OpenStreetMap</a> contributors'
+		}).addTo(map);
+
+	$.get( "latlon.update", function( data )
+	{
+		var lines = data.split('\n');
+		var arr = [];
+		for (var idx in lines){
+			var line = lines[idx];
+			if (line == '') break;
+			var tokens = line.split('\t');
+			var tname = tokens[0];
+			var tlat = parseFloat(tokens[1]);
+			var tlon = parseFloat(tokens[2]);
+			console.log(tname, tlat, tlon);
+			L.marker([tlat, tlon]).addTo(map)
+				.bindPopup("<a href='/location/"+tname+"'>"+tname+"</a>");
+		}
+	});
+	</script>
+
+</body>
+</html>

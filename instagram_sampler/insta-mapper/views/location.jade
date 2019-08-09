@@ -1,0 +1,17 @@
+html
+	head
+		title= _title
+		link(rel='stylesheet', href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css")
+		link(rel='stylesheet', href="/public/template.css")
+	body
+		for post in posts
+			div.post
+				p #{post.caption}
+				for img_path in post.images
+					img(src='http://localhost/'+img_path + '.jpg' width=96 height=96)
+
+		script(src='https://code.jquery.com/jquery-3.4.1.min.js')
+		script(src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js")
+		script(src='/public/location.js')
+
+
