@@ -1,4 +1,6 @@
 # Instagram Sampler
+Author: Sumin Han (hsm6911@kaist.ac.kr)
+
 ### Components
 - crawler: instagram crawling code which inputs instagram account, location ids, and date interval to crawl.
 - insta-mapper: marker on the OpenStreetMap to point the image reference.
