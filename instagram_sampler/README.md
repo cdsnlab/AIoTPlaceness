@@ -6,4 +6,12 @@
 
 ## insta-mapper
 
-![](https://pandao.github.io/editor.md/images/logos/editormd-logo-180x180.png)
+![](https://github.com/cdsnlab/AIoTPlaceness/blob/master/instagram_sampler/screenshot-2019-08-09/insta-mapper-1.png?raw=true)
+![](https://github.com/cdsnlab/AIoTPlaceness/blob/master/instagram_sampler/screenshot-2019-08-09/insta-mapper-2.png?raw=true)
+
+## place-ontology
+
+![](https://github.com/cdsnlab/AIoTPlaceness/blob/master/instagram_sampler/screenshot-2019-08-09/place-ontology-1.png?raw=true)
+![](https://github.com/cdsnlab/AIoTPlaceness/blob/master/instagram_sampler/screenshot-2019-08-09/place-ontology-2.png?raw=true)
+![](https://github.com/cdsnlab/AIoTPlaceness/blob/master/instagram_sampler/screenshot-2019-08-09/place-ontology-3.png?raw=true)
+![](https://github.com/cdsnlab/AIoTPlaceness/blob/master/instagram_sampler/screenshot-2019-08-09/place-ontology-4.png?raw=true)
