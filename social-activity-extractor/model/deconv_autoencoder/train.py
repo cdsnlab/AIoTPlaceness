@@ -21,7 +21,6 @@ from model.deconv_autoencoder import net
 from model.deconv_autoencoder.datasets import load_hotel_review_data
 from model.deconv_autoencoder.parallel import DataParallelModel, DataParallelCriterion
 
-
 def train_reconstruction(args, CONFIG):
 	device = torch.device("cuda" if torch.cuda.is_available() and args.use_cuda else "cpu")
 	train_data, test_data = load_hotel_review_data(args.sentence_len)
@@ -50,7 +49,7 @@ def train_reconstruction(args, CONFIG):
 	if torch.cuda.device_count() > 1 and args.use_cuda:
 		encoder = DataParallelModel(encoder)
 		decoder = DataParallelModel(decoder)
-		criterion = DataParallelCriterion(criterion) 
+		criterion = DataParallelCriterion(criterion)
 	encoder.to(device)
 	decoder.to(device)
 	exp = Experiment("Reconstruction Training")
