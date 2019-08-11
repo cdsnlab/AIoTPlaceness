@@ -36,6 +36,7 @@ def train_reconstruction(args, CONFIG):
 	if args.enc_snapshot is None or args.dec_snapshot is None :
 		print("Start from initial")
 		embedding = nn.Embedding(v, k, max_norm=1, norm_type=2.0)
+		embedding.weight.data = embedding.weight.data.to(device)
 		encoder = net.ConvolutionEncoder(embedding, t3, args.filter_size, args.filter_shape, args.latent_size)
 		decoder = net.DeconvolutionDecoder(embedding, args.tau, t3, args.filter_size, args.filter_shape, args.latent_size)
 	else:
@@ -44,8 +45,8 @@ def train_reconstruction(args, CONFIG):
 		decoder = torch.load(os.path.join(CONFIG.DECONV_SNAPSHOT_PATH, args.dec_snapshot))
 
 	if torch.cuda.device_count() > 1 and args.use_cuda:
-	    encoder = nn.DataParallel(encoder)
-	    decoder = nn.DataParallel(decoder)
+		encoder = nn.DataParallel(encoder)
+		decoder = nn.DataParallel(decoder)
 	encoder.to(device)
 	decoder.to(device)
 
