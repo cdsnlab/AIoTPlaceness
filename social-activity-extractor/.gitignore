@@ -1,0 +1,6 @@
+data/corpus/*
+data/hongdae/*
+data/pickle/*
+csv/*
+embedding/*
+dependency/*
