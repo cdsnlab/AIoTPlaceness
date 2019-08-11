@@ -1,6 +1,17 @@
 data/corpus/*
+!data/corpus/.keep
+
 data/hongdae/*
+!data/hongdae/.keep
+
 data/pickle/*
+!data/pickle/.keep
+
 csv/*
+!csv/.keep
+
 embedding/*
+!embedding/.keep
+
+
 dependency/*
