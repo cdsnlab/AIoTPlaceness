@@ -19,6 +19,8 @@ from hyperdash import Experiment
 from model.deconv_autoencoder import util
 from model.deconv_autoencoder import net
 from model.deconv_autoencoder.datasets import load_hotel_review_data
+from model.deconv_autoencoder.parallel import DataParallelModel, DataParallelCriterion
+
 
 def train_reconstruction(args, CONFIG):
 	device = torch.device("cuda" if torch.cuda.is_available() and args.use_cuda else "cpu")
@@ -44,12 +46,13 @@ def train_reconstruction(args, CONFIG):
 		encoder = torch.load(os.path.join(CONFIG.DECONV_SNAPSHOT_PATH, args.enc_snapshot))
 		decoder = torch.load(os.path.join(CONFIG.DECONV_SNAPSHOT_PATH, args.dec_snapshot))
 
+	criterion = nn.NLLLoss()
 	if torch.cuda.device_count() > 1 and args.use_cuda:
-		encoder = nn.DataParallel(encoder)
-		decoder = nn.DataParallel(decoder)
+		encoder = DataParallelModel(encoder)
+		decoder = DataParallelModel(decoder)
+		criterion = DataParallelCriterion(criterion) 
 	encoder.to(device)
 	decoder.to(device)
-
 	exp = Experiment("Reconstruction Training")
 	try:
 		lr = args.lr
@@ -77,7 +80,8 @@ def train_reconstruction(args, CONFIG):
 
 				h = encoder(feature)
 				prob = decoder(h)
-				reconstruction_loss = compute_cross_entropy(prob, feature)
+				prob_t = torch.transpose(prob, 1, 2)
+				reconstruction_loss = criterion(prob_t, feature)
 				reconstruction_loss.backward()
 				optimizer_enc.step()
 				optimizer_dec.step()
@@ -136,15 +140,6 @@ def train_reconstruction(args, CONFIG):
 
 	finally:
 		exp.end()
-
-def compute_cross_entropy(log_prob, target):
-	# compute reconstruction loss using cross entropy
-	# loss = [F.nll_loss(sentence_emb_matrix, word_ids, size_average=False) for sentence_emb_matrix, word_ids in zip(log_prob, target)]
-	# average_loss = sum([torch.sum(l) for l in loss]) / log_prob.size()[0]
-	# print(average_loss)
-	log_prob_t = torch.transpose(log_prob, 1, 2)
-	loss = F.nll_loss(log_prob_t, target)
-	return loss
 
 def eval_reconstruction(encoder, decoder, data_iter, args):
 	print("=================Eval======================")
