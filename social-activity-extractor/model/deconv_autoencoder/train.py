@@ -19,7 +19,6 @@ from hyperdash import Experiment
 from model.deconv_autoencoder import util
 from model.deconv_autoencoder import net
 from model.deconv_autoencoder.datasets import load_hotel_review_data
-from model.deconv_autoencoder.parallel import DataParallelModel, DataParallelCriterion
 
 def train_reconstruction(args, CONFIG):
 	device = torch.device("cuda" if torch.cuda.is_available() and args.use_cuda else "cpu")
@@ -47,9 +46,8 @@ def train_reconstruction(args, CONFIG):
 
 	criterion = nn.NLLLoss()
 	if torch.cuda.device_count() > 1 and args.use_cuda:
-		encoder = DataParallelModel(encoder)
-		decoder = DataParallelModel(decoder)
-		criterion = DataParallelCriterion(criterion)
+		encoder = nn.DataParallel(encoder)
+		decoder = nn.DataParallel(decoder)
 	encoder.to(device)
 	decoder.to(device)
 	exp = Experiment("Reconstruction Training")
