@@ -90,8 +90,8 @@ class DeconvolutionDecoder(nn.Module):
 		h1 = self.deconvs2(h2)
 		x_hat = self.deconvs3(h1)
 		x_hat = x_hat.squeeze()
-		W = Variable(self.embed.weight.data).to(device)
-
+		W = self.embed.weight.data
+		
 		# x.size() is (L, emb_dim) if batch_size is 1.
 		# So interpolate x's dimension if batch_size is 1.
 		if len(x_hat.size()) < 3:
