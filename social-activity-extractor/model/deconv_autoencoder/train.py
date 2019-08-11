@@ -20,11 +20,8 @@ from model.deconv_autoencoder import util
 from model.deconv_autoencoder import net
 from model.deconv_autoencoder.datasets import load_hotel_review_data
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-print("current device is: ", device)
-
 def train_reconstruction(args, CONFIG):
-
+	device = torch.device("cuda" if torch.cuda.is_available() and args.use_cuda else "cpu")
 	train_data, test_data = load_hotel_review_data(args.sentence_len)
 	train_loader, test_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=args.shuffle),\
 								  DataLoader(test_data, batch_size=int(args.batch_size/2), shuffle=False)
@@ -46,6 +43,12 @@ def train_reconstruction(args, CONFIG):
 		encoder = torch.load(os.path.join(CONFIG.DECONV_SNAPSHOT_PATH, args.enc_snapshot))
 		decoder = torch.load(os.path.join(CONFIG.DECONV_SNAPSHOT_PATH, args.dec_snapshot))
 
+	if torch.cuda.device_count() > 1 and args.use_cuda:
+	    encoder = nn.DataParallel(encoder)
+	    decoder = nn.DataParallel(decoder)
+	encoder.to(device)
+	decoder.to(device)
+
 	exp = Experiment("Reconstruction Training")
 	try:
 		lr = args.lr
@@ -58,9 +61,7 @@ def train_reconstruction(args, CONFIG):
 
 		encoder.train() 
 		decoder.train() 
-		if args.use_cuda:
-			encoder.to(device)
-			decoder.to(device)
+
 		steps = 0
 		for epoch in range(args.epochs):
 			print('Epoch:', epoch)
@@ -113,7 +114,8 @@ def train_reconstruction(args, CONFIG):
 
 		# finalization
 		# save vocabulary
-		with open("word2index", "wb") as w2i, open("index2word", "wb") as i2w:
+		with open(os.path.join(CONFIG.DECONV_VOCAB_PATH, 'word2index.p'), "wb") as w2i, \
+		open(os.path.join(DECONV_VOCAB_PATH, 'index2word.p'), "wb") as i2w:
 			pickle.dump(train_loader.dataset.word2index, w2i)
 			pickle.dump(train_loader.dataset.index2word, i2w)
 
