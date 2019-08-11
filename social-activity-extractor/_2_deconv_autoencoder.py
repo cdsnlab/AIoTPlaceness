@@ -31,8 +31,7 @@ def main():
 	parser.add_argument('-tau', type=float, default=0.01, help='temperature parameter')
 	parser.add_argument('-use_cuda', action='store_true', default=True, help='whether using cuda')
 	# option
-	parser.add_argument('-enc_snapshot', type=str, default=None, help='filename of encoder snapshot ')
-	parser.add_argument('-dec_snapshot', type=str, default=None, help='filename of encoder snapshot ')
+	parser.add_argument('-snapshot', type=str, default=None, help='filename of model snapshot ')
 
 	args = parser.parse_args()
 

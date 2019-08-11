@@ -91,7 +91,7 @@ class DeconvolutionDecoder(nn.Module):
 		x_hat = self.deconvs3(h1)
 		x_hat = x_hat.squeeze()
 		W = self.embed.weight.data
-		
+
 		# x.size() is (L, emb_dim) if batch_size is 1.
 		# So interpolate x's dimension if batch_size is 1.
 		if len(x_hat.size()) < 3:
@@ -108,3 +108,18 @@ class DeconvolutionDecoder(nn.Module):
 		prob_logits = torch.tensordot(normalized_x_hat, normalized_W, dims=([2], [1]))
 		log_prob = self.log_softmax(prob_logits / self.tau)
 		return log_prob
+
+class AutoEncoder(nn.Module):
+	def __init__(self, embedding, tau, sentence_len, filter_size, filter_shape, latent_size):
+		super(AutoEncoder, self).__init__()
+		self.ConvolutionEncoder = ConvolutionEncoder(embedding, sentence_len, filter_size, filter_shape, latent_size)
+		self.DeconvolutionDecoder = DeconvolutionDecoder(embedding, tau, sentence_len, filter_size, filter_shape, latent_size)
+
+	def forward(self, feature):
+		h = self.ConvolutionEncoder(feature)
+		prob = self.DeconvolutionDecoder(h)
+		return prob
+
+	def get_latent(self, feature):
+		latent = self.ConvolutionEncoder(feature)
+		return latent
