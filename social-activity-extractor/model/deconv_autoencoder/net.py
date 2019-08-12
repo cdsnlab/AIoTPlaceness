@@ -118,8 +118,8 @@ class AutoEncoder(nn.Module):
 	def forward(self, x):
 		h = self.encoder(x)
 		log_prob = self.decoder(h)
-
-		return log_prob
+		prob = torch.transpose(log_prob, 1, 2)
+		return prob
 
 	def get_latent(self, x):
 		h = self.encoder(x)

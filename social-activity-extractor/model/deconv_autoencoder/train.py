@@ -72,8 +72,7 @@ def train_reconstruction(args, CONFIG):
 				optimizer.zero_grad()
 
 				prob = autoencoder(feature)
-				prob_t = torch.transpose(prob, 1, 2)
-				reconstruction_loss = criterion(prob_t, feature)
+				reconstruction_loss = criterion(prob, feature)
 				reconstruction_loss.backward()
 				optimizer.step()
 
@@ -88,7 +87,7 @@ def train_reconstruction(args, CONFIG):
 				if steps % args.log_interval == 0:
 					print("Test!!")
 					input_data = feature[0]
-					single_data = prob[0]
+					single_data = prob[0].t()
 					_, predict_index = torch.max(single_data, 1)
 					input_sentence = util.transform_id2word(input_data.detach(), train_loader.dataset.index2word, lang="en")
 					predict_sentence = util.transform_id2word(predict_index.detach(), train_loader.dataset.index2word, lang="en")
@@ -150,8 +149,7 @@ def eval_reconstruction(autoencoder, data_iter, args, device):
 		r1, r2 = calc_rouge(original_sentences, predict_sentences)
 		rouge_1 += r1
 		rouge_2 += r2
-		prob_t = torch.transpose(prob, 1, 2)
-		reconstruction_loss = criterion(prob_t, feature)
+		reconstruction_loss = criterion(prob, feature)
 		
 		avg_loss += reconstruction_loss.detach().item()
 		del feature, prob
