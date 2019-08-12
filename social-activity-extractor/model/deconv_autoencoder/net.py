@@ -108,3 +108,20 @@ class DeconvolutionDecoder(nn.Module):
 		prob_logits = torch.tensordot(normalized_x_hat, normalized_W, dims=([2], [1]))
 		log_prob = self.log_softmax(prob_logits / self.tau)
 		return log_prob
+
+class AutoEncoder(nn.Module):
+	def __init__(self, embedding, tau, sentence_len, filter_size, filter_shape, latent_size):
+		super(AutoEncoder, self).__init__()
+		self.encoder = ConvolutionEncoder(embedding, sentence_len, filter_size, filter_shape, latent_size)
+		self.decoder = DeconvolutionDecoder(embedding, tau, sentence_len, filter_size, filter_shape, latent_size)
+
+	def forward(self, x):
+		h = self.encoder(x)
+		log_prob = self.decoder(h)
+
+		return log_prob
+
+	def get_latent(self, x):
+		h = self.encoder(x)
+
+		return h

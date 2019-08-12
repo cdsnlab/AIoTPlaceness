@@ -35,36 +35,30 @@ def train_reconstruction(args, CONFIG):
 	t2 = int(math.floor((t1 - args.filter_shape) / 2) + 1) # "2" means stride size
 	t3 = int(math.floor((t2 - args.filter_shape) / 2) + 1)
 
-	if args.enc_snapshot is None or args.dec_snapshot is None :
+	if args.snapshot is None:
 		print("Start from initial")
 		embedding = nn.Embedding(v, k, max_norm=1, norm_type=2.0)
 		embedding.weight.data = embedding.weight.data.to(device)
-		encoder = net.ConvolutionEncoder(embedding, t3, args.filter_size, args.filter_shape, args.latent_size)
-		decoder = net.DeconvolutionDecoder(embedding, args.tau, t3, args.filter_size, args.filter_shape, args.latent_size)
+		autoencoder = net.AutoEncoder(embedding, args.tau, t3, args.filter_size, args.filter_shape, args.latent_size)
 	else:
 		print("Restart from snapshot")
-		encoder = torch.load(os.path.join(CONFIG.DECONV_SNAPSHOT_PATH, args.enc_snapshot))
-		decoder = torch.load(os.path.join(CONFIG.DECONV_SNAPSHOT_PATH, args.dec_snapshot))
+		autoencoder = torch.load(os.path.join(CONFIG.DECONV_SNAPSHOT_PATH, args.snapshot))
 
 	criterion = nn.NLLLoss()
 	if torch.cuda.device_count() > 1 and args.use_cuda:
-		encoder = DataParallelModel(encoder)
-		decoder = DataParallelModel(decoder)
+		autoencoder = DataParallelModel(autoencoder)
 		criterion = DataParallelCriterion(criterion)
-	encoder.to(device)
-	decoder.to(device)
+	autoencoder.to(device)
 	exp = Experiment("Reconstruction Training")
 	try:
 		lr = args.lr
-		optimizer_enc = Adam(encoder.parameters(), lr=lr)
-		optimizer_dec = Adam(decoder.parameters(), lr=lr)
+		optimizer = Adam(autoencoder.parameters(), lr=lr)
 
 		avg_loss = []
 		rouge_1 = []
 		rouge_2 = []
 
-		encoder.train() 
-		decoder.train() 
+		autoencoder.train() 
 
 		steps = 0
 		for epoch in range(args.epochs):
@@ -75,16 +69,13 @@ def train_reconstruction(args, CONFIG):
 				if args.use_cuda:
 					feature = feature.to(device)
 
-				optimizer_enc.zero_grad()
-				optimizer_dec.zero_grad()
+				optimizer.zero_grad()
 
-				h = encoder(feature)
-				prob = decoder(h)
+				prob = autoencoder(feature)
 				prob_t = torch.transpose(prob, 1, 2)
 				reconstruction_loss = criterion(prob_t, feature)
 				reconstruction_loss.backward()
-				optimizer_enc.step()
-				optimizer_dec.step()
+				optimizer.step()
 
 				steps += 1
 
@@ -108,14 +99,13 @@ def train_reconstruction(args, CONFIG):
 				del feature, prob
 
 			if epoch % args.test_interval == 0:
-				_avg_loss, _rouge_1, _rouge_2 = eval_reconstruction(encoder, decoder, test_loader, args, device)
+				_avg_loss, _rouge_1, _rouge_2 = eval_reconstruction(autoencoder, test_loader, args, device)
 				avg_loss.append(_avg_loss)
 				rouge_1.append(_rouge_1)
 				rouge_2.append(_rouge_2)
 
 			if epoch % args.save_interval == 0:
-				util.save_models(optimizer_enc, CONFIG.DECONV_SNAPSHOT_PATH, "encoder", epoch)
-				util.save_models(optimizer_dec, CONFIG.DECONV_SNAPSHOT_PATH, "decoder", epoch)
+				util.save_models(optimizer, CONFIG.DECONV_SNAPSHOT_PATH, "autoencoder", epoch)
 
 		# finalization
 		# save vocabulary
@@ -125,8 +115,7 @@ def train_reconstruction(args, CONFIG):
 			pickle.dump(train_loader.dataset.index2word, i2w)
 
 		# save models
-		util.save_models(encoder, CONFIG.DECONV_SNAPSHOT_PATH, "encoder", "final")
-		util.save_models(decoder, CONFIG.DECONV_SNAPSHOT_PATH, "decoder", "final")
+		util.save_models(autoencoder, CONFIG.DECONV_SNAPSHOT_PATH, "autoencoder", "final")
 		table = []
 		table.append(avg_loss)
 		table.append(rouge_1)
@@ -141,10 +130,9 @@ def train_reconstruction(args, CONFIG):
 	finally:
 		exp.end()
 
-def eval_reconstruction(encoder, decoder, data_iter, args, device):
+def eval_reconstruction(autoencoder, data_iter, args, device):
 	print("=================Eval======================")
-	encoder.eval()
-	decoder.eval()
+	autoencoder.eval()
 	avg_loss = 0
 	rouge_1 = 0.0
 	rouge_2 = 0.0
@@ -155,8 +143,7 @@ def eval_reconstruction(encoder, decoder, data_iter, args, device):
 			feature = Variable(batch)
 			if args.use_cuda:
 				feature = feature.to(device)
-		h = encoder(feature)
-		prob = decoder(h)
+		prob = autoencoder(feature)
 		_, predict_index = torch.max(prob, 2)
 		original_sentences = [util.transform_id2word(sentence, index2word, "en") for sentence in batch.detach()]
 		predict_sentences = [util.transform_id2word(sentence, index2word, "en") for sentence in predict_index.detach()]
@@ -174,8 +161,7 @@ def eval_reconstruction(encoder, decoder, data_iter, args, device):
 	rouge_2 = rouge_2 / len(data_iter.dataset)
 	print("Evaluation - loss: {}  Rouge1: {}    Rouge2: {}".format(avg_loss, rouge_1, rouge_2))
 	print("===============================================================")
-	encoder.train()
-	decoder.train()
+	autoencoder.train()
 
 	return avg_loss, rouge_1, rouge_2
 
