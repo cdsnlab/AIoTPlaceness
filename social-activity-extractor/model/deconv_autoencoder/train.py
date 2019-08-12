@@ -19,6 +19,8 @@ from hyperdash import Experiment
 from model.deconv_autoencoder import util
 from model.deconv_autoencoder import net
 from model.deconv_autoencoder.datasets import load_hotel_review_data
+from model.deconv_autoencoder.parallel import DataParallelModel, DataParallelCriterion
+
 
 def train_reconstruction(args, CONFIG):
 	device = torch.device("cuda" if torch.cuda.is_available() and args.use_cuda else "cpu")
@@ -46,8 +48,9 @@ def train_reconstruction(args, CONFIG):
 
 	criterion = nn.NLLLoss()
 	if torch.cuda.device_count() > 1 and args.use_cuda:
-		encoder = nn.DataParallel(encoder)
-		decoder = nn.DataParallel(decoder)
+		encoder = DataParallelModel(encoder)
+		decoder = DataParallelModel(decoder)
+		criterion = DataParallelCriterion(criterion)
 	encoder.to(device)
 	decoder.to(device)
 	exp = Experiment("Reconstruction Training")
@@ -105,7 +108,7 @@ def train_reconstruction(args, CONFIG):
 				del feature, prob
 
 			if epoch % args.test_interval == 0:
-				_avg_loss, _rouge_1, _rouge_2 = eval_reconstruction(encoder, decoder, test_loader, args)
+				_avg_loss, _rouge_1, _rouge_2 = eval_reconstruction(encoder, decoder, test_loader, args, device)
 				avg_loss.append(_avg_loss)
 				rouge_1.append(_rouge_1)
 				rouge_2.append(_rouge_2)
@@ -138,7 +141,7 @@ def train_reconstruction(args, CONFIG):
 	finally:
 		exp.end()
 
-def eval_reconstruction(encoder, decoder, data_iter, args):
+def eval_reconstruction(encoder, decoder, data_iter, args, device):
 	print("=================Eval======================")
 	encoder.eval()
 	decoder.eval()
@@ -160,7 +163,8 @@ def eval_reconstruction(encoder, decoder, data_iter, args):
 		r1, r2 = calc_rouge(original_sentences, predict_sentences)
 		rouge_1 += r1
 		rouge_2 += r2
-		reconstruction_loss = compute_cross_entropy(prob, feature)
+		prob_t = torch.transpose(prob, 1, 2)
+		reconstruction_loss = criterion(prob_t, feature)
 		
 		avg_loss += reconstruction_loss.detach().item()
 		del feature, prob
