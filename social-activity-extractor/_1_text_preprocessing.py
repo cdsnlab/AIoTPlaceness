@@ -48,7 +48,7 @@ def make_corpus(target_folder):
 							languages_dic[language] = languages_dic[language] + 1
 						else:
 							languages_dic[language] = 0 
-						if language != 'un' and len(tokenized_line) > 0:
+						if (language is 'ko' or language is 'en') and len(tokenized_line) > 0:
 							f_wr.write(" ".join(tokenized_line) + '\n')
 				count = count + 1
 	f_wr.close()
@@ -141,12 +141,14 @@ def pickle_to_corpus(target_pickle):
 				print(count)
 			pg = np.setdiff1d(pg, TOKENS)
 			f_wr.write(" ".join([data[3][idx] for idx in pg]))
+			f_wr.write("\n")
 			count = count + 1
 		for pg in data[1]:
 			if count % 100 == 0: 
 				print(count)
 			pg = np.setdiff1d(pg, TOKENS)
 			f_wr.write(" ".join([data[3][idx] for idx in pg]))
+			f_wr.write("\n")
 			count = count + 1
 	f_wr.close()
 
