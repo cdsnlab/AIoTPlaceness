@@ -73,7 +73,7 @@ def train_reconstruction(args, CONFIG):
 
 				prob = autoencoder(feature)
 				reconstruction_loss = criterion(prob, feature)
-				reconstruction_loss.backward()
+				reconstruction_loss.mean().backward()
 				optimizer.step()
 
 				steps += 1
