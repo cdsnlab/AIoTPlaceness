@@ -45,10 +45,11 @@ def train_reconstruction(args, CONFIG):
 		autoencoder = torch.load(os.path.join(CONFIG.DECONV_SNAPSHOT_PATH, args.snapshot))
 
 	criterion = nn.NLLLoss()
-	if torch.cuda.device_count() > 1 and args.use_cuda:
+	autoencoder.to(device)
+	criterion.to(device)
+	if args.distributed:
 		autoencoder = DataParallelModel(autoencoder)
 		criterion = DataParallelCriterion(criterion)
-	autoencoder.to(device)
 	exp = Experiment("Reconstruction Training")
 	try:
 		lr = args.lr
@@ -73,7 +74,9 @@ def train_reconstruction(args, CONFIG):
 
 				prob = autoencoder(feature)
 				reconstruction_loss = criterion(prob, feature)
-				reconstruction_loss.mean().backward()
+				if args.distributed:
+					reconstruction_loss = reconstruction_loss.mean()
+				reconstruction_loss.backward()
 				optimizer.step()
 
 				steps += 1
@@ -87,7 +90,10 @@ def train_reconstruction(args, CONFIG):
 				if steps % args.log_interval == 0:
 					print("Test!!")
 					input_data = feature[0]
-					single_data = prob[0].t()
+					if args.distributed:
+						single_data = prob[0][0].t()
+					else:
+						single_data = prob[0].t()
 					_, predict_index = torch.max(single_data, 1)
 					input_sentence = util.transform_id2word(input_data.detach(), train_loader.dataset.index2word, lang="en")
 					predict_sentence = util.transform_id2word(predict_index.detach(), train_loader.dataset.index2word, lang="en")
@@ -150,7 +156,8 @@ def eval_reconstruction(autoencoder, data_iter, args, device):
 		rouge_1 += r1
 		rouge_2 += r2
 		reconstruction_loss = criterion(prob, feature)
-		
+		if args.distributed:
+			reconstruction_loss = reconstruction_loss.mean()
 		avg_loss += reconstruction_loss.detach().item()
 		del feature, prob
 	avg_loss = avg_loss / len(data_iter.dataset)

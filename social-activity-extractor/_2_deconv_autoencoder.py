@@ -30,6 +30,7 @@ def main():
 	parser.add_argument('-latent_size', type=int, default=900, help='size of latent variable')
 	parser.add_argument('-tau', type=float, default=0.01, help='temperature parameter')
 	parser.add_argument('-use_cuda', action='store_true', default=True, help='whether using cuda')
+	parser.add_argument('-distributed', action='store_true', default=False, help='whether using cuda')
 	# option
 	parser.add_argument('-snapshot', type=str, default=None, help='filename of encoder snapshot ')
 
