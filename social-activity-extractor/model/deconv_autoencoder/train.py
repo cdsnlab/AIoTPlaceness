@@ -73,10 +73,10 @@ def train_reconstruction(args, CONFIG):
 				optimizer.zero_grad()
 
 				prob = autoencoder(feature)
-				reconstruction_loss = criterion(prob, feature)
+				loss = criterion(prob, feature)
 				if args.distributed:
-					reconstruction_loss = reconstruction_loss.mean()
-				reconstruction_loss.backward()
+					loss = loss.mean()
+				loss.backward()
 				optimizer.step()
 
 				steps += 1
@@ -84,8 +84,8 @@ def train_reconstruction(args, CONFIG):
 				if steps % 100 == 0:
 					print("Epoch: {} at {}".format(epoch, str(datetime.datetime.now())))
 					print("Steps: {}".format(steps))
-					print("Loss: {}".format(reconstruction_loss.detach().item()))
-					exp.metric("Loss", reconstruction_loss.detach().item())
+					print("Loss: {}".format(loss.detach().item()))
+					exp.metric("Loss", loss.detach().item())
 				# check reconstructed sentence
 				if steps % args.log_interval == 0:
 					print("Test!!")
@@ -101,7 +101,8 @@ def train_reconstruction(args, CONFIG):
 					print(input_sentence)
 					print("Output Sentence:")
 					print(predict_sentence)
-				del feature, prob
+					del input_data, single_data, _, predict_index
+				del feature, prob, loss
 
 			if epoch % args.test_interval == 0:
 				_avg_loss, _rouge_1, _rouge_2 = eval_reconstruction(autoencoder, test_loader, args, device)
@@ -155,11 +156,11 @@ def eval_reconstruction(autoencoder, data_iter, args, device):
 		r1, r2 = calc_rouge(original_sentences, predict_sentences)
 		rouge_1 += r1
 		rouge_2 += r2
-		reconstruction_loss = criterion(prob, feature)
+		loss = criterion(prob, feature)
 		if args.distributed:
-			reconstruction_loss = reconstruction_loss.mean()
-		avg_loss += reconstruction_loss.detach().item()
-		del feature, prob
+			loss = loss.mean()
+		avg_loss += loss.detach().item()
+		del feature, prob, _, predict_index, loss
 	avg_loss = avg_loss / len(data_iter.dataset)
 	# avg_loss = avg_loss / args.sentence_len
 	rouge_1 = rouge_1 / len(data_iter.dataset)
