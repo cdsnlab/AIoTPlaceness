@@ -41,23 +41,22 @@ def make_corpus(target_folder):
 					while True:
 						line = f.readline()
 						if not line: break;
-						printable_line = ''.join(x for x in line if x.isprintable())
-						
-						tokenized_line, language = multi_language_tokenizer(printable_line)
+						line = [regex.findall('[\p{Hangul}|\p{Latin}|\s]+', x) for x in line if x.isprintable()]
+						regular_line = ''.join(str(character) for inner in line for character in inner)
+						tokenized_line, language = multi_language_tokenizer(regular_line)
 						if language in languages_dic:
 							languages_dic[language] = languages_dic[language] + 1
 						else:
 							languages_dic[language] = 0 
-						if (language is 'ko' or language is 'en') and len(tokenized_line) > 0:
+						if (language == 'ko' or language is 'en') and len(tokenized_line) > 0:
 							f_wr.write(" ".join(tokenized_line) + '\n')
 				count = count + 1
 	f_wr.close()
-	# print(languages_dic)
-	# csv_name = target_folder + '_meta.csv'
-	# with open(os.path.join(CONFIG.CSV_PATH, csv_name), 'w', encoding='utf-8-sig', newline='') as f:
-	#     w = csv.writer(f)
-	#     for k,v in languages_dic.items():
-	#     	w.writerow((k, v))
+	csv_name = target_folder + '_meta.csv'
+	with open(os.path.join(CONFIG.CSV_PATH, csv_name), 'w', encoding='utf-8-sig', newline='') as f:
+	    w = csv.writer(f)
+	    for k,v in languages_dic.items():
+	    	w.writerow((k, v))
 	print("completed to make corpus")
 
 def multi_language_tokenizer(input_line):
@@ -90,7 +89,7 @@ def multi_language_tokenizer(input_line):
 				output_line.append(token)
 	else:
 		return ("", language.name)
-	return (output_line, language.name)
+	return (output_line, language.code)
 
 def make_fasttext(target_corpus):
 	target_corpus_name = target_corpus + '.txt'
@@ -130,7 +129,7 @@ def test_fasttext(target_model):
 def pickle_to_corpus(target_pickle):
 	pickle_name = target_pickle + '.p'
 	text_name = target_pickle + '.txt'
-	f_wr = open(os.path.join(CONFIG.DATA_PATH, 'corpus', text_name), 'w', encoding='utf-8', newline='\n')
+	f_wr = open(os.path.join(CONFIG.DATA_PATH, 'corpus', text_name), 'w', encoding='utf-8')
 	import _pickle as cPickle
 	count = 0
 	with open(os.path.join(CONFIG.DATA_PATH, 'pickle', pickle_name), "rb") as f:
@@ -140,15 +139,13 @@ def pickle_to_corpus(target_pickle):
 			if count % 100 == 0: 
 				print(count)
 			pg = np.setdiff1d(pg, TOKENS)
-			f_wr.write(" ".join([data[3][idx] for idx in pg]))
-			f_wr.write("\n")
+			f_wr.write(" ".join([data[3][idx] for idx in pg]) + '\n')
 			count = count + 1
 		for pg in data[1]:
 			if count % 100 == 0: 
 				print(count)
 			pg = np.setdiff1d(pg, TOKENS)
-			f_wr.write(" ".join([data[3][idx] for idx in pg]))
-			f_wr.write("\n")
+			f_wr.write(" ".join([data[3][idx] for idx in pg]) + '\n')
 			count = count + 1
 	f_wr.close()
 

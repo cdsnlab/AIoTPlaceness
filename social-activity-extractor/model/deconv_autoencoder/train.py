@@ -151,10 +151,11 @@ def eval_reconstruction(autoencoder, data_iter, args, device):
 				feature = feature.to(device)
 		prob = autoencoder(feature)		
 		if args.distributed:
-			single_data = prob[0].t()
+			concat_prob = torch.stack(prob, 0)
+			_, predict_index = torch.max(concat_prob, 2)
+			del concat_prob
 		else:
-			single_data = prob.t()
-		_, predict_index = torch.max(single_data, 2)
+			_, predict_index = torch.max(prob, 2)
 		original_sentences = [util.transform_id2word(sentence, index2word, "en") for sentence in batch.detach()]
 		predict_sentences = [util.transform_id2word(sentence, index2word, "en") for sentence in predict_index.detach()]
 		r1, r2 = calc_rouge(original_sentences, predict_sentences)
