@@ -152,10 +152,13 @@ def eval_reconstruction(autoencoder, data_iter, args, device):
 		prob = autoencoder(feature)		
 		if args.distributed:
 			concat_prob = torch.stack(prob, 0)
-			_, predict_index = torch.max(concat_prob, 2)
-			del concat_prob
+			concat_prob_t = torch.transpose(concat_prob, 1, 2)
+			_, predict_index = torch.max(concat_prob_t, 2)
+			del concat_prob, concat_prob_t
 		else:
-			_, predict_index = torch.max(prob, 2)
+			prob_t = torch.transpose(prob, 1, 2)
+			_, predict_index = torch.max(prob_t, 2)
+			del prob_t
 		original_sentences = [util.transform_id2word(sentence, index2word, "en") for sentence in batch.detach()]
 		predict_sentences = [util.transform_id2word(sentence, index2word, "en") for sentence in predict_index.detach()]
 		r1, r2 = calc_rouge(original_sentences, predict_sentences)
