@@ -91,10 +91,10 @@ def train_reconstruction(args, CONFIG):
 					print("Test!!")
 					input_data = feature[0]
 					if args.distributed:
-						single_data = prob[0][0].t()
+						single_data = prob[0][0]
 					else:
-						single_data = prob[0].t()
-					_, predict_index = torch.max(single_data, 1)
+						single_data = prob[0]
+					_, predict_index = torch.max(single_data, 0)
 					input_sentence = util.transform_id2word(input_data.detach(), train_loader.dataset.index2word, lang="en")
 					predict_sentence = util.transform_id2word(predict_index.detach(), train_loader.dataset.index2word, lang="en")
 					print("Input Sentence:")
@@ -152,14 +152,10 @@ def eval_reconstruction(autoencoder, data_iter, args, device):
 		prob = autoencoder(feature)		
 		if args.distributed:
 			concat_prob = torch.stack(prob, 0)
-			concat_prob_t = torch.transpose(concat_prob, 1, 2)
+			_, predict_index = torch.max(concat_prob, 1)
 			del concat_prob
-			_, predict_index = torch.max(concat_prob_t, 2)
-			del concat_prob_t
 		else:
-			prob_t = torch.transpose(prob, 1, 2)
-			_, predict_index = torch.max(prob_t, 2)
-			del prob_t
+			_, predict_index = torch.max(prob, 1)
 		original_sentences = [util.transform_id2word(sentence, index2word, "en") for sentence in batch.detach()]
 		predict_sentences = [util.transform_id2word(sentence, index2word, "en") for sentence in predict_index.detach()]
 		r1, r2 = calc_rouge(original_sentences, predict_sentences)
