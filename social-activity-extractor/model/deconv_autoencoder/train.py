@@ -151,7 +151,7 @@ def eval_reconstruction(autoencoder, data_iter, args, device):
 				feature = feature.to(device)
 		prob = autoencoder(feature)		
 		if args.distributed:
-			concat_prob = torch.stack(prob, 0)
+			concat_prob = torch.cat(prob, 0)
 			_, predict_index = torch.max(concat_prob, 1)
 			del concat_prob
 		else:
