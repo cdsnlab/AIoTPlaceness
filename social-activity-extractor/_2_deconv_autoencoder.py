@@ -1,8 +1,15 @@
 import argparse
 from model.deconv_autoencoder.train import train_reconstruction
 import config
+import requests
 
 CONFIG = config.Config
+
+def slacknoti(contentstr):
+	webhook_url = "https://hooks.slack.com/services/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"
+	payload = {"text": contentstr}
+	requests.post(webhook_url, data=json.dumps(payload), headers={'Content-Type': 'application/json'})
+
 def main():
 	parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
 	# learning
@@ -36,7 +43,11 @@ def main():
 
 	args = parser.parse_args()
 
+	if args.distributed:
+		slacknoti("underkoo start using")
 	train_reconstruction(args, CONFIG)
+	if args.distributed:
+		slacknoti("underkoo end using")
 
 
 if __name__ == '__main__':
