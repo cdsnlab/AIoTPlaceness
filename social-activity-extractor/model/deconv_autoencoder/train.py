@@ -105,7 +105,7 @@ def train_reconstruction(args, CONFIG):
 				del feature, prob, loss
 
 			if epoch % args.test_interval == 0:
-				_avg_loss, _rouge_1, _rouge_2 = eval_reconstruction(autoencoder, test_loader, args, device)
+				_avg_loss, _rouge_1, _rouge_2 = eval_reconstruction(autoencoder, criterion, test_loader, args, device)
 				avg_loss.append(_avg_loss)
 				rouge_1.append(_rouge_1)
 				rouge_2.append(_rouge_2)
@@ -136,7 +136,7 @@ def train_reconstruction(args, CONFIG):
 	finally:
 		exp.end()
 
-def eval_reconstruction(autoencoder, data_iter, args, device):
+def eval_reconstruction(autoencoder, criterion, data_iter, args, device):
 	print("=================Eval======================")
 	autoencoder.eval()
 	avg_loss = 0
