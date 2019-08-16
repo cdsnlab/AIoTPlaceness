@@ -2,6 +2,7 @@ import argparse
 from model.deconv_autoencoder.train import train_reconstruction
 import config
 import requests
+import json
 
 CONFIG = config.Config
 
