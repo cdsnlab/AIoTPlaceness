@@ -20,13 +20,13 @@ class ConvolutionEncoder(nn.Module):
 		self.convs1 = nn.Sequential(
 				nn.Conv2d(1, filter_size, (filter_shape, self.embed.weight.size()[1]), stride=(2,1)),
 				nn.BatchNorm2d(filter_size),
-				PTanh(penalty=0.25)
+				nn.SELU()
 			)
 
 		self.convs2 = nn.Sequential(
 				nn.Conv2d(filter_size, filter_size * 2, (filter_shape, 1), stride=(2,1)),
 				nn.BatchNorm2d(filter_size * 2),
-				PTanh(penalty=0.25)
+				nn.SELU()
 			)
 
 		self.convs3 = nn.Sequential(
@@ -55,7 +55,6 @@ class ConvolutionEncoder(nn.Module):
 		h3 = self.convs3(h2)
 		return h3
 
-
 class DeconvolutionDecoder(nn.Module):
 	def __init__(self, embedding, tau, sentence_len, filter_size, filter_shape, latent_size):
 		super(DeconvolutionDecoder, self).__init__()
@@ -64,12 +63,12 @@ class DeconvolutionDecoder(nn.Module):
 		self.deconvs1 = nn.Sequential(
 				nn.ConvTranspose2d(latent_size, filter_size * 2, (sentence_len, 1), stride=(1,1)),
 				nn.BatchNorm2d(filter_size * 2),
-				PTanh(penalty=0.25)
+				nn.SELU()
 			)
 		self.deconvs2 = nn.Sequential(
 				nn.ConvTranspose2d(filter_size * 2, filter_size, (filter_shape, 1), stride=(2,1)),
 				nn.BatchNorm2d(filter_size),
-				PTanh(penalty=0.25)
+				nn.SELU()
 			)
 		self.deconvs3 = nn.Sequential(
 				nn.ConvTranspose2d(filter_size, 1, (filter_shape, self.embed.weight.size()[1]), stride=(2,1)),
@@ -90,6 +89,7 @@ class DeconvolutionDecoder(nn.Module):
 		h1 = self.deconvs2(h2)
 		x_hat = self.deconvs3(h1)
 		x_hat = x_hat.squeeze()
+		print(x_hat.size())
 		W = self.embed.weight.data
 		
 		# x.size() is (L, emb_dim) if batch_size is 1.
@@ -106,6 +106,7 @@ class DeconvolutionDecoder(nn.Module):
 
 		# calculate logit and softmax
 		prob_logits = torch.tensordot(normalized_x_hat, normalized_W, dims=([2], [1]))
+		print(prob_logits.size())
 		log_prob = self.log_softmax(prob_logits / self.tau)
 		return log_prob
 

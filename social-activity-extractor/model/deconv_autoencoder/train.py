@@ -116,7 +116,7 @@ def train_reconstruction(args, CONFIG):
 		# finalization
 		# save vocabulary
 		with open(os.path.join(CONFIG.DECONV_VOCAB_PATH, 'word2index.p'), "wb") as w2i, \
-		open(os.path.join(DECONV_VOCAB_PATH, 'index2word.p'), "wb") as i2w:
+		open(os.path.join(CONFIG.DECONV_VOCAB_PATH, 'index2word.p'), "wb") as i2w:
 			pickle.dump(train_loader.dataset.word2index, w2i)
 			pickle.dump(train_loader.dataset.index2word, i2w)
 

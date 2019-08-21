@@ -13,8 +13,8 @@ from konlpy.tag import Okt
 import nagisa
 import jieba
 
-from gensim.models import word2vec, FastText 
-from gensim.models.keyedvectors import FastTextKeyedVectors
+from gensim.models import word2vec, Word2Vec, FastText 
+from gensim.models.keyedvectors import Word2VecKeyedVectors, FastTextKeyedVectors
 from gensim.test.utils import datapath
 from polyglot.detect import Detector
 
@@ -24,11 +24,11 @@ okt=Okt()
 def make_corpus(target_folder):
 	print(target_folder)
 	corpus_name = target_folder + '.txt'
-	f_wr = open(os.path.join(CONFIG.DATA_PATH, 'corpus', corpus_name), 'w', encoding='utf-8-sig')
+	f_wr = open(os.path.join(CONFIG.DATA_PATH, 'corpus', corpus_name), 'w', encoding='utf-8')
 	text_path = os.path.join(CONFIG.DATA_PATH, target_folder)
 	text_folder_list = os.listdir(text_path)
 	count = 0
-	languages_dic = dict()
+	# languages_dic = dict()
 	for text_folder in text_folder_list:
 		# print("folder: ", text_folder)
 		text_files = os.listdir(os.path.join(text_path, text_folder))
@@ -36,27 +36,37 @@ def make_corpus(target_folder):
 			if text_file.endswith('.txt') and not text_file.endswith('_location.txt'):
 				if count % 100 == 0: 
 					print(count)
-				with open(os.path.join(text_path, text_folder, text_file), 'r', encoding='utf-8-sig', newline='\n') as f:
+				with open(os.path.join(text_path, text_folder, text_file), 'r', encoding='utf-8', newline='\n') as f:
 					# print("file: ", text_file)
-					while True:
-						line = f.readline()
-						if not line: break;
-						line = [regex.findall('[\p{Hangul}|\p{Latin}|\s]+', x) for x in line if x.isprintable()]
-						regular_line = ''.join(str(character) for inner in line for character in inner)
-						tokenized_line, language = multi_language_tokenizer(regular_line)
-						if language in languages_dic:
-							languages_dic[language] = languages_dic[language] + 1
+					data = f.read()
+					data = data.replace("#", " ")
+					data = data.replace("\n", " ")
+					data = [regex.findall('[\p{Hangul}|\p{Latin}|\s]+', x) for x in data if x.isprintable()]
+					word_list = []
+					word = []
+					for character in data:
+						if len(character) is 0:
+							continue
+						if character[0] == ' ' or character[0] == 'ㅤ':
+							if len(word) != 0:
+								word_list.append(''.join(word))
+								word = []
+							else:
+								continue
 						else:
-							languages_dic[language] = 0 
-						if (language == 'ko' or language is 'en') and len(tokenized_line) > 0:
-							f_wr.write(" ".join(tokenized_line) + '\n')
+							if character[0].isalpha():
+								character[0] = character[0].lower()
+							word.append(character[0])
+					line = ' '.join(word_list)
+					if len(line) > 0:
+						f_wr.write(line + '\n')
 				count = count + 1
 	f_wr.close()
-	csv_name = target_folder + '_meta.csv'
-	with open(os.path.join(CONFIG.CSV_PATH, csv_name), 'w', encoding='utf-8-sig', newline='') as f:
-	    w = csv.writer(f)
-	    for k,v in languages_dic.items():
-	    	w.writerow((k, v))
+	# csv_name = target_folder + '_meta.csv'
+	# with open(os.path.join(CONFIG.CSV_PATH, csv_name), 'w', encoding='utf-8-sig', newline='') as f:
+	# 	w = csv.writer(f)
+	# 	for k,v in languages_dic.items():
+	# 		w.writerow((k, v))
 	print("completed to make corpus")
 
 def multi_language_tokenizer(input_line):
@@ -89,7 +99,7 @@ def multi_language_tokenizer(input_line):
 				output_line.append(token)
 	else:
 		return ("", language.name)
-	return (output_line, language.code)
+	return (input_line, language.code)
 
 def make_fasttext(target_corpus):
 	target_corpus_name = target_corpus + '.txt'
@@ -102,11 +112,15 @@ def make_fasttext(target_corpus):
 	embedding_model.wv.save(os.path.join(CONFIG.EMBEDDING_PATH, model_name))
 	print("embedding completed")
 
-def fasttext_to_csv(target_model):
-	model_name = 'FASTTEXT_' + target_model + '.model'
-	model = FastTextKeyedVectors.load(os.path.join(CONFIG.EMBEDDING_PATH,model_name))
+def model_to_csv(target_model, model_type):
+	if model_type is 0:
+		model_name = 'FASTTEXT_' + target_model + '.model'
+		model = FastTextKeyedVectors.load(os.path.join(CONFIG.EMBEDDING_PATH,model_name))
+	else:
+		model_name = 'WORD2VEC_' + target_model + '.model'
+		model = Word2VecKeyedVectors.load(os.path.join(CONFIG.EMBEDDING_PATH,model_name))
 	vocab = list(model.vocab)
-	vocab_list = [x for x in vocab if x not in ['et', 'al', '']]
+	vocab_list = [x for x in vocab]
 
 	# f_csv = open(DF_PATH+'Word2VecBlog300_5_min10_mecab.csv', 'w', encoding='utf-8-sig', newline='')
 	print("started to write csv")
@@ -133,22 +147,81 @@ def pickle_to_corpus(target_pickle):
 	import _pickle as cPickle
 	count = 0
 	with open(os.path.join(CONFIG.DATA_PATH, 'pickle', pickle_name), "rb") as f:
-		data = cPickle.load(f, encoding="latin1")
-		TOKENS = np.array([0, 1])
-		for pg in data[0]:
+		dataset = cPickle.load(f, encoding="latin1")
+		for pg in dataset[0]:
 			if count % 100 == 0: 
 				print(count)
-			pg = np.setdiff1d(pg, TOKENS)
-			f_wr.write(" ".join([data[3][idx] for idx in pg]) + '\n')
+			data = " ".join([dataset[3][idx] for idx in pg])
+			data = data.replace("END_TOKEN", "")
+			data = [regex.findall('[\p{Hangul}|\p{Latin}|\s]+', x) for x in data if x.isprintable()]
+			word_list = []
+			word = []
+			for character in data:
+				if len(character) is 0:
+					continue
+				if character[0] == ' ' or character[0] == 'ㅤ':
+					if len(word) != 0:
+						word_list.append(''.join(word))
+						word = []
+					else:
+						continue
+				else:
+					if character[0].isalpha():
+						character[0] = character[0].lower()
+					word.append(character[0])
+			line = ' '.join(word_list)
+			if len(line) > 0:
+				f_wr.write(line + '\n')
 			count = count + 1
-		for pg in data[1]:
+		for pg in dataset[1]:
 			if count % 100 == 0: 
 				print(count)
-			pg = np.setdiff1d(pg, TOKENS)
-			f_wr.write(" ".join([data[3][idx] for idx in pg]) + '\n')
+			data = " ".join([dataset[3][idx] for idx in pg])
+			data = data.replace("END_TOKEN", "")
+			data = [regex.findall('[\p{Hangul}|\p{Latin}|\s]+', x) for x in data if x.isprintable()]
+			word_list = []
+			word = []
+			for character in data:
+				if len(character) is 0:
+					continue
+				if character[0] == ' ' or character[0] == 'ㅤ':
+					if len(word) != 0:
+						word_list.append(''.join(word))
+						word = []
+					else:
+						continue
+				else:
+					if character[0].isalpha():
+						character[0] = character[0].lower()
+					word.append(character[0])
+			line = ' '.join(word_list)
+			if len(line) > 0:
+				f_wr.write(line + '\n')
 			count = count + 1
 	f_wr.close()
 
+def make_word2vec(target_corpus):
+	target_corpus_name = target_corpus + '.txt'
+	corpus_path = os.path.join(CONFIG.DATA_PATH, "corpus", target_corpus_name)
+	sentences = word2vec.LineSentence(corpus_path) 
+	
+	print("embedding started")
+	embedding_model = Word2Vec(sentences, size=300, window=5, min_count=1, workers=4, sg = 1, hs=0, negative=5, sample = 0.00001, iter = 100)
+	model_name = "WORD2VEC_"+ target_corpus + ".model"
+	embedding_model.wv.save(os.path.join(CONFIG.EMBEDDING_PATH, model_name))
+	print("embedding completed")
+
+def test(target_corpus):
+	target_corpus_name = target_corpus + '.txt'
+	length_list = []
+	with open(os.path.join(CONFIG.DATA_PATH, 'corpus', target_corpus_name), 'r', encoding='utf-8-sig', newline='\n') as f:
+		while True:
+			line = f.readline()
+			if not line: break;
+			length_list.append(len(line.split()))
+	length_array = np.array(length_list)
+	print("mean: ", np.mean(length_array))
+	print("max: ", np.max(length_array))
 
 def run(option):
 	if option == 0:
@@ -156,11 +229,15 @@ def run(option):
 	elif option == 1:
 		make_fasttext(target_corpus=sys.argv[2])
 	elif option == 2:
-		fasttext_to_csv(target_model=sys.argv[2])
+		model_to_csv(target_model=sys.argv[2], model_type=sys.argv[3])
 	elif option == 3:
 		test_fasttext(target_model=sys.argv[2])
 	elif option == 4:
 		pickle_to_corpus(target_pickle=sys.argv[2])
+	elif option == 5:
+		make_word2vec(target_corpus=sys.argv[2])
+	elif option == 6:
+		test(target_corpus=sys.argv[2])
 	else:
 		print("This option does not exist!\n")
 
