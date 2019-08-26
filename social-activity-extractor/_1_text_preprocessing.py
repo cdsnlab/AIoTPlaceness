@@ -5,6 +5,7 @@ import config
 import csv
 import pickle
 import regex
+import re
 import numpy as np
 
 
@@ -14,6 +15,7 @@ import nagisa
 import jieba
 
 from gensim.models import word2vec, Word2Vec, FastText 
+from gensim.models.fasttext import load_facebook_model
 from gensim.models.keyedvectors import Word2VecKeyedVectors, FastTextKeyedVectors
 from gensim.test.utils import datapath
 from polyglot.detect import Detector
@@ -41,7 +43,9 @@ def make_corpus(target_folder):
 					data = f.read()
 					data = data.replace("#", " ")
 					data = data.replace("\n", " ")
-					data = [regex.findall('[\p{Hangul}|\p{Latin}|\s]+', x) for x in data if x.isprintable()]
+					expression = re.compile('[ㄱ-ㅣ가-힣|a-zA-Z|\s]+') 
+					data = [re.findall(expression, x) for x in data if x.isprintable()]
+					#data = [regex.findall('[\p{Hangul}|\p{Latin}|\s]+', x) for x in data if x.isprintable()]
 					word_list = []
 					word = []
 					for character in data:
@@ -59,7 +63,7 @@ def make_corpus(target_folder):
 							word.append(character[0])
 					line = ' '.join(word_list)
 					if len(line) > 0:
-						f_wr.write(line + '\n')
+						f_wr.write(line + ' <EOS>\n')
 				count = count + 1
 	f_wr.close()
 	# csv_name = target_folder + '_meta.csv'
@@ -102,23 +106,24 @@ def multi_language_tokenizer(input_line):
 	return (input_line, language.code)
 
 def make_fasttext(target_corpus):
+
 	target_corpus_name = target_corpus + '.txt'
 	corpus_path = os.path.join(CONFIG.DATA_PATH, "corpus", target_corpus_name)
 	sentences = word2vec.LineSentence(corpus_path) 
-	
+	dimension_size = 300
 	print("embedding started")
-	embedding_model = FastText(sentences, size=300, window=6, min_count=5, workers=4, sg = 1, iter=100) #skip-gram
+	# embedding_model = FastText(sentences=sentences, size=dimension_size, window=6, min_count=5, workers=4, sg = 1) #skip-gram
+	embedding_model = FastText(size=dimension_size, window=6, min_count=5, workers=4, sg = 1) #skip-gram
+	embedding_model.build_vocab(sentences=sentences)
+	print(embedding_model.epochs)
+	embedding_model.train(sentences=sentences, total_examples=embedding_model.corpus_count, epochs=10)
 	model_name = "FASTTEXT_"+ target_corpus + ".model"
 	embedding_model.wv.save(os.path.join(CONFIG.EMBEDDING_PATH, model_name))
 	print("embedding completed")
 
-def model_to_csv(target_model, model_type):
-	if model_type is 0:
-		model_name = 'FASTTEXT_' + target_model + '.model'
-		model = FastTextKeyedVectors.load(os.path.join(CONFIG.EMBEDDING_PATH,model_name))
-	else:
-		model_name = 'WORD2VEC_' + target_model + '.model'
-		model = Word2VecKeyedVectors.load(os.path.join(CONFIG.EMBEDDING_PATH,model_name))
+def model_to_csv(target_model):
+	model_name = 'FASTTEXT_' + target_model + '.model'
+	model = FastTextKeyedVectors.load(os.path.join(CONFIG.EMBEDDING_PATH,model_name))
 	vocab = list(model.vocab)
 	vocab_list = [x for x in vocab]
 
@@ -137,8 +142,18 @@ def model_to_csv(target_model, model_type):
 def test_fasttext(target_model):
 	model_name = 'FASTTEXT_' + target_model + '.model'
 	model = FastTextKeyedVectors.load(os.path.join(CONFIG.EMBEDDING_PATH, model_name))
-	print(model.get_vector('hotelreview'))
-	print(model.most_similar('hotel'))
+	pad_vector = np.full(300, np.finfo(np.float32).eps)
+	# pad_vector = np.random.randn(300)
+	# pad_vector = np.ones(300)
+	# pad_vector = np.full(300, 100)
+	# print(pad_vector)
+	print(model.similar_by_word("<EOS>"))
+	print(model.similar_by_vector(vector=pad_vector, topn=5))
+	model.add("<PAD>", pad_vector)
+	model.init_sims(replace=True)
+	print(model.similar_by_vector(vector=pad_vector, topn=5))
+	print(model.get_vector("<EOS>"))
+	print(model.get_vector("<PAD>"))
 
 def pickle_to_corpus(target_pickle):
 	pickle_name = target_pickle + '.p'
@@ -153,7 +168,8 @@ def pickle_to_corpus(target_pickle):
 				print(count)
 			data = " ".join([dataset[3][idx] for idx in pg])
 			data = data.replace("END_TOKEN", "")
-			data = [regex.findall('[\p{Hangul}|\p{Latin}|\s]+', x) for x in data if x.isprintable()]
+			expression = re.compile('[ㄱ-ㅣ가-힣|a-zA-Z|\s]+') 
+			data = [re.findall(expression, x) for x in data if x.isprintable()]
 			word_list = []
 			word = []
 			for character in data:
@@ -171,14 +187,15 @@ def pickle_to_corpus(target_pickle):
 					word.append(character[0])
 			line = ' '.join(word_list)
 			if len(line) > 0:
-				f_wr.write(line + '\n')
+				f_wr.write(line + ' <EOS>\n')
 			count = count + 1
 		for pg in dataset[1]:
 			if count % 100 == 0: 
 				print(count)
 			data = " ".join([dataset[3][idx] for idx in pg])
 			data = data.replace("END_TOKEN", "")
-			data = [regex.findall('[\p{Hangul}|\p{Latin}|\s]+', x) for x in data if x.isprintable()]
+			expression = re.compile('[ㄱ-ㅣ가-힣|a-zA-Z|\s]+') 
+			data = [re.findall(expression, x) for x in data if x.isprintable()]
 			word_list = []
 			word = []
 			for character in data:
@@ -196,7 +213,7 @@ def pickle_to_corpus(target_pickle):
 					word.append(character[0])
 			line = ' '.join(word_list)
 			if len(line) > 0:
-				f_wr.write(line + '\n')
+				f_wr.write(line + ' <EOS>\n')
 			count = count + 1
 	f_wr.close()
 
@@ -214,14 +231,36 @@ def make_word2vec(target_corpus):
 def test(target_corpus):
 	target_corpus_name = target_corpus + '.txt'
 	length_list = []
+	sentence_len = 0
 	with open(os.path.join(CONFIG.DATA_PATH, 'corpus', target_corpus_name), 'r', encoding='utf-8-sig', newline='\n') as f:
 		while True:
 			line = f.readline()
 			if not line: break;
 			length_list.append(len(line.split()))
+			if len(line.split()) > sentence_len:
+				sentence_len = len(line.split())
+				print(line)
 	length_array = np.array(length_list)
 	print("mean: ", np.mean(length_array))
 	print("max: ", np.max(length_array))
+
+def make_fasttext_pretrained(target_corpus, pretrined_model):
+
+	target_corpus_name = target_corpus + '.txt'
+	corpus_path = os.path.join(CONFIG.DATA_PATH, "corpus", target_corpus_name)
+	fb_path = os.path.join(CONFIG.EMBEDDING_PATH, "facebook", pretrined_model)
+	sentences = word2vec.LineSentence(corpus_path) 
+	embedding_model = load_facebook_model(fb_path) # load pretrained model
+	print("embedding started")	
+	embedding_model.build_vocab(sentences=sentences, update=True)
+	print(embedding_model.epochs)
+	print("train started")	
+	embedding_model.train(sentences=sentences, total_examples=embedding_model.corpus_count, epochs=10)
+	print("train completed")	
+	model_name = "FASTTEXT_"+ target_corpus + "_pretrained.model"
+	embedding_model.wv.save(os.path.join(CONFIG.EMBEDDING_PATH, model_name))
+	print("embedding completed")
+
 
 def run(option):
 	if option == 0:
@@ -229,7 +268,7 @@ def run(option):
 	elif option == 1:
 		make_fasttext(target_corpus=sys.argv[2])
 	elif option == 2:
-		model_to_csv(target_model=sys.argv[2], model_type=sys.argv[3])
+		model_to_csv(target_model=sys.argv[2])
 	elif option == 3:
 		test_fasttext(target_model=sys.argv[2])
 	elif option == 4:
@@ -238,6 +277,8 @@ def run(option):
 		make_word2vec(target_corpus=sys.argv[2])
 	elif option == 6:
 		test(target_corpus=sys.argv[2])
+	elif option == 7:
+		make_fasttext_pretrained(target_corpus=sys.argv[2], pretrined_model=sys.argv[3])
 	else:
 		print("This option does not exist!\n")
 

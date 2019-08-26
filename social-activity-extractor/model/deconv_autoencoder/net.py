@@ -14,11 +14,10 @@ from model.deconv_autoencoder.ptanh import PTanh
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class ConvolutionEncoder(nn.Module):
-	def __init__(self, embedding, sentence_len, filter_size, filter_shape, latent_size):
+	def __init__(self, embed_dim, sentence_len, filter_size, filter_shape, latent_size):
 		super(ConvolutionEncoder, self).__init__()
-		self.embed = embedding
 		self.convs1 = nn.Sequential(
-				nn.Conv2d(1, filter_size, (filter_shape, self.embed.weight.size()[1]), stride=(2,1)),
+				nn.Conv2d(1, filter_size, (filter_shape, embed_dim), stride=(2,1)),
 				nn.BatchNorm2d(filter_size),
 				nn.SELU()
 			)
@@ -42,7 +41,6 @@ class ConvolutionEncoder(nn.Module):
 					torch.nn.init.constant_(m.bias, 0.001)
 
 	def __call__(self, x):
-		x = self.embed(x)
 		# x.size() is (L, emb_dim) if batch_size is 1.
 		# So interpolate x's dimension if batch_size is 1.
 		if len(x.size()) < 3:
@@ -56,10 +54,8 @@ class ConvolutionEncoder(nn.Module):
 		return h3
 
 class DeconvolutionDecoder(nn.Module):
-	def __init__(self, embedding, tau, sentence_len, filter_size, filter_shape, latent_size):
+	def __init__(self, embed_dim, sentence_len, filter_size, filter_shape, latent_size):
 		super(DeconvolutionDecoder, self).__init__()
-		self.tau = tau
-		self.embed = embedding
 		self.deconvs1 = nn.Sequential(
 				nn.ConvTranspose2d(latent_size, filter_size * 2, (sentence_len, 1), stride=(1,1)),
 				nn.BatchNorm2d(filter_size * 2),
@@ -71,11 +67,9 @@ class DeconvolutionDecoder(nn.Module):
 				nn.SELU()
 			)
 		self.deconvs3 = nn.Sequential(
-				nn.ConvTranspose2d(filter_size, 1, (filter_shape, self.embed.weight.size()[1]), stride=(2,1)),
+				nn.ConvTranspose2d(filter_size, 1, (filter_shape, embed_dim), stride=(2,1)),
 				nn.Tanh()
 			)
-		self.log_softmax = nn.LogSoftmax(dim=2)
-		self.CosineSimilarity = nn.CosineSimilarity(dim=2)
 
 		# weight initialize for conv_transpose layer
 		for m in self.modules():
@@ -89,40 +83,82 @@ class DeconvolutionDecoder(nn.Module):
 		h1 = self.deconvs2(h2)
 		x_hat = self.deconvs3(h1)
 		x_hat = x_hat.squeeze()
-		print(x_hat.size())
-		W = self.embed.weight.data
 		
 		# x.size() is (L, emb_dim) if batch_size is 1.
 		# So interpolate x's dimension if batch_size is 1.
 		if len(x_hat.size()) < 3:
 			x_hat = x_hat.view(1, *x_hat.size())
-			
-		# normalize
-		norm_x_hat = torch.norm(x_hat, 2, dim=2, keepdim=True)
-		norm_W = torch.norm(W, 2, dim=1, keepdim=True)
+		normalized_x_hat = F.normalize(x_hat, p=2, dim=2)
+		return normalized_x_hat
+		# return x_hat
 
-		normalized_x_hat = x_hat / norm_x_hat
-		normalized_W = W / norm_W
-
-		# calculate logit and softmax
-		prob_logits = torch.tensordot(normalized_x_hat, normalized_W, dims=([2], [1]))
-		print(prob_logits.size())
-		log_prob = self.log_softmax(prob_logits / self.tau)
-		return log_prob
-
-class AutoEncoder(nn.Module):
-	def __init__(self, embedding, tau, sentence_len, filter_size, filter_shape, latent_size):
-		super(AutoEncoder, self).__init__()
-		self.encoder = ConvolutionEncoder(embedding, sentence_len, filter_size, filter_shape, latent_size)
-		self.decoder = DeconvolutionDecoder(embedding, tau, sentence_len, filter_size, filter_shape, latent_size)
+class CNNAutoEncoder(nn.Module):
+	def __init__(self, embed_dim, sentence_len, filter_size, filter_shape, latent_size):
+		super(CNNAutoEncoder, self).__init__()
+		self.encoder = ConvolutionEncoder(embed_dim, sentence_len, filter_size, filter_shape, latent_size)
+		self.decoder = DeconvolutionDecoder(embed_dim, sentence_len, filter_size, filter_shape, latent_size)
 
 	def forward(self, x):
 		h = self.encoder(x)
-		log_prob = self.decoder(h)
-		prob = torch.transpose(log_prob, 1, 2)
-		return prob
+		x_hat = self.decoder(h)
+		return x_hat
 
 	def get_latent(self, x):
 		h = self.encoder(x)
+
+		return h
+
+class RNNEncoder(nn.Module):
+	def __init__(self, embed_dim, num_layers, latent_size, bidirectional):
+		super(RNNEncoder, self).__init__()
+		self.latent_size = latent_size
+		self.num_layers = num_layers
+		self.lstm = nn.LSTM(embed_dim, int(latent_size/2), num_layers, batch_first=True, dropout=0.2, bidirectional=bidirectional)
+
+		# initialize weights
+		#nn.init.xavier_uniform_(self.lstm.weight_ih_l0, gain=np.sqrt(2))
+		#nn.init.xavier_uniform_(self.lstm.weight_hh_l0, gain=np.sqrt(2))
+		#nn.init.orthogonal_(self.lstm.weight_ih_l0, gain=np.sqrt(2))
+		#nn.init.orthogonal_(self.lstm.weight_hh_l0, gain=np.sqrt(2))
+
+	def __call__(self, x):
+
+		# forward propagate lstm
+		h, _ = self.lstm(x) 
+		return h[:, -1, :].unsqueeze(1)
+
+class RNNDecoder(nn.Module):
+	def __init__(self, embed_dim, num_layers, latent_size, bidirectional):
+		super(RNNDecoder, self).__init__()
+		self.embed_dim = embed_dim
+		self.num_layers = num_layers
+		self.lstm = nn.LSTM(latent_size, int(embed_dim/2), num_layers, batch_first=True, dropout=0.2, bidirectional=bidirectional)
+
+		# initialize weights
+		#nn.init.xavier_uniform_(self.lstm.weight_ih_l0, gain=np.sqrt(2))
+		#nn.init.xavier_uniform_(self.lstm.weight_hh_l0, gain=np.sqrt(2))
+		#nn.init.orthogonal_(self.lstm.weight_ih_l0, gain=np.sqrt(2))
+		#nn.init.orthogonal_(self.lstm.weight_hh_l0, gain=np.sqrt(2))
+
+	def __call__(self, h):
+
+		# forward propagate lstm
+		x_hat, _ = self.lstm(h)
+		return x_hat
+
+class RNNAutoEncoder(nn.Module):
+	def __init__(self, embed_dim, sentence_len, num_layers, latent_size, bidirectional=True):
+		super(RNNAutoEncoder, self).__init__()
+		self.sentence_len = sentence_len
+		self.encoder = RNNEncoder(embed_dim, num_layers, latent_size, bidirectional)
+		self.decoder = RNNDecoder(embed_dim, num_layers, latent_size, bidirectional)
+
+	def forward(self, x):
+		h = self.encoder(x).expand(-1, self.sentence_len, -1)
+		x_hat = self.decoder(h)
+		return x_hat
+
+	def get_latent(self, x):
+		h = self.encoder(x).expand(-1, self.sentence_len, -1)
 
 		return h

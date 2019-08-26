@@ -14,37 +14,54 @@ import numpy as np
 import pandas as pd
 from sumeval.metrics.rouge import RougeCalculator
 from sumeval.metrics.bleu import BLEUCalculator
+from gensim.models.keyedvectors import FastTextKeyedVectors
+from gensim.similarities.index import AnnoyIndexer
 from hyperdash import Experiment
+from tqdm import tqdm
 
 from model.deconv_autoencoder import util
 from model.deconv_autoencoder import net
-from model.deconv_autoencoder.datasets import load_hotel_review_data
+from model.deconv_autoencoder.util import load_hotel_review_data, load_corpus_data
 from model.deconv_autoencoder.parallel import DataParallelModel, DataParallelCriterion
+from model.deconv_autoencoder.adamW import AdamW
 
 
 def train_reconstruction(args, CONFIG):
 	device = torch.device("cuda" if torch.cuda.is_available() and args.use_cuda else "cpu")
-	train_data, test_data = load_hotel_review_data(args.sentence_len)
-	train_loader, test_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=args.shuffle),\
-								  DataLoader(test_data, batch_size=int(args.batch_size/2), shuffle=False)
+	print("Loading embedding model...")
+	model_name = 'FASTTEXT_' + args.embedding_model + '.model'
+	embedding_model = FastTextKeyedVectors.load(os.path.join(CONFIG.EMBEDDING_PATH, model_name))
+	# pad_value = np.finfo(np.float32).eps
+	pad_value = 1.
+	args.pad_value = pad_value
+	embedding_model.add("<PAD>", np.full(embedding_model.vector_size, pad_value), replace=True)
+	embedding_model.init_sims(replace=True)	
+	print("Building index...")
+	indexer = AnnoyIndexer(embedding_model, 10)
+	print("Loading embedding model completed")
+	print("Loading dataset...")
+	train_dataset, val_dataset, max_sentence_len = load_corpus_data(args, CONFIG, embedding_model)
+	print("Loading dataset completed")
+	train_loader, val_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=args.shuffle),\
+								  DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
 
-	k = args.embed_dim
-	v = train_data.vocab_lennght()
-	# t1 = args.sentence_len + 2 * (args.filter_shape - 1)
-	t1 = args.sentence_len
+	# t1 = max_sentence_len + 2 * (args.filter_shape - 1)
+	t1 = max_sentence_len
 	t2 = int(math.floor((t1 - args.filter_shape) / 2) + 1) # "2" means stride size
 	t3 = int(math.floor((t2 - args.filter_shape) / 2) + 1)
-
 	if args.snapshot is None:
 		print("Start from initial")
-		embedding = nn.Embedding(v, k, max_norm=1, norm_type=2.0)
-		embedding.weight.data = embedding.weight.data.to(device)
-		autoencoder = net.AutoEncoder(embedding, args.tau, t3, args.filter_size, args.filter_shape, args.latent_size)
+		if args.RNN:
+			print("Set autoencoder to RNN")
+			autoencoder = net.RNNAutoEncoder(train_dataset.embedding_dim(), max_sentence_len, args.num_layer, args.latent_size)
+		else:
+			print("Set autoencoder to CNN")
+			autoencoder = net.CNNAutoEncoder(train_dataset.embedding_dim(), t3, args.filter_size, args.filter_shape, args.latent_size)
 	else:
 		print("Restart from snapshot")
-		autoencoder = torch.load(os.path.join(CONFIG.DECONV_SNAPSHOT_PATH, args.snapshot))
+		autoencoder = torch.load(os.path.join(CONFIG.SNAPSHOT_PATH, args.snapshot))
 
-	criterion = nn.NLLLoss()
+	criterion = nn.MSELoss()
 	autoencoder.to(device)
 	criterion.to(device)
 	if args.distributed:
@@ -52,9 +69,7 @@ def train_reconstruction(args, CONFIG):
 		criterion = DataParallelCriterion(criterion)
 	exp = Experiment("Reconstruction Training")
 	try:
-		lr = args.lr
-		optimizer = Adam(autoencoder.parameters(), lr=lr)
-
+		optimizer = AdamW(autoencoder.parameters(), lr=args.lr, weight_decay=args.weight_decay, amsgrad=True)
 		avg_loss = []
 		rouge_1 = []
 		rouge_2 = []
@@ -63,17 +78,15 @@ def train_reconstruction(args, CONFIG):
 
 		steps = 0
 		for epoch in range(args.epochs):
-			print('Epoch:', epoch)
+			print("Epoch: {}".format(epoch))
 			for batch in train_loader:
 				torch.cuda.empty_cache()
 				feature = Variable(batch)
 				if args.use_cuda:
 					feature = feature.to(device)
-
 				optimizer.zero_grad()
-
-				prob = autoencoder(feature)
-				loss = criterion(prob, feature)
+				feature_hat = autoencoder(feature)
+				loss = criterion(feature_hat, feature)
 				if args.distributed:
 					loss = loss.mean()
 				loss.backward()
@@ -91,37 +104,31 @@ def train_reconstruction(args, CONFIG):
 					print("Test!!")
 					input_data = feature[0]
 					if args.distributed:
-						single_data = prob[0][0]
+						single_data = feature_hat[0][0]
 					else:
-						single_data = prob[0]
-					_, predict_index = torch.max(single_data, 0)
-					input_sentence = util.transform_id2word(input_data.detach(), train_loader.dataset.index2word, lang="en")
-					predict_sentence = util.transform_id2word(predict_index.detach(), train_loader.dataset.index2word, lang="en")
+						single_data = feature_hat[0]
+					input_sentence = util.transform_vec2sentence(input_data.detach().cpu().numpy(), embedding_model, indexer)
+					predict_sentence = util.transform_vec2sentence(single_data.detach().cpu().numpy(), embedding_model, indexer)
 					print("Input Sentence:")
 					print(input_sentence)
 					print("Output Sentence:")
 					print(predict_sentence)
-					del input_data, single_data, _, predict_index
-				del feature, prob, loss
+					del input_data, single_data
+				del feature, feature_hat, loss
 
 			if epoch % args.test_interval == 0:
-				_avg_loss, _rouge_1, _rouge_2 = eval_reconstruction(autoencoder, criterion, test_loader, args, device)
+				_avg_loss, _rouge_1, _rouge_2 = eval_reconstruction(autoencoder, embedding_model, indexer, criterion, val_loader, args, device)
 				avg_loss.append(_avg_loss)
 				rouge_1.append(_rouge_1)
 				rouge_2.append(_rouge_2)
 
 			if epoch % args.save_interval == 0:
-				util.save_models(optimizer, CONFIG.DECONV_SNAPSHOT_PATH, "autoencoder", epoch)
+				util.save_models(autoencoder, CONFIG.SNAPSHOT_PATH, "autoencoder", epoch)
 
 		# finalization
-		# save vocabulary
-		with open(os.path.join(CONFIG.DECONV_VOCAB_PATH, 'word2index.p'), "wb") as w2i, \
-		open(os.path.join(CONFIG.DECONV_VOCAB_PATH, 'index2word.p'), "wb") as i2w:
-			pickle.dump(train_loader.dataset.word2index, w2i)
-			pickle.dump(train_loader.dataset.index2word, i2w)
 
 		# save models
-		util.save_models(autoencoder, CONFIG.DECONV_SNAPSHOT_PATH, "autoencoder", "final")
+		util.save_models(autoencoder, CONFIG.SNAPSHOT_PATH, "autoencoder", "final")
 		table = []
 		table.append(avg_loss)
 		table.append(rouge_1)
@@ -136,40 +143,35 @@ def train_reconstruction(args, CONFIG):
 	finally:
 		exp.end()
 
-def eval_reconstruction(autoencoder, criterion, data_iter, args, device):
+def eval_reconstruction(autoencoder, embedding_model, indexer, criterion, data_iter, args, device):
 	print("=================Eval======================")
 	autoencoder.eval()
-	avg_loss = 0
-	rouge_1 = 0.0
-	rouge_2 = 0.0
-	index2word = data_iter.dataset.index2word
-	for batch in data_iter:
+	step = 0
+	avg_loss = 0.
+	rouge_1 = 0.
+	rouge_2 = 0.
+	for batch in tqdm(data_iter):
 		torch.cuda.empty_cache()
 		with torch.no_grad():
 			feature = Variable(batch)
 			if args.use_cuda:
 				feature = feature.to(device)
-		prob = autoencoder(feature)		
-		if args.distributed:
-			concat_prob = torch.cat(prob, 0)
-			_, predict_index = torch.max(concat_prob, 1)
-			del concat_prob
-		else:
-			_, predict_index = torch.max(prob, 1)
-		original_sentences = [util.transform_id2word(sentence, index2word, "en") for sentence in batch.detach()]
-		predict_sentences = [util.transform_id2word(sentence, index2word, "en") for sentence in predict_index.detach()]
-		r1, r2 = calc_rouge(original_sentences, predict_sentences)
-		rouge_1 += r1
-		rouge_2 += r2
-		loss = criterion(prob, feature)
+		feature_hat = autoencoder(feature)	
+		original_sentences = [util.transform_vec2sentence(sentence, embedding_model, indexer) for sentence in feature.detach().cpu().numpy()]		
+		predict_sentences = [util.transform_vec2sentence(sentence, embedding_model, indexer) for sentence in feature_hat.detach().cpu().numpy()]	
+		r1, r2 = calc_rouge(original_sentences, predict_sentences)		
+		rouge_1 += r1 / len(batch)
+		rouge_2 += r2 / len(batch)
+		loss = criterion(feature_hat, feature)	
 		if args.distributed:
 			loss = loss.mean()
 		avg_loss += loss.detach().item()
-		del feature, prob, _, predict_index, loss
-	avg_loss = avg_loss / len(data_iter.dataset)
-	# avg_loss = avg_loss / args.sentence_len
-	rouge_1 = rouge_1 / len(data_iter.dataset)
-	rouge_2 = rouge_2 / len(data_iter.dataset)
+		step = step + 1
+		del feature, feature_hat, loss
+	avg_loss = avg_loss / step
+	# avg_loss = avg_loss / args.max_sentence_len
+	rouge_1 = rouge_1 / step
+	rouge_2 = rouge_2 / step
 	print("Evaluation - loss: {}  Rouge1: {}    Rouge2: {}".format(avg_loss, rouge_1, rouge_2))
 	print("===============================================================")
 	autoencoder.train()
