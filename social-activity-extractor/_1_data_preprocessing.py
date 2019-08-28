@@ -21,7 +21,7 @@ from gensim.test.utils import datapath
 from polyglot.detect import Detector
 
 CONFIG = config.Config
-okt=Okt()
+# okt=Okt()
 
 def make_corpus(target_folder):
 	print(target_folder)
@@ -73,37 +73,37 @@ def make_corpus(target_folder):
 	# 		w.writerow((k, v))
 	print("completed to make corpus")
 
-def multi_language_tokenizer(input_line):
-	language = Detector(input_line, quiet=True).languages[0]
+# def multi_language_tokenizer(input_line):
+# 	language = Detector(input_line, quiet=True).languages[0]
 
-	output_line = []
-	if language.code == 'en':
-		tokens = word_tokenize(input_line)
-		for token in tokens:
-			if token != '#':
-				output_line.append(token)
-	elif language.code == 'ko':
-		tokens = okt.pos(input_line)
-		for token in tokens:
-			if token[1] == 'Hashtag':
-				output_line.append(token[0][1:])
-			elif token[1] == 'Punctuation':
-				pass
-			else:
-				output_line.append(token[0])
-	elif language.code == 'ja':
-		tokens = nagisa.tagging(input_line)
-		for token in tokens.words:
-			if token != '#':
-				output_line.append(token)
-	elif language.code == 'zh_Hant':
-		tokens = jieba.cut(input_line)
-		for token in tokens:
-			if token != '#':
-				output_line.append(token)
-	else:
-		return ("", language.name)
-	return (input_line, language.code)
+# 	output_line = []
+# 	if language.code == 'en':
+# 		tokens = word_tokenize(input_line)
+# 		for token in tokens:
+# 			if token != '#':
+# 				output_line.append(token)
+# 	elif language.code == 'ko':
+# 		tokens = okt.pos(input_line)
+# 		for token in tokens:
+# 			if token[1] == 'Hashtag':
+# 				output_line.append(token[0][1:])
+# 			elif token[1] == 'Punctuation':
+# 				pass
+# 			else:
+# 				output_line.append(token[0])
+# 	elif language.code == 'ja':
+# 		tokens = nagisa.tagging(input_line)
+# 		for token in tokens.words:
+# 			if token != '#':
+# 				output_line.append(token)
+# 	elif language.code == 'zh_Hant':
+# 		tokens = jieba.cut(input_line)
+# 		for token in tokens:
+# 			if token != '#':
+# 				output_line.append(token)
+# 	else:
+# 		return ("", language.name)
+# 	return (input_line, language.code)
 
 def make_fasttext(target_corpus):
 
@@ -115,9 +115,12 @@ def make_fasttext(target_corpus):
 	# embedding_model = FastText(sentences=sentences, size=dimension_size, window=6, min_count=5, workers=4, sg = 1) #skip-gram
 	embedding_model = FastText(size=dimension_size, window=6, min_count=5, workers=4, sg = 1) #skip-gram
 	embedding_model.build_vocab(sentences=sentences)
-	print(embedding_model.epochs)
 	embedding_model.train(sentences=sentences, total_examples=embedding_model.corpus_count, epochs=10)
 	model_name = "FASTTEXT_"+ target_corpus + ".model"
+	# pad_value = np.finfo(np.float32).eps
+	pad_value = 1.
+	embedding_model.wv.add("<PAD>", np.full(embedding_model.vector_size, pad_value), replace=True)
+	embedding_model.wv.init_sims(replace=True)
 	embedding_model.wv.save(os.path.join(CONFIG.EMBEDDING_PATH, model_name))
 	print("embedding completed")
 
@@ -260,7 +263,6 @@ def make_fasttext_pretrained(target_corpus, pretrined_model):
 	model_name = "FASTTEXT_"+ target_corpus + "_pretrained.model"
 	embedding_model.wv.save(os.path.join(CONFIG.EMBEDDING_PATH, model_name))
 	print("embedding completed")
-
 
 def run(option):
 	if option == 0:

@@ -7,6 +7,14 @@ data/hongdae/*
 data/pickle/*
 !data/pickle/.keep
 
+
+data/dataset/*
+data/backup/*
+data/instagram/*
+data/temp/*
+
+model/rec_checkpoint/*
+
 csv/*
 !csv/.keep
 

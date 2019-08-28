@@ -1,7 +1,9 @@
 # config.py
 class Config:
 	DATA_PATH = './data'
+	DATASET_PATH = './data/dataset'
 	EMBEDDING_PATH = './embedding'
 	CSV_PATH = './csv'
-	SNAPSHOT_PATH = './model/deconv_autoencoder/rec_snapshot'
-	VOCAB_PATH = './model/deconv_autoencoder/vocabulary'
+	CHECKPOINT_PATH = './model/rec_checkpoint'
+	MAX_SENTENCE_LEN = 513
+	MAX_SEQUENCE_LEN = 10
