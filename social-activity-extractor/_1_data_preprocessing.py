@@ -10,8 +10,9 @@ import numpy as np
 
 
 from nltk import word_tokenize
-import nagisa
-import jieba
+#from konlpy.tag import Okt
+#import nagisa
+#import jieba
 
 from gensim.models import word2vec, Word2Vec, FastText 
 from gensim.models.fasttext import load_facebook_model
