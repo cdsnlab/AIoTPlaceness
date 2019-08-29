@@ -10,7 +10,6 @@ import numpy as np
 
 
 from nltk import word_tokenize
-from konlpy.tag import Okt
 import nagisa
 import jieba
 

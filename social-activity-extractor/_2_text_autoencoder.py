@@ -123,7 +123,7 @@ def train_reconstruction(args):
 		optimizer.load_state_dict(checkpoint['optimizer'])
 
 
-	exp = Experiment("Reconstruction Training")
+	exp = Experiment("Text autoencoder")
 	try:
 		avg_loss = []
 		rouge_1 = []
