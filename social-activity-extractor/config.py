@@ -1,9 +1,17 @@
 # config.py
+import platform
+import os
 class Config:
-	DATA_PATH = './data'
-	DATASET_PATH = './data/dataset'
-	EMBEDDING_PATH = './embedding'
+	
+	if platform.system() == 'Windows':
+		root_dir = 'Y:'
+	else:
+		root_dir = '/cdsn_nas'
+
+	DATA_PATH = os.path.join(root_dir, 'processed')
+	DATASET_PATH = os.path.join(root_dir, 'processed', 'dataset')
+	EMBEDDING_PATH = os.path.join(root_dir, 'processed', 'embedding')
+	CHECKPOINT_PATH = os.path.join(root_dir, 'processed', 'checkpoint')
 	CSV_PATH = './csv'
-	CHECKPOINT_PATH = './model/rec_checkpoint'
 	MAX_SENTENCE_LEN = 513
 	MAX_SEQUENCE_LEN = 10

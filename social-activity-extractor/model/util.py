@@ -16,17 +16,14 @@ class ToTensor(object):
 		return torch.from_numpy(data).type(torch.FloatTensor)
 
 
-def load_text_data(args, CONFIG, embedding_model):
-	dataset_path = os.path.join(CONFIG.DATASET_PATH, args.target_dataset)
-	
+def load_text_data(args, CONFIG, embedding_model):	
 	full_data = []
-	for loc_id in tqdm(os.listdir(dataset_path)):
-		path_dir = os.path.join(dataset_path, loc_id)
-		for post in os.listdir(path_dir):
-			with open(os.path.join(path_dir, post, "text.txt"), 'r', encoding='utf-8', newline='\n') as f:
-				text_data = f.read()
-				full_data.append(text_data)
-			f.close()
+	df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'posts.csv'), header=None, encoding='utf-8')
+	pbar = tqdm(total=df_data.shape[0])
+	for index, row in df_data.iterrows():
+		pbar.update(1)
+		full_data.append(row.iloc[1])
+	pbar.close()
 
 	train_size = int(args.split_rate * len(full_data))
 	train_data, val_data = full_data[:train_size], full_data[train_size:]
@@ -63,55 +60,34 @@ class TextDataset(Dataset):
 			vector_array = self.transform(vector_array)
 		return vector_array
 
-def load_imgseq_data(args, CONFIG, embedding_model, device):
-	dataset_path = os.path.join(CONFIG.DATASET_PATH, args.target_dataset)
-	transform_func = transforms.Compose([
-			transforms.Resize(256),
-			transforms.CenterCrop(224),
-			transforms.ToTensor(),
-			transforms.Normalize(mean=[0.485, 0.456, 0.406],
-									 std=[0.229, 0.224, 0.225])
-		])
+def load_imgseq_data(args, CONFIG, embedding_model):
 	full_data = []
-	for loc_id in tqdm(os.listdir(dataset_path)):
-		path_dir = os.path.join(dataset_path, loc_id)
-		for post in os.listdir(path_dir):
-			img_dir = os.path.join(path_dir, post, "images")
-			img_list = []
-			for image in os.listdir(img_dir):
-				img_path = os.path.join(img_dir,image)
-				img_list.append(transform_func(pil_loader(img_path)))
-			img_tensor = torch.stack(img_list)
-			full_data.append(img_tensor)
 
+	image_dir = os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'resnet50')
+	for image_path in tqdm(os.listdir(image_dir)):
+		with open(image_path, "rb") as f:
+			full_data.append(cPickle.load(f))
+		f.close()
+	full_data = np.array(full_data, dtype=np.float32)
 	train_size = int(args.split_rate * len(full_data))
 	train_data, val_data = full_data[:train_size], full_data[train_size:]
-	train_dataset, val_dataset = ImgseqDataset(train_data, embedding_model, CONFIG, device=device, transform=ToTensor()), \
-							 ImgseqDataset(val_data, embedding_model, CONFIG, device=device, transform=ToTensor())
+	train_dataset, val_dataset = ImgseqDataset(train_data, embedding_model, CONFIG, transform=ToTensor()), \
+							 ImgseqDataset(val_data, embedding_model, CONFIG, transform=ToTensor())
 	return train_dataset, val_dataset
 
 
 class ImgseqDataset(Dataset):
-	def __init__(self, data_list, embedding_model, CONFIG, device, transform):
+	def __init__(self, data_list, embedding_model, CONFIG, transform):
 		self.data = data_list
 		self.embedding_model = embedding_model
 		self.CONFIG = CONFIG
-		self.device = device
 		self.transform = transform
 
 	def __len__(self):
 		return len(self.data)
 
 	def __getitem__(self, idx):
-		with torch.no_grad():
-			image_tensor = self.data[idx].to(self.device)
-		vector_array = self.embedding_model(image_tensor).detach().cpu().numpy()
-		if len(vector_array) < self.CONFIG.MAX_SEQUENCE_LEN:
-			vector_array = np.lib.pad(vector_array,
-										((0, self.CONFIG.MAX_SEQUENCE_LEN - len(vector_array)), (0, 0)),
-										"constant",
-										constant_values=(1.))
-		del image_tensor
+		vector_array = self.data[idx]
 		if self.transform:
 			vector_array = self.transform(vector_array)
 		return vector_array

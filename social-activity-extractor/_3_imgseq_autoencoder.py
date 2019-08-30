@@ -61,16 +61,16 @@ def main():
 	parser.add_argument('-num_layer', type=int, default=4, help='layer number')
 
 	# train
-	parser.add_argument('-distributed', action='store_true', default=False, help='whether using cuda')
+	parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
 	# option
 	parser.add_argument('-resume', type=str, default=None, help='filename of checkpoint to resume ')
 
 	args = parser.parse_args()
 
-	if args.distributed:
+	if args.noti:
 		slacknoti("underkoo start using")
 	train_reconstruction(args)
-	if args.distributed:
+	if args.noti:
 		slacknoti("underkoo end using")
 
 

@@ -55,7 +55,7 @@ def main():
 	# data
 	parser.add_argument('-target_dataset', type=str, default=None, help='folder name of target dataset')
 	parser.add_argument('-shuffle', default=True, help='shuffle data every epoch')
-	parser.add_argument('-split_rate', type=float, default=0.99, help='split rate between train and validation')
+	parser.add_argument('-split_rate', type=float, default=0.9, help='split rate between train and validation')
 	# model
 	parser.add_argument('-latent_size', type=int, default=900, help='size of latent variable')
 	parser.add_argument('-filter_size', type=int, default=300, help='filter size of convolution')
@@ -64,16 +64,16 @@ def main():
 	parser.add_argument('-num_layer', type=int, default=4, help='layer number')
 
 	# train
-	parser.add_argument('-distributed', action='store_true', default=False, help='whether using cuda')
+	parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
 	# option
 	parser.add_argument('-resume', type=str, default=None, help='filename of checkpoint to resume ')
 
 	args = parser.parse_args()
 
-	if args.distributed:
+	if args.noti:
 		slacknoti("underkoo start using")
 	train_reconstruction(args)
-	if args.distributed:
+	if args.noti:
 		slacknoti("underkoo end using")
 
 
@@ -149,10 +149,7 @@ def train_reconstruction(args):
 					exp.metric("Loss", loss.detach().item())
 					print("Test!!")
 					input_data = feature[0]
-					if args.distributed:
-						single_data = feature_hat[0][0]
-					else:
-						single_data = feature_hat[0]
+					single_data = feature_hat[0]
 					input_sentence = util.transform_vec2sentence(input_data.detach().cpu().numpy(), embedding_model, indexer)
 					predict_sentence = util.transform_vec2sentence(single_data.detach().cpu().numpy(), embedding_model, indexer)
 					print("Input Sentence:")

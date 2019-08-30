@@ -87,10 +87,9 @@ def make_corpus(target_folder):
 # 		return ("", language.name)
 # 	return (input_line, language.code)
 
-def make_fasttext(target_corpus):
+def make_fasttext(target_dataset):
 
-	target_corpus_name = target_corpus + '.txt'
-	corpus_path = os.path.join(CONFIG.DATA_PATH, "corpus", target_corpus_name)
+	corpus_path = os.path.join(CONFIG.DATASET_PATH, target_dataset, "corpus.txt")
 	sentences = word2vec.LineSentence(corpus_path) 
 	dimension_size = 300
 	print("embedding started")
@@ -98,7 +97,7 @@ def make_fasttext(target_corpus):
 	embedding_model = FastText(size=dimension_size, window=6, min_count=5, workers=4, sg = 1) #skip-gram
 	embedding_model.build_vocab(sentences=sentences)
 	embedding_model.train(sentences=sentences, total_examples=embedding_model.corpus_count, epochs=10)
-	model_name = "FASTTEXT_"+ target_corpus + ".model"
+	model_name = "FASTTEXT_"+ target_dataset + ".model"
 	pad_value = np.finfo(np.float32).eps
 	pad_value = 1.
 	embedding_model.wv.add("<PAD>", np.full(embedding_model.vector_size, pad_value), replace=True)
@@ -250,7 +249,7 @@ def run(option):
 	if option == 0:
 		make_corpus(target_folder=sys.argv[2])
 	elif option == 1:
-		make_fasttext(target_corpus=sys.argv[2])
+		make_fasttext(target_dataset=sys.argv[2])
 	elif option == 2:
 		model_to_csv(target_model=sys.argv[2])
 	elif option == 3:
