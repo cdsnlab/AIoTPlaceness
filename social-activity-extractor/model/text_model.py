@@ -7,9 +7,7 @@ from torch.autograd import Variable
 import math
 import numpy as np
 
-from model.silu import SiLU
-from model.maxout import Maxout
-from model.ptanh import PTanh
+from model.component import SiLU, Maxout, PTanh
 
 class ConvolutionEncoder(nn.Module):
 	def __init__(self, embed_dim, sentence_len, filter_size, filter_shape, latent_size):

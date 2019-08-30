@@ -19,15 +19,15 @@ from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision.models as models
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
 from torch.optim.adam import Adam
 from torch.optim.lr_scheduler import StepLR, CyclicLR
 from model import util
-from model import text_model
-from model.util import load_text_data
-from model.component import AdamW
-
+from model import imgseq_model
+from model.component import AdamW, Identity
+from model.util import load_imgseq_data
 
 
 CONFIG = config.Config
@@ -58,9 +58,6 @@ def main():
 	parser.add_argument('-split_rate', type=float, default=0.99, help='split rate between train and validation')
 	# model
 	parser.add_argument('-latent_size', type=int, default=900, help='size of latent variable')
-	parser.add_argument('-filter_size', type=int, default=300, help='filter size of convolution')
-	parser.add_argument('-filter_shape', type=int, default=5,
-						help='filter shape to use for convolution')
 	parser.add_argument('-num_layer', type=int, default=4, help='layer number')
 
 	# train
@@ -80,56 +77,49 @@ def main():
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def train_reconstruction(args):
 	print("Loading embedding model...")
-	model_name = 'FASTTEXT_' + args.target_dataset + '.model'
-	embedding_model = FastTextKeyedVectors.load(os.path.join(CONFIG.EMBEDDING_PATH, model_name))
-	embedding_dim = embedding_model.vector_size	
+	embedding_model = models.resnet50(pretrained=True)
+	embedding_dim = embedding_model.fc.in_features
 	args.embedding_dim = embedding_dim
-	print("Building index...")
-	indexer = AnnoyIndexer(embedding_model, 10)
-	print("Loading embedding model completed")
+	embedding_model.fc = Identity()
+	embedding_model.to(device)
+	embedding_model.eval()
 	print("Loading dataset...")
-	train_dataset, val_dataset = load_text_data(args, CONFIG, embedding_model)
+	train_dataset, val_dataset = load_imgseq_data(args, CONFIG, embedding_model, device=device)
 	print("Loading dataset completed")
 	train_loader, val_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=args.shuffle),\
 								  DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
 
-	# t1 = max_sentence_len + 2 * (args.filter_shape - 1)
-	t1 = CONFIG.MAX_SENTENCE_LEN
-	t2 = int(math.floor((t1 - args.filter_shape) / 2) + 1) # "2" means stride size
-	t3 = int(math.floor((t2 - args.filter_shape) / 2) + 1)
-	args.t3 = t3	
-
-	text_encoder = text_model.ConvolutionEncoder(embedding_dim, t3, args.filter_size, args.filter_shape, args.latent_size)
-	text_decoder = text_model.DeconvolutionDecoder(embedding_dim, t3, args.filter_size, args.filter_shape, args.latent_size)
+	imgseq_encoder = imgseq_model.RNNEncoder(embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
+	imgseq_decoder = imgseq_model.RNNDecoder(embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
 	if args.resume:
 		print("Restart from checkpoint")
 		checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.resume), map_location=lambda storage, loc: storage)
 		best_loss = checkpoint['best_loss']
 		start_epoch = checkpoint['epoch']
-		text_encoder.load_state_dict(checkpoint['text_encoder'])
-		text_decoder.load_state_dict(checkpoint['text_decoder'])
+		imageseq_encoder.load_state_dict(checkpoint['imgseq_encoder'])
+		imageseq_decoder.load_state_dict(checkpoint['imgseq_decoder'])
 	else:		
 		print("Start from initial")
 		best_loss = 999999.
 		start_epoch = 0
 	
-	text_autoencoder = text_model.TextAutoencoder(text_encoder, text_decoder)
+	imgseq_autoencoder = imgseq_model.ImgseqAutoEncoder(imgseq_encoder, imgseq_decoder, CONFIG.MAX_SEQUENCE_LEN)
 	criterion = nn.MSELoss().to(device)
-	text_autoencoder.to(device)
+	imgseq_autoencoder.to(device)
 
-	optimizer = AdamW(text_autoencoder.parameters(), lr=args.lr, weight_decay=args.weight_decay, amsgrad=True)
+	optimizer = AdamW(imgseq_autoencoder.parameters(), lr=args.lr, weight_decay=args.weight_decay, amsgrad=True)
 
 	if args.resume:
 		optimizer.load_state_dict(checkpoint['optimizer'])
 
 
-	exp = Experiment("Text autoencoder")
+	exp = Experiment("Image-sequence autoencoder")
 	try:
 		avg_loss = []
 		rouge_1 = []
 		rouge_2 = []
 
-		text_autoencoder.train() 
+		imgseq_autoencoder.train() 
 
 		for epoch in range(start_epoch, args.epochs):
 			print("Epoch: {}".format(epoch))
@@ -137,7 +127,7 @@ def train_reconstruction(args):
 				torch.cuda.empty_cache()
 				feature = Variable(batch).to(device)
 				optimizer.zero_grad()
-				feature_hat = text_autoencoder(feature)
+				feature_hat = imgseq_autoencoder(feature)
 				loss = criterion(feature_hat, feature)
 				loss.backward()
 				optimizer.step()
@@ -147,52 +137,36 @@ def train_reconstruction(args):
 					print("Steps: {}".format(steps))
 					print("Loss: {}".format(loss.detach().item()))
 					exp.metric("Loss", loss.detach().item())
-					print("Test!!")
 					input_data = feature[0]
-					if args.distributed:
-						single_data = feature_hat[0][0]
-					else:
-						single_data = feature_hat[0]
-					input_sentence = util.transform_vec2sentence(input_data.detach().cpu().numpy(), embedding_model, indexer)
-					predict_sentence = util.transform_vec2sentence(single_data.detach().cpu().numpy(), embedding_model, indexer)
-					print("Input Sentence:")
-					print(input_sentence)
-					print("Output Sentence:")
-					print(predict_sentence)
-					del input_data, single_data
 				del feature, feature_hat, loss
 			
-			_avg_loss, _rouge_1, _rouge_2 = eval_reconstruction(text_autoencoder, embedding_model, indexer, criterion, val_loader, args)
+			_avg_loss = eval_reconstruction(imgseq_autoencoder, embedding_model, criterion, val_loader, args)
 			avg_loss.append(_avg_loss)
-			rouge_1.append(_rouge_1)
-			rouge_2.append(_rouge_2)
 
 			if best_loss > _avg_loss:
 				best_loss = _avg_loss
 				util.save_models({
 					'epoch': epoch + 1,
-					'text_encoder': text_encoder.state_dict(),
-					'text_decoder': text_decoder.state_dict(),
+					'imgseq_encoder': imgseq_encoder.state_dict(),
+					'imgseq_decoder': imgseq_decoder.state_dict(),
 					'best_loss': best_loss,
 					'optimizer' : optimizer.state_dict(),
-				}, CONFIG.CHECKPOINT_PATH, "text_autoencoder")
+				}, CONFIG.CHECKPOINT_PATH, "imgseq_autoencoder")
 
 		# finalization
 		table = []
 		table.append(avg_loss)
-		table.append(rouge_1)
-		table.append(rouge_2)
 		df = pd.DataFrame(table)
 		df = df.transpose()
-		df.columns = ['avg_loss', 'rouge_1', 'rouge_2']
-		df.to_csv(os.path.join(CONFIG.CSV_PATH, 'Evaluation_result.csv'), encoding='utf-8-sig')
+		df.columns = ['avg_loss']
+		df.to_csv(os.path.join(CONFIG.CSV_PATH, 'Evaluation_result_imgseq.csv'), encoding='utf-8-sig')
 
 		print("Finish!!!")
 
 	finally:
 		exp.end()
 
-def eval_reconstruction(autoencoder, embedding_model, indexer, criterion, data_iter, args):
+def eval_reconstruction(autoencoder, embedding_model, criterion, data_iter, args):
 	print("=================Eval======================")
 	autoencoder.eval()
 	step = 0
@@ -204,36 +178,17 @@ def eval_reconstruction(autoencoder, embedding_model, indexer, criterion, data_i
 		with torch.no_grad():
 			feature = Variable(batch).to(device)
 		feature_hat = autoencoder(feature)
-		original_sentences = [util.transform_vec2sentence(sentence, embedding_model, indexer) for sentence in feature.detach().cpu().numpy()]		
-		predict_sentences = [util.transform_vec2sentence(sentence, embedding_model, indexer) for sentence in feature_hat.detach().cpu().numpy()]	
-		r1, r2 = calc_rouge(original_sentences, predict_sentences)		
-		rouge_1 += r1 / len(batch)
-		rouge_2 += r2 / len(batch)
 		loss = criterion(feature_hat, feature)	
 		avg_loss += loss.detach().item()
 		step = step + 1
 		del feature, feature_hat, loss
 	avg_loss = avg_loss / step
-	rouge_1 = rouge_1 / step
-	rouge_2 = rouge_2 / step
-	print("Evaluation - loss: {}  Rouge1: {}    Rouge2: {}".format(avg_loss, rouge_1, rouge_2))
+	print("Evaluation - loss: {}".format(avg_loss))
 	print("===============================================================")
 	autoencoder.train()
 
-	return avg_loss, rouge_1, rouge_2
+	return avg_loss
 
-def calc_rouge(original_sentences, predict_sentences):
-	rouge_1 = 0.0
-	rouge_2 = 0.0
-	for original, predict in zip(original_sentences, predict_sentences):
-		# Remove padding
-		original, predict = original.replace("<PAD>", "").strip(), predict.replace("<PAD>", "").strip()
-		rouge = RougeCalculator(stopwords=True, lang="en")
-		r1 = rouge.rouge_1(summary=predict, references=original)
-		r2 = rouge.rouge_2(summary=predict, references=original)
-		rouge_1 += r1
-		rouge_2 += r2
-	return rouge_1, rouge_2
 
 
 if __name__ == '__main__':

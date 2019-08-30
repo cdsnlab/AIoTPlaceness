@@ -20,6 +20,8 @@ from gensim.models.keyedvectors import Word2VecKeyedVectors, FastTextKeyedVector
 from gensim.test.utils import datapath
 from polyglot.detect import Detector
 
+
+from util import process_text
 CONFIG = config.Config
 # okt=Okt()
 
@@ -41,29 +43,9 @@ def make_corpus(target_folder):
 				with open(os.path.join(text_path, text_folder, text_file), 'r', encoding='utf-8', newline='\n') as f:
 					# print("file: ", text_file)
 					data = f.read()
-					data = data.replace("#", " ")
-					data = data.replace("\n", " ")
-					expression = re.compile('[ㄱ-ㅣ가-힣|a-zA-Z|\s]+') 
-					data = [re.findall(expression, x) for x in data if x.isprintable()]
-					#data = [regex.findall('[\p{Hangul}|\p{Latin}|\s]+', x) for x in data if x.isprintable()]
-					word_list = []
-					word = []
-					for character in data:
-						if len(character) is 0:
-							continue
-						if character[0] == ' ' or character[0] == 'ㅤ':
-							if len(word) != 0:
-								word_list.append(''.join(word))
-								word = []
-							else:
-								continue
-						else:
-							if character[0].isalpha():
-								character[0] = character[0].lower()
-							word.append(character[0])
-					line = ' '.join(word_list)
+					line = process_text(data)
 					if len(line) > 0:
-						f_wr.write(line + ' <EOS>\n')
+						f_wr.write(line + ' <EOS> <PAD>\n')
 				count = count + 1
 	f_wr.close()
 	# csv_name = target_folder + '_meta.csv'
@@ -112,12 +94,12 @@ def make_fasttext(target_corpus):
 	sentences = word2vec.LineSentence(corpus_path) 
 	dimension_size = 300
 	print("embedding started")
-	# embedding_model = FastText(sentences=sentences, size=dimension_size, window=6, min_count=5, workers=4, sg = 1) #skip-gram
+	embedding_model = FastText(sentences=sentences, size=dimension_size, window=6, min_count=5, workers=4, sg = 1) #skip-gram
 	embedding_model = FastText(size=dimension_size, window=6, min_count=5, workers=4, sg = 1) #skip-gram
 	embedding_model.build_vocab(sentences=sentences)
 	embedding_model.train(sentences=sentences, total_examples=embedding_model.corpus_count, epochs=10)
 	model_name = "FASTTEXT_"+ target_corpus + ".model"
-	# pad_value = np.finfo(np.float32).eps
+	pad_value = np.finfo(np.float32).eps
 	pad_value = 1.
 	embedding_model.wv.add("<PAD>", np.full(embedding_model.vector_size, pad_value), replace=True)
 	embedding_model.wv.init_sims(replace=True)

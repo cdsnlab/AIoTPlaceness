@@ -7,9 +7,7 @@ from torch.autograd import Variable
 import math
 import numpy as np
 
-from model.silu import SiLU
-from model.maxout import Maxout
-from model.ptanh import PTanh
+from model.component import SiLU, Maxout, PTanh
 
 class RNNEncoder(nn.Module):
 	def __init__(self, embed_dim, num_layers, latent_size, bidirectional):
@@ -49,9 +47,9 @@ class RNNDecoder(nn.Module):
 		x_hat, _ = self.lstm(h)
 		return x_hat
 
-class ImageAutoEncoder(nn.Module):
+class ImgseqAutoEncoder(nn.Module):
 	def __init__(self, encoder, decoder, sequence_len):
-		super(ImageAutoEncoder, self).__init__()
+		super(ImgseqAutoEncoder, self).__init__()
 		self.encoder = encoder
 		self.decoder = decoder
 		self.sequence_len = sequence_len
