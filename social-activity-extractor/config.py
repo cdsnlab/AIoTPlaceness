@@ -6,7 +6,7 @@ class Config:
 	if platform.system() == 'Windows':
 		root_dir = 'Y:'
 	else:
-		root_dir = '/cdsn_nas'
+		root_dir = '/cdsn-nas'
 
 	DATA_PATH = os.path.join(root_dir, 'processed')
 	DATASET_PATH = os.path.join(root_dir, 'processed', 'dataset')
