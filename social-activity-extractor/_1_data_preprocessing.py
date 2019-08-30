@@ -18,7 +18,7 @@ from gensim.models import word2vec, Word2Vec, FastText
 from gensim.models.fasttext import load_facebook_model
 from gensim.models.keyedvectors import Word2VecKeyedVectors, FastTextKeyedVectors
 from gensim.test.utils import datapath
-from polyglot.detect import Detector
+#from polyglot.detect import Detector
 
 
 from util import process_text
