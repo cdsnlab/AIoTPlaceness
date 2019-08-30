@@ -84,7 +84,7 @@ def train_reconstruction(args):
 	embedding_model.to(device)
 	embedding_model.eval()
 	print("Loading dataset...")
-	train_dataset, val_dataset = load_imgseq_data(args, CONFIG, embedding_model, device=device)
+	train_dataset, val_dataset = load_imgseq_data(args, CONFIG, embedding_model)
 	print("Loading dataset completed")
 	train_loader, val_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=args.shuffle),\
 								  DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
@@ -116,8 +116,6 @@ def train_reconstruction(args):
 	exp = Experiment("Image-sequence autoencoder")
 	try:
 		avg_loss = []
-		rouge_1 = []
-		rouge_2 = []
 
 		imgseq_autoencoder.train() 
 

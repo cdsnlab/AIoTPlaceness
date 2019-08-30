@@ -110,6 +110,7 @@ def model_to_csv(target_model):
 	model = FastTextKeyedVectors.load(os.path.join(CONFIG.EMBEDDING_PATH,model_name))
 	vocab = list(model.vocab)
 	vocab_list = [x for x in vocab]
+	print("vocab length: ", len(vocab_list))
 
 	# f_csv = open(DF_PATH+'Word2VecBlog300_5_min10_mecab.csv', 'w', encoding='utf-8-sig', newline='')
 	print("started to write csv")

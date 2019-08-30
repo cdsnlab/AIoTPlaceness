@@ -65,7 +65,7 @@ def load_imgseq_data(args, CONFIG, embedding_model):
 
 	image_dir = os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'resnet50')
 	for image_path in tqdm(os.listdir(image_dir)):
-		with open(image_path, "rb") as f:
+		with open(os.path.join(image_dir, image_path), "rb") as f:
 			full_data.append(cPickle.load(f))
 		f.close()
 	full_data = np.array(full_data, dtype=np.float32)
