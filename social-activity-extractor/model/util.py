@@ -78,7 +78,7 @@ def load_imgseq_data(args, CONFIG):
 
 
 class ImgseqDataset(Dataset):
-	def __init__(self, data_list, embedding_model, CONFIG, transform):
+	def __init__(self, data_list, CONFIG, transform):
 		self.data = data_list
 		self.CONFIG = CONFIG
 		self.transform = transform
