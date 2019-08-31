@@ -84,8 +84,9 @@ class DeconvolutionDecoder(nn.Module):
 		# So interpolate x's dimension if batch_size is 1.
 		if len(x_hat.size()) < 3:
 			x_hat = x_hat.view(1, *x_hat.size())
-		normalized_x_hat = F.normalize(x_hat, p=2, dim=2)
-		return normalized_x_hat
+		#normalized_x_hat = F.normalize(x_hat, p=2, dim=2)
+		#return normalized_x_hat
+		return x_hat
 
 class TextAutoencoder(nn.Module):
 	def __init__(self, encoder, decoder):

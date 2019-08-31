@@ -45,8 +45,7 @@ class RNNDecoder(nn.Module):
 
 		# forward propagate lstm
 		x_hat, _ = self.lstm(h)
-		normalized_x_hat = F.normalize(x_hat, p=2, dim=2)
-		return normalized_x_hat
+		return x_hat
 
 class ImgseqAutoEncoder(nn.Module):
 	def __init__(self, encoder, decoder, sequence_len):
