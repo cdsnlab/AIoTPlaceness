@@ -72,15 +72,14 @@ def load_imgseq_data(args, CONFIG):
 	full_data = np.array(full_data, dtype=np.float32)
 	train_size = int(args.split_rate * len(full_data))
 	train_data, val_data = full_data[:train_size], full_data[train_size:]
-	train_dataset, val_dataset = ImgseqDataset(train_data, embedding_model, CONFIG, transform=ToTensor()), \
-							 ImgseqDataset(val_data, embedding_model, CONFIG, transform=ToTensor())
+	train_dataset, val_dataset = ImgseqDataset(train_data, CONFIG, transform=ToTensor()), \
+							 ImgseqDataset(val_data, CONFIG, transform=ToTensor())
 	return train_dataset, val_dataset
 
 
 class ImgseqDataset(Dataset):
 	def __init__(self, data_list, embedding_model, CONFIG, transform):
 		self.data = data_list
-		self.embedding_model = embedding_model
 		self.CONFIG = CONFIG
 		self.transform = transform
 
