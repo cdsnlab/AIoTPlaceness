@@ -97,18 +97,11 @@ def copy_selected_post(target_folder):
 	print("Copy completed")
 
 
-class Identity(nn.Module):
-	def __init__(self):
-		super(Identity, self).__init__()
-		
-	def forward(self, x):
-		return x
-
 def embedding_images(target_dataset):
 	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 	print("Loading embedding model...")
 	embedding_model = models.resnet50(pretrained=True)
-	embedding_model.fc = Identity()
+	embedding_model.fc = nn.Tanh()
 	embedding_model.eval()
 	embedding_model.to(device)
 	print("Loading embedding model completed")
@@ -189,7 +182,7 @@ def process_dataset(target_dataset):
 	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 	print("Loading embedding model...")
 	embedding_model = models.resnet50(pretrained=True)
-	embedding_model.fc = Identity()
+	embedding_model.fc = nn.Tanh()
 	embedding_model.eval()
 	embedding_model.to(device)
 	print("Loading embedding model completed")
@@ -206,8 +199,7 @@ def process_dataset(target_dataset):
 	f_csv = open(os.path.join(dataset_path, 'posts.csv'), 'w', encoding='utf-8')
 	f_corpus = open(os.path.join(dataset_path, 'corpus.txt'), 'w', encoding='utf-8')
 	wr = csv.writer(f_csv)
-	target_path = os.path.join('Y:', 'placeness')
-	df_data = pd.read_csv(os.path.join(target_path, 'posts.csv'), encoding='utf-8')
+	df_data = pd.read_csv(os.path.join(CONFIG.TARGET_PATH, 'posts.csv'), encoding='utf-8')
 	pbar = tqdm(total=df_data.shape[0])
 	for index, in_row in df_data.iterrows():
 		pbar.update(1)
@@ -217,7 +209,7 @@ def process_dataset(target_dataset):
 		images = []
 		for image in in_row.iloc[7:]:
 			if not pd.isna(image):
-				image_path = os.path.join(target_path, 'original', image)
+				image_path = os.path.join(CONFIG.TARGET_PATH, 'original', image)
 				try:
 					images.append(img_transform(pil_loader(image_path)))
 				except OSError as e:
@@ -248,10 +240,13 @@ def process_dataset(target_dataset):
 	pbar.close()
 
 def test():
-	dataset_path = os.path.join(CONFIG.DATASET_PATH, "instagram_full", "images", "Bk4yiNHna1R.p")
+	dataset_path = os.path.join(CONFIG.DATASET_PATH, "instagram0830", "resnet50", "Bo3GCouAlwg.p")
 	with open(dataset_path, "rb") as f:
 		data = cPickle.load(f)
-		print(data[0])
+		print(data)
+		print(np.max(data))
+		print(np.min(data))
+		print(np.mean(data))
 		print(data.shape)
 	#df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, target_dataset, 'posts.csv'), header=None, encoding='utf-8')
 	#print(df_data)

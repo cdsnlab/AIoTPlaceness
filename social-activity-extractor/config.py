@@ -8,6 +8,7 @@ class Config:
 	else:
 		root_dir = '/cdsn-nas'
 
+	TARGET_PATH = os.path.join(root_dir, 'placeness')
 	DATA_PATH = os.path.join(root_dir, 'processed')
 	DATASET_PATH = os.path.join(root_dir, 'processed', 'dataset')
 	CHECKPOINT_PATH = os.path.join(root_dir, 'processed', 'checkpoint')

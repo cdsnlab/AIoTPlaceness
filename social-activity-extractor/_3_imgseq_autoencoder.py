@@ -80,7 +80,7 @@ def train_reconstruction(args):
 	embedding_model = models.resnet50(pretrained=True)
 	embedding_dim = embedding_model.fc.in_features
 	args.embedding_dim = embedding_dim
-	embedding_model.fc = Identity()
+	embedding_model.fc = nn.Tanh()
 	embedding_model.to(device)
 	embedding_model.eval()
 	print("Loading dataset...")
