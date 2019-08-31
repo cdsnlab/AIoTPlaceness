@@ -63,7 +63,7 @@ class TextDataset(Dataset):
 
 def load_imgseq_data(args, CONFIG):
 	full_data = []
-
+	print("Using embedding model: ", args.arch)
 	image_dir = os.path.join(CONFIG.DATASET_PATH, args.target_dataset, args.arch)
 	for image_path in tqdm(os.listdir(image_dir)):
 		with open(os.path.join(image_dir, image_path), "rb") as f:
