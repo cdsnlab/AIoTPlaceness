@@ -61,7 +61,7 @@ class TextDataset(Dataset):
 			vector_array = self.transform(vector_array)
 		return vector_array
 
-def load_imgseq_data(args, CONFIG, embedding_model):
+def load_imgseq_data(args, CONFIG):
 	full_data = []
 
 	image_dir = os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'resnet50')

@@ -97,56 +97,43 @@ def copy_selected_post(target_folder):
 	print("Copy completed")
 
 
-def embedding_images(target_dataset):
+def embedding_images(target_dataset, arch):
+
+	dataset_path = os.path.join(CONFIG.DATASET_PATH, target_dataset)
 	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 	print("Loading embedding model...")
-	embedding_model = models.resnet50(pretrained=True)
+	embedding_model = models.__dict__[arch](pretrained=True)
 	embedding_model.fc = nn.Tanh()
 	embedding_model.eval()
 	embedding_model.to(device)
 	print("Loading embedding model completed")
 	# pad_value = np.finfo(np.float32).eps
 	pad_value = 1.
-	dataset_path = os.path.join(CONFIG.DATASET_PATH, target_dataset)
-	img_transform = transforms.Compose([
-					transforms.Resize(256),
-					transforms.CenterCrop(224),
-					transforms.ToTensor(),
-					transforms.Normalize(mean=[0.485, 0.456, 0.406],
-									 std=[0.229, 0.224, 0.225])
-				])	
-	for loc_id in tqdm(os.listdir(dataset_path)):
-		path_dir = os.path.join(dataset_path, loc_id)
-		for post in tqdm(os.listdir(path_dir), leave=False):
-			pickle_path = os.path.join(path_dir, post, "images.p")
-			image_dir = os.path.join(path_dir, post, "images")
-			images = []
-			for image in os.listdir(image_dir):
-				image_path = os.path.join(image_dir, image)
-				try:
-					images.append(img_transform(pil_loader(image_path)))
-				except OSError as e:
-					print(e)
-					print(image_path)
-			image_data = torch.stack(images).detach().numpy()
-			with open(pickle_path, 'wb') as f:
-				cPickle.dump(image_data, f)
-			f.close()
-			del image_data
-			# image_data = torch.stack(images).to(device)
-			# embedded_image = embedding_model(image_data).detach().cpu().numpy()
-			# if len(embedded_image) < CONFIG.MAX_SEQUENCE_LEN:
-			# 	# pad sentence with 0 if sentence length is shorter than `max_sentence_len`
-			# 	vector_array = np.lib.pad(embedded_image,
-			# 							((0, CONFIG.MAX_SEQUENCE_LEN - len(embedded_image)), (0,0)),
-			# 							"constant",
-			# 							constant_values=(pad_value))
-			# else:
-			# 	vector_array = embedded_image
-			# with open(pickle_path, 'wb') as f:
-			# 	cPickle.dump(vector_array, f)
-			# f.close()
-			# del image_data, embedded_image, vector_array
+	embedding_path = os.path.join(dataset_path, arch)
+	if not os.path.exists(embedding_path):
+		os.mkdir(embedding_path)
+	original_path = os.path.join(dataset_path, 'original')
+	for image_path in tqdm(os.listdir(original_path)):
+		with open(os.path.join(original_path, image_path), 'rb') as f:
+			image_data = cPickle.load(f)
+		f.close()
+
+		image_data = torch.from_numpy(image_data).type(torch.FloatTensor).to(device)
+		embedded_image = embedding_model(image_data).detach().cpu().numpy()
+
+		if len(embedded_image) < CONFIG.MAX_SEQUENCE_LEN:
+			# pad sentence with 0 if sentence length is shorter than `max_sentence_len`
+			vector_array = np.lib.pad(embedded_image,
+									((0, CONFIG.MAX_SEQUENCE_LEN - len(embedded_image)), (0,0)),
+									"constant",
+									constant_values=(pad_value))
+		else:
+			vector_array = embedded_image
+
+		with open(os.path.join(embedding_path, image_path), 'wb') as f:
+			cPickle.dump(vector_array, f)
+		f.close()
+		del image_data, embedded_image, vector_array
 
 def embedding_text(target_dataset):
 	print("Loading embedding model...")
@@ -179,15 +166,7 @@ def embedding_text(target_dataset):
 			del text_data, word_list, vector_array
 
 def process_dataset(target_dataset):
-	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-	print("Loading embedding model...")
-	embedding_model = models.resnet50(pretrained=True)
-	embedding_model.fc = nn.Tanh()
-	embedding_model.eval()
-	embedding_model.to(device)
-	print("Loading embedding model completed")
-	# pad_value = np.finfo(np.float32).eps
-	pad_value = 1.
+
 	img_transform = transforms.Compose([
 					transforms.Resize(256),
 					transforms.CenterCrop(224),
@@ -216,31 +195,21 @@ def process_dataset(target_dataset):
 					print(e)
 					print(image_path)
 		if len(sentence) > 0 and len(images) > 0:
-			with torch.no_grad():
-				image_data = torch.stack(images).to(device)
-			embedded_image = embedding_model(image_data).detach().cpu().numpy()
-			if len(embedded_image) < CONFIG.MAX_SEQUENCE_LEN:
-				# pad sentence with 0 if sentence length is shorter than `max_sentence_len`
-				vector_array = np.lib.pad(embedded_image,
-										((0, CONFIG.MAX_SEQUENCE_LEN - len(embedded_image)), (0,0)),
-										"constant",
-										constant_values=(pad_value))
-			else:
-				vector_array = embedded_image
+			image_data = torch.stack(images).detach().numpy()
 			sentence = sentence + ' <EOS>'
 			out_row = []
 			out_row.append(in_row.iloc[1])
 			out_row.append(sentence)
 			wr.writerow(out_row)
 			f_corpus.write(sentence + '\n')
-			with open(os.path.join(dataset_path, 'resnet50', in_row.iloc[1]+'.p'), 'wb') as f:
-				cPickle.dump(vector_array, f)
+			with open(os.path.join(dataset_path, 'original', in_row.iloc[1]+'.p'), 'wb') as f:
+				cPickle.dump(image_data, f)
 			f.close()
-			del image_data, embedded_image, vector_array
+			del image_data
 	pbar.close()
 
 def test():
-	dataset_path = os.path.join(CONFIG.DATASET_PATH, "instagram0830", "resnet50", "Bo3GCouAlwg.p")
+	dataset_path = os.path.join(CONFIG.DATASET_PATH, "instagram0830", "resnet152", "B0_OmM4l_rR.p")
 	with open(dataset_path, "rb") as f:
 		data = cPickle.load(f)
 		print(data)
@@ -251,11 +220,34 @@ def test():
 	#df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, target_dataset, 'posts.csv'), header=None, encoding='utf-8')
 	#print(df_data)
 
+
+def embedded_image():
+
+	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+	print("Loading embedding model...")
+	embedding_model = models.resnet50(pretrained=True)
+	embedding_model.fc = nn.Tanh()
+	embedding_model.eval()
+	embedding_model.to(device)
+	print("Loading embedding model completed")
+	# pad_value = np.finfo(np.float32).eps
+	pad_value = 1.
+
+	#embedded_image = embedding_model(image_data).detach().cpu().numpy()
+
+	# if len(embedded_image) < CONFIG.MAX_SEQUENCE_LEN:
+	# 	# pad sentence with 0 if sentence length is shorter than `max_sentence_len`
+	# 	vector_array = np.lib.pad(embedded_image,
+	# 							((0, CONFIG.MAX_SEQUENCE_LEN - len(embedded_image)), (0,0)),
+	# 							"constant",
+	# 							constant_values=(pad_value))
+	# else:
+	# 	vector_array = embedded_image
 def run(option): 
 	if option == 0:
 		copy_selected_post(target_folder=sys.argv[2])
 	elif option == 1:
-		embedding_images(target_dataset=sys.argv[2])
+		embedding_images(target_dataset=sys.argv[2], arch=sys.argv[3])
 	elif option == 2:
 		embedding_text(target_dataset=sys.argv[2])
 	elif option == 3:

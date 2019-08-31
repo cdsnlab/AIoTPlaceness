@@ -98,7 +98,7 @@ def make_fasttext(target_dataset):
 	embedding_model.build_vocab(sentences=sentences)
 	embedding_model.train(sentences=sentences, total_examples=embedding_model.corpus_count, epochs=10)
 	model_name = "FASTTEXT_"+ target_dataset + ".model"
-	pad_value = np.finfo(np.float32).eps
+	#pad_value = np.finfo(np.float32).eps
 	pad_value = 1.
 	embedding_model.wv.add("<PAD>", np.full(embedding_model.vector_size, pad_value), replace=True)
 	embedding_model.wv.init_sims(replace=True)

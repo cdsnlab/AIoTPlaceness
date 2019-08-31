@@ -57,6 +57,7 @@ def main():
 	parser.add_argument('-shuffle', default=True, help='shuffle data every epoch')
 	parser.add_argument('-split_rate', type=float, default=0.9, help='split rate between train and validation')
 	# model
+	parser.add_argument('-arch', type=str, default=None, help='image embedding model')
 	parser.add_argument('-latent_size', type=int, default=900, help='size of latent variable')
 	parser.add_argument('-num_layer', type=int, default=4, help='layer number')
 
@@ -77,14 +78,11 @@ def main():
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def train_reconstruction(args):
 	print("Loading embedding model...")
-	embedding_model = models.resnet50(pretrained=True)
+	embedding_model = models.__dict__[args.arch](pretrained=True)
 	embedding_dim = embedding_model.fc.in_features
 	args.embedding_dim = embedding_dim
-	embedding_model.fc = nn.Tanh()
-	embedding_model.to(device)
-	embedding_model.eval()
 	print("Loading dataset...")
-	train_dataset, val_dataset = load_imgseq_data(args, CONFIG, embedding_model)
+	train_dataset, val_dataset = load_imgseq_data(args, CONFIG)
 	print("Loading dataset completed")
 	train_loader, val_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=args.shuffle),\
 								  DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
