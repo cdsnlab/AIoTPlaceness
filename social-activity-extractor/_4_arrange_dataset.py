@@ -5,6 +5,7 @@ import config
 import re
 import sys
 import csv
+import random
 import _pickle as cPickle
 import numpy as np
 import pandas as pd
@@ -221,28 +222,22 @@ def test():
 	#print(df_data)
 
 
-def embedded_image():
+def make_toy_dataset(target_dataset=sys.argv[2]):
+	dataset_path = os.path.join(CONFIG.DATASET_PATH, target_dataset)
+	toy_path = os.path.join(CONFIG.DATASET_PATH, 'toy')
+	df_data = pd.read_csv(os.path.join(dataset_path, 'posts.csv'), header=None, encoding='utf-8')
+	short_codes = []
+	for index, row in df_data.iterrows():
+		short_codes.append(row)
+	toy_codes = random.sample(short_codes, k=500)
 
-	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-	print("Loading embedding model...")
-	embedding_model = models.resnet50(pretrained=True)
-	embedding_model.fc = nn.Tanh()
-	embedding_model.eval()
-	embedding_model.to(device)
-	print("Loading embedding model completed")
-	# pad_value = np.finfo(np.float32).eps
-	pad_value = 1.
-
-	#embedded_image = embedding_model(image_data).detach().cpu().numpy()
-
-	# if len(embedded_image) < CONFIG.MAX_SEQUENCE_LEN:
-	# 	# pad sentence with 0 if sentence length is shorter than `max_sentence_len`
-	# 	vector_array = np.lib.pad(embedded_image,
-	# 							((0, CONFIG.MAX_SEQUENCE_LEN - len(embedded_image)), (0,0)),
-	# 							"constant",
-	# 							constant_values=(pad_value))
-	# else:
-	# 	vector_array = embedded_image
+	f_csv = open(os.path.join(toy_path, 'posts.csv'), 'w', encoding='utf-8')
+	wr = csv.writer(f_csv)
+	for row in toy_codes:
+		wr.writerow(row)
+		short_code = row.iloc[0] + '.p'
+		shutil.copy2(os.path.join(dataset_path, 'resnet152', short_code), os.path.join(toy_path, 'resnet152', short_code))
+	
 def run(option): 
 	if option == 0:
 		copy_selected_post(target_folder=sys.argv[2])
@@ -254,6 +249,8 @@ def run(option):
 		process_dataset(target_dataset=sys.argv[2])
 	elif option == 4:
 		test()
+	elif option == 5:
+		make_toy_dataset(target_dataset=sys.argv[2])
 	else:
 		print("This option does not exist!\n")
 

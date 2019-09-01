@@ -57,7 +57,7 @@ def main():
 	parser.add_argument('-shuffle', default=True, help='shuffle data every epoch')
 	parser.add_argument('-split_rate', type=float, default=0.9, help='split rate between train and validation')
 	# model
-	parser.add_argument('-arch', type=str, default=None, help='image embedding model')
+	parser.add_argument('-arch', type=str, default='resnet152', help='image embedding model')
 	parser.add_argument('-latent_size', type=int, default=900, help='size of latent variable')
 	parser.add_argument('-num_layer', type=int, default=4, help='layer number')
 
