@@ -168,10 +168,9 @@ def train_reconstruction(args):
 					single_data = text_feature_hat[0]
 					input_sentence = util.transform_vec2sentence(input_data.detach().cpu().numpy(), embedding_model, indexer)
 					predict_sentence = util.transform_vec2sentence(single_data.detach().cpu().numpy(), embedding_model, indexer)
-					r1, r2 = calc_rouge(input_sentence, predict_sentence)	
 					print("Epoch: {} at {}".format(epoch, str(datetime.datetime.now())))
 					print("Steps: {}".format(steps))
-					print("Loss: {}, Rouge1: {} Rouge2: {}".format(loss.detach().item(), r1, r2))
+					print("Loss: {}".format(loss.detach().item()))
 					exp.metric("Loss", loss.detach().item())
 					print("Input Sentence:")
 					print(input_sentence)
