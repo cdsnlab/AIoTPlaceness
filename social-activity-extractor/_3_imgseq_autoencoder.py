@@ -46,7 +46,7 @@ def main():
 	parser.add_argument('-batch_size', type=int, default=16, help='batch size for training')
 	parser.add_argument('-lr_decay_interval', type=int, default=10,
 						help='how many epochs to wait before decrease learning rate')
-	parser.add_argument('-log_interval', type=int, default=100,
+	parser.add_argument('-log_interval', type=int, default=1000,
 						help='how many steps to wait before logging training status')
 	parser.add_argument('-test_interval', type=int, default=1,
 						help='how many epochs to wait before testing')
@@ -63,6 +63,7 @@ def main():
 
 	# train
 	parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
+	parser.add_argument('-gpu', type=str, default='cuda', help='gpu number')
 	# option
 	parser.add_argument('-resume', type=str, default=None, help='filename of checkpoint to resume ')
 
@@ -75,8 +76,8 @@ def main():
 		slacknoti("underkoo end using")
 
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def train_reconstruction(args):
+	device = torch.device(args.gpu)
 	print("Loading embedding model...")
 	embedding_model = models.__dict__[args.arch](pretrained=True)
 	embedding_dim = embedding_model.fc.in_features
@@ -136,7 +137,7 @@ def train_reconstruction(args):
 					input_data = feature[0]
 				del feature, feature_hat, loss
 			
-			_avg_loss = eval_reconstruction(imgseq_autoencoder, embedding_model, criterion, val_loader, args)
+			_avg_loss = eval_reconstruction(imgseq_autoencoder, embedding_model, criterion, val_loader, args, device)
 			avg_loss.append(_avg_loss)
 
 			if best_loss > _avg_loss:
@@ -149,27 +150,20 @@ def train_reconstruction(args):
 					'optimizer' : optimizer.state_dict(),
 				}, CONFIG.CHECKPOINT_PATH, "imgseq_autoencoder")
 
-		# finalization
-		table = []
-		table.append(avg_loss)
-		df = pd.DataFrame(table)
-		df = df.transpose()
-		df.columns = ['avg_loss']
-		df.to_csv(os.path.join(CONFIG.CSV_PATH, 'Evaluation_result_imgseq.csv'), encoding='utf-8-sig')
-
+		eval_reconstruction(imgseq_autoencoder, embedding_model, criterion, val_loader, args, device)		
 		print("Finish!!!")
 
 	finally:
 		exp.end()
 
-def eval_reconstruction(autoencoder, embedding_model, criterion, data_iter, args):
+def eval_reconstruction(autoencoder, embedding_model, criterion, data_iter, args, device):
 	print("=================Eval======================")
 	autoencoder.eval()
 	step = 0
 	avg_loss = 0.
 	rouge_1 = 0.
 	rouge_2 = 0.
-	for batch in tqdm(data_iter):
+	for batch in data_iter:
 		torch.cuda.empty_cache()
 		with torch.no_grad():
 			feature = Variable(batch).to(device)
