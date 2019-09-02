@@ -112,14 +112,14 @@ def train_reconstruction(args):
 	text_decoder = text_model.DeconvolutionDecoder(text_embedding_dim, t3, args.filter_size, args.filter_shape, args.latent_size)
 	if args.text_pt:
 		text_checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.text_pt), map_location=lambda storage, loc: storage)
-		text_encoder.load_state_dict(checkpoint['text_encoder'])
-		text_decoder.load_state_dict(checkpoint['text_decoder'])
+		text_encoder.load_state_dict(text_checkpoint['text_encoder'])
+		text_decoder.load_state_dict(text_checkpoint['text_decoder'])
 	imgseq_encoder = imgseq_model.RNNEncoder(image_embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
 	imgseq_decoder = imgseq_model.RNNDecoder(image_embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
 	if args.imgseq_pt:
 		imgseq_checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.imgseq_pt), map_location=lambda storage, loc: storage)
-		imgseq_encoder.load_state_dict(checkpoint['imgseq_encoder'])
-		imgseq_decoder.load_state_dict(checkpoint['imgseq_decoder'])
+		imgseq_encoder.load_state_dict(imgseq_checkpoint['imgseq_encoder'])
+		imgseq_decoder.load_state_dict(imgseq_checkpoint['imgseq_decoder'])
 	multimodal_encoder = multimodal_model.MultimodalEncoder(text_encoder, imgseq_encoder, args.latent_size)
 	multimodal_decoder = multimodal_model.MultimodalDecoder(text_decoder, imgseq_decoder, args.latent_size, CONFIG.MAX_SEQUENCE_LEN)
 	if args.resume:
@@ -155,10 +155,10 @@ def train_reconstruction(args):
 				torch.cuda.empty_cache()
 				text_feature = Variable(text_batch).to(device)
 				imgseq_feature = Variable(imgseq_batch).to(device)
-				feature = torch.cat((text_feature.view(args.batch_size, -1), imgseq_feature.view(args.batch_size, -1)), dim=1)
+				feature = torch.cat((text_feature.view(text_feature.size()[0], -1), imgseq_feature.view(imgseq_feature.size()[0], -1)), dim=1)
 				optimizer.zero_grad()
 				text_feature_hat, imgseq_feature_hat = multimodal_autoencoder(text_feature, imgseq_feature)
-				feature_hat = torch.cat((text_feature_hat.contiguous().view(args.batch_size, -1), imgseq_feature_hat.contiguous().view(args.batch_size, -1)), dim=1)
+				feature_hat = torch.cat((text_feature_hat.contiguous().view(text_feature.size()[0], -1), imgseq_feature_hat.contiguous().view(imgseq_feature.size()[0], -1)), dim=1)
 				loss = criterion(feature_hat, feature)
 				loss.backward()
 				optimizer.step()
@@ -209,9 +209,9 @@ def eval_reconstruction(autoencoder, embedding_model, indexer, criterion, data_i
 		with torch.no_grad():			
 			text_feature = Variable(text_batch).to(device)
 			imgseq_feature = Variable(imgseq_batch).to(device)
-			feature = torch.cat((text_feature.view(args.batch_size, -1), imgseq_feature.view(args.batch_size, -1)), dim=1)
+			feature = torch.cat((text_feature.view(text_feature.size()[0], -1), imgseq_feature.view(imgseq_feature.size()[0], -1)), dim=1)
 		text_feature_hat, imgseq_feature_hat = autoencoder(text_feature, imgseq_feature)
-		feature_hat = torch.cat((text_feature_hat.contiguous().view(args.batch_size, -1), imgseq_feature_hat.contiguous().view(args.batch_size, -1)), dim=1)
+		feature_hat = torch.cat((text_feature_hat.contiguous().view(text_feature.size()[0], -1), imgseq_feature_hat.contiguous().view(imgseq_feature.size()[0], -1)), dim=1)
 		loss = criterion(feature_hat, feature)	
 		avg_loss += loss.detach().item()
 		step = step + 1
@@ -235,9 +235,9 @@ def eval_reconstruction_with_rouge(autoencoder, embedding_model, indexer, criter
 		with torch.no_grad():
 			text_feature = Variable(text_batch).to(device)
 			imgseq_feature = Variable(imgseq_batch).to(device)
-			feature = torch.cat((text_feature.view(args.batch_size, -1), imgseq_feature.view(args.batch_size, -1)), dim=1)
+			feature = torch.cat((text_feature.view(text_feature.size()[0], -1), imgseq_feature.view(imgseq_feature.size()[0], -1)), dim=1)
 		feature_hat = autoencoder(feature)
-		feature_hat = torch.cat((text_feature_hat.contiguous().view(args.batch_size, -1), imgseq_feature_hat.contiguous().view(args.batch_size, -1)), dim=1)
+		feature_hat = torch.cat((text_feature_hat.contiguous().view(text_feature.size()[0], -1), imgseq_feature_hat.contiguous().view(imgseq_feature.size()[0], -1)), dim=1)
 		original_sentences = [util.transform_vec2sentence(sentence, embedding_model, indexer) for sentence in text_feature.detach().cpu().numpy()]		
 		predict_sentences = [util.transform_vec2sentence(sentence, embedding_model, indexer) for sentence in text_feature_hat.detach().cpu().numpy()]	
 		r1, r2 = calc_rouge(original_sentences, predict_sentences)		
