@@ -204,7 +204,7 @@ def eval_reconstruction(autoencoder, embedding_model, indexer, criterion, data_i
 	avg_loss = 0.
 	rouge_1 = 0.
 	rouge_2 = 0.
-	for batch in data_iter:
+	for text_batch, imgseq_batch in data_iter:
 		torch.cuda.empty_cache()
 		with torch.no_grad():			
 			text_feature = Variable(text_batch).to(device)
@@ -230,7 +230,7 @@ def eval_reconstruction_with_rouge(autoencoder, embedding_model, indexer, criter
 	avg_loss = 0.
 	rouge_1 = 0.
 	rouge_2 = 0.
-	for batch in data_iter:
+	for text_batch, imgseq_batch in data_iter:
 		torch.cuda.empty_cache()
 		with torch.no_grad():
 			text_feature = Variable(text_batch).to(device)
