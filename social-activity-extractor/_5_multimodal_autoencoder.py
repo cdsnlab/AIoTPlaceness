@@ -166,8 +166,8 @@ def train_reconstruction(args):
 				if steps % args.log_interval == 0:					
 					input_data = text_feature[0]
 					single_data = text_feature_hat[0]
-					input_sentence = util.transform_vec2sentence(input_data.detach().cpu().numpy(), embedding_model, indexer)
-					predict_sentence = util.transform_vec2sentence(single_data.detach().cpu().numpy(), embedding_model, indexer)
+					input_sentence = util.transform_vec2sentence(input_data.detach().cpu().numpy(), text_embedding_model, indexer)
+					predict_sentence = util.transform_vec2sentence(single_data.detach().cpu().numpy(), text_embedding_model, indexer)
 					print("Epoch: {} at {}".format(epoch, str(datetime.datetime.now())))
 					print("Steps: {}".format(steps))
 					print("Loss: {}".format(loss.detach().item()))
@@ -179,7 +179,7 @@ def train_reconstruction(args):
 					del input_data, single_data
 				del text_feature, text_feature_hat, imgseq_feature, imgseq_feature_hat, feature, feature_hat, loss
 			
-			_avg_loss = eval_reconstruction(multimodal_autoencoder, embedding_model, indexer, criterion, val_loader, args, device)
+			_avg_loss = eval_reconstruction(multimodal_autoencoder, text_embedding_model, indexer, criterion, val_loader, args, device)
 
 			if best_loss > _avg_loss:
 				best_loss = _avg_loss
@@ -191,7 +191,7 @@ def train_reconstruction(args):
 					'optimizer' : optimizer.state_dict(),
 				}, CONFIG.CHECKPOINT_PATH, "multimodal_autoencoder")
 
-		eval_reconstruction_with_rouge(multimodal_autoencoder, embedding_model, indexer, criterion, val_loader, args, device)
+		eval_reconstruction_with_rouge(multimodal_autoencoder, text_embedding_model, indexer, criterion, val_loader, args, device)
 		print("Finish!!!")
 
 	finally:
