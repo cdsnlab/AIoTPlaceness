@@ -7,6 +7,8 @@ import pickle
 import regex
 import re
 import numpy as np
+import pandas as pd
+from tqdm import tqdm
 
 
 from nltk import word_tokenize
@@ -213,21 +215,42 @@ def make_word2vec(target_corpus):
 	embedding_model.wv.save(os.path.join(CONFIG.EMBEDDING_PATH, model_name))
 	print("embedding completed")
 
-def test(target_corpus):
-	target_corpus_name = target_corpus + '.txt'
-	length_list = []
-	sentence_len = 0
-	with open(os.path.join(CONFIG.DATA_PATH, 'corpus', target_corpus_name), 'r', encoding='utf-8-sig', newline='\n') as f:
-		while True:
-			line = f.readline()
-			if not line: break;
-			length_list.append(len(line.split()))
-			if len(line.split()) > sentence_len:
-				sentence_len = len(line.split())
-				print(line)
-	length_array = np.array(length_list)
-	print("mean: ", np.mean(length_array))
-	print("max: ", np.max(length_array))
+def test():
+	# target_corpus_name = target_corpus + '.txt'
+	# length_list = []
+	# sentence_len = 0
+	# with open(os.path.join(CONFIG.DATA_PATH, 'corpus', target_corpus_name), 'r', encoding='utf-8-sig', newline='\n') as f:
+	# 	while True:
+	# 		line = f.readline()
+	# 		if not line: break;
+	# 		length_list.append(len(line.split()))
+	# 		if len(line.split()) > sentence_len:
+	# 			sentence_len = len(line.split())
+	# 			print(line)
+	# length_array = np.array(length_list)
+	# print("mean: ", np.mean(length_array))
+	# print("max: ", np.max(length_array))
+
+	full_data = []
+	full_data_norm = []
+	df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "hongdae.csv"), header=None, encoding='utf-8')
+	pbar = tqdm(total=df_data.shape[0])
+	for index, row in df_data.iterrows():
+		pbar.update(1)
+		text_data = row.iloc[1:]
+		text_data = np.array(text_data, dtype=np.float32)
+		text_data_norm = np.linalg.norm(text_data, axis=0, ord=2)
+		full_data.append(text_data)
+		full_data_norm.append(text_data_norm)
+		del text_data
+	pbar.close()
+	full_data = np.array(full_data, dtype=np.float32)
+	full_data_norm = np.array(full_data_norm, dtype=np.float32)
+	print("mean: ", np.mean(full_data, axis=1))
+	print("std: ", np.std(full_data, axis=1))
+	print("max: ", np.max(full_data, axis=1))
+	print("min: ", np.min(full_data, axis=1))
+	print("norm: ", full_data_norm)
 
 def make_fasttext_pretrained(target_corpus, pretrined_model):
 
@@ -260,7 +283,7 @@ def run(option):
 	elif option == 5:
 		make_word2vec(target_corpus=sys.argv[2])
 	elif option == 6:
-		test(target_corpus=sys.argv[2])
+		test()
 	elif option == 7:
 		make_fasttext_pretrained(target_corpus=sys.argv[2], pretrined_model=sys.argv[3])
 	else:

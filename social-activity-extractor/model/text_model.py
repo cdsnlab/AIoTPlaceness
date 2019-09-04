@@ -46,8 +46,8 @@ class ConvolutionEncoder(nn.Module):
 		# x = F.relu(x)
 		h1 = self.convs1(x)
 		h2 = self.convs2(h1)
-		h3 = self.convs3(h2)
-		return h3
+		h = self.convs3(h2).squeeze().squeeze()
+		return h
 
 class DeconvolutionDecoder(nn.Module):
 	def __init__(self, embed_dim, sentence_len, filter_size, filter_shape, latent_size):
@@ -75,10 +75,9 @@ class DeconvolutionDecoder(nn.Module):
 					torch.nn.init.constant_(m.bias, 0.001)
 
 	def __call__(self, h):
-		h2 = self.deconvs1(h)
+		h2 = self.deconvs1(h.unsqueeze(dim=-1).unsqueeze(dim=-1))
 		h1 = self.deconvs2(h2)
-		x_hat = self.deconvs3(h1)
-		x_hat = x_hat.squeeze()
+		x_hat = self.deconvs3(h1).squeeze()
 		
 		# x.size() is (L, emb_dim) if batch_size is 1.
 		# So interpolate x's dimension if batch_size is 1.

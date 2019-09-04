@@ -20,8 +20,8 @@ class MultimodalEncoder(nn.Module):
 			nn.SELU(),
 			nn.Linear(int(latent_size*2/3), latent_size))
 	def __call__(self, text, imgseq):
-		text_h = self.text_encoder(text).squeeze().squeeze()
-		imgseq_h = self.imgseq_encoder(imgseq).squeeze(dim=1)
+		text_h = self.text_encoder(text)
+		imgseq_h = self.imgseq_encoder(imgseq)
 		h = self.multimodal_encoder(torch.cat((text_h, imgseq_h), dim=1))
 		return h
 
@@ -40,8 +40,8 @@ class MultimodalDecoder(nn.Module):
 
 	def __call__(self, h):
 		decode_h = torch.split(self.multimodal_decoder(h), self.latent_size, dim=1)
-		text_hat = self.text_decoder(decode_h[0].unsqueeze(dim=-1).unsqueeze(dim=-1))
-		imgseq_hat = self.imgseq_decoder(decode_h[1].unsqueeze(dim=1).expand(-1, self.sequence_len, -1))
+		text_hat = self.text_decoder(decode_h[0])
+		imgseq_hat = self.imgseq_decoder(decode_h[1])
 		return text_hat, imgseq_hat
 
 class MultimodalAutoEncoder(nn.Module):

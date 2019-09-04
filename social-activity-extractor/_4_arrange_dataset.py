@@ -14,6 +14,7 @@ from tqdm import tqdm
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torchvision.models as models
 import torchvision.transforms as transforms
 from torchvision.datasets.folder import pil_loader
@@ -97,6 +98,12 @@ def copy_selected_post(target_folder):
 
 	print("Copy completed")
 
+class last_layer(nn.Module):
+	def __init__(self):
+		super(fc, self).__init__()
+		
+	def forward(self, x):
+		return x
 
 def embedding_images(target_dataset, arch):
 
@@ -104,7 +111,7 @@ def embedding_images(target_dataset, arch):
 	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 	print("Loading embedding model...")
 	embedding_model = models.__dict__[arch](pretrained=True)
-	embedding_model.fc = nn.Tanh()
+	embedding_model.fc = last_layer()
 	embedding_model.eval()
 	embedding_model.to(device)
 	print("Loading embedding model completed")
@@ -114,6 +121,7 @@ def embedding_images(target_dataset, arch):
 	if not os.path.exists(embedding_path):
 		os.mkdir(embedding_path)
 	original_path = os.path.join(dataset_path, 'original')
+	step = 0
 	for image_path in tqdm(os.listdir(original_path)):
 		with open(os.path.join(original_path, image_path), 'rb') as f:
 			image_data = cPickle.load(f)
@@ -130,11 +138,14 @@ def embedding_images(target_dataset, arch):
 									constant_values=(pad_value))
 		else:
 			vector_array = embedded_image
-
+		vector_array = vector_array / np.linalg.norm(vector_array, axis=1, ord=2, keepdims=True)
 		with open(os.path.join(embedding_path, image_path), 'wb') as f:
 			cPickle.dump(vector_array, f)
 		f.close()
 		del image_data, embedded_image, vector_array
+		step = step + 1
+		if step > 500:
+			break
 
 def embedding_text(target_dataset):
 	print("Loading embedding model...")
@@ -209,18 +220,33 @@ def process_dataset(target_dataset):
 			del image_data
 	pbar.close()
 
-def test():
-	dataset_path = os.path.join(CONFIG.DATASET_PATH, "instagram0830", "resnet152", "B0_OmM4l_rR.p")
-	with open(dataset_path, "rb") as f:
-		data = cPickle.load(f)
-		print(data)
-		print(np.max(data))
-		print(np.min(data))
-		print(np.mean(data))
-		print(data.shape)
+def test(target_dataset=sys.argv[2]):
+	toy_path = os.path.join(CONFIG.DATASET_PATH, 'instagram0830')
+	full_data = []
+	full_data_norm = []
+	for image_path in os.listdir(os.path.join(toy_path, 'resnext101_32x8d')):
+		with open(os.path.join(toy_path, 'resnext101_32x8d', image_path), "rb") as f:
+			image_data = cPickle.load(f)
+			# print(data)
+			# print(np.max(data))
+			# print(np.min(data))
+			# print(np.mean(data))
+			# print(data.shape)
+		full_data.append(image_data)
+		image_data_norm = np.linalg.norm(image_data, axis=1, ord=2)
+		full_data_norm.append(image_data_norm)
 	#df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, target_dataset, 'posts.csv'), header=None, encoding='utf-8')
 	#print(df_data)
 
+	full_data = np.array(full_data, dtype=np.float32)
+	full_data_norm = np.array(full_data_norm, dtype=np.float32)
+	temp = np.mean(np.mean(full_data, axis=2), axis=1)
+	print(temp.shape)
+	print("mean: ", np.mean(np.mean(full_data, axis=2), axis=1))
+	print("std: ", np.mean(np.std(full_data, axis=2), axis=1))
+	print("max: ", np.mean(np.max(full_data, axis=2), axis=1))
+	print("min: ", np.mean(np.min(full_data, axis=2), axis=1))
+	print("norm: ", full_data_norm)
 
 def make_toy_dataset(target_dataset=sys.argv[2]):
 	dataset_path = os.path.join(CONFIG.DATASET_PATH, target_dataset)
@@ -248,7 +274,7 @@ def run(option):
 	elif option == 3:
 		process_dataset(target_dataset=sys.argv[2])
 	elif option == 4:
-		test()
+		test(target_dataset=sys.argv[2])
 	elif option == 5:
 		make_toy_dataset(target_dataset=sys.argv[2])
 	else:

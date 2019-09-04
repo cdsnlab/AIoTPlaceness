@@ -10,8 +10,8 @@ class Config:
 
 	TARGET_PATH = os.path.join(root_dir, 'placeness')
 	DATA_PATH = os.path.join(root_dir, 'processed')
-	DATASET_PATH = os.path.join(root_dir, 'processed', 'dataset')
-	CHECKPOINT_PATH = os.path.join(root_dir, 'processed', 'checkpoint')
+	DATASET_PATH = os.path.join('./data', 'dataset')
+	CHECKPOINT_PATH = './checkpoint'
 	EMBEDDING_PATH = './embedding'
 	CSV_PATH = './csv'
 	MAX_SENTENCE_LEN = 513

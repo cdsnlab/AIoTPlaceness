@@ -26,7 +26,7 @@ class RNNEncoder(nn.Module):
 
 		# forward propagate lstm
 		h, _ = self.lstm(x) 
-		return h[:, -1, :].unsqueeze(1)
+		return h[:, -1, :]
 
 class RNNDecoder(nn.Module):
 	def __init__(self, embed_dim, num_layers, latent_size, bidirectional):
@@ -44,7 +44,7 @@ class RNNDecoder(nn.Module):
 	def __call__(self, h):
 
 		# forward propagate lstm
-		x_hat, _ = self.lstm(h)
+		x_hat, _ = self.lstm(h.expand(-1, self.sequence_len, -1))
 		return x_hat
 
 class ImgseqAutoEncoder(nn.Module):
@@ -55,6 +55,6 @@ class ImgseqAutoEncoder(nn.Module):
 		self.sequence_len = sequence_len
 
 	def forward(self, x):
-		h = self.encoder(x).expand(-1, self.sequence_len, -1)
+		h = self.encoder(x)
 		x_hat = self.decoder(h)
 		return x_hat

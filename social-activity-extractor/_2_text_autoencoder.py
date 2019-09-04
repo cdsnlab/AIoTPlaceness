@@ -40,18 +40,16 @@ def slacknoti(contentstr):
 def main():
 	parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
 	# learning
-	parser.add_argument('-lr', type=float, default=3e-04, help='initial learning rate')
-	parser.add_argument('-weight_decay', type=float, default=3e-05, help='initial weight decay')
-	parser.add_argument('-epochs', type=int, default=40, help='number of epochs for train')
-	parser.add_argument('-batch_size', type=int, default=16, help='batch size for training')
+	parser.add_argument('-lr', type=float, default=1e-04, help='initial learning rate')
+	parser.add_argument('-weight_decay', type=float, default=1e-05, help='initial weight decay')
+	parser.add_argument('-epochs', type=int, default=200, help='number of epochs for train')
+	parser.add_argument('-batch_size', type=int, default=64, help='batch size for training')
 	parser.add_argument('-lr_decay_interval', type=int, default=10,
 						help='how many epochs to wait before decrease learning rate')
-	parser.add_argument('-log_interval', type=int, default=1000,
+	parser.add_argument('-log_interval', type=int, default=25600,
 						help='how many steps to wait before logging training status')
-	parser.add_argument('-test_interval', type=int, default=1,
-						help='how many epochs to wait before testing')
-	parser.add_argument('-save_interval', type=int, default=1,
-						help='how many epochs to wait before saving')
+	parser.add_argument('-test_interval', type=int, default=10,
+						help='how many epochs to wait before rouge testing')
 	# data
 	parser.add_argument('-target_dataset', type=str, default=None, help='folder name of target dataset')
 	parser.add_argument('-shuffle', default=True, help='shuffle data every epoch')
@@ -122,9 +120,10 @@ def train_reconstruction(args):
 
 	if args.resume:
 		optimizer.load_state_dict(checkpoint['optimizer'])
+	exp = Experiment("Text autoencoder", capture_io=False)
 
-
-	exp = Experiment("Text autoencoder")
+	for arg, value in vars(args).items():
+		exp.param(arg, value) 
 	try:
 		avg_loss = []
 
@@ -141,7 +140,7 @@ def train_reconstruction(args):
 				loss.backward()
 				optimizer.step()
 
-				if steps % args.log_interval == 0:					
+				if (steps * args.batch_size) % args.log_interval == 0:					
 					input_data = feature[0]
 					single_data = feature_hat[0]
 					input_sentence = util.transform_vec2sentence(input_data.detach().cpu().numpy(), embedding_model, indexer)
@@ -149,7 +148,6 @@ def train_reconstruction(args):
 					print("Epoch: {} at {}".format(epoch, str(datetime.datetime.now())))
 					print("Steps: {}".format(steps))
 					print("Loss: {}".format(loss.detach().item()))
-					exp.metric("Loss", loss.detach().item())
 					print("Input Sentence:")
 					print(input_sentence)
 					print("Output Sentence:")
@@ -157,7 +155,13 @@ def train_reconstruction(args):
 					del input_data, single_data
 				del feature, feature_hat, loss
 			
-			_avg_loss = eval_reconstruction(text_autoencoder, embedding_model, indexer, criterion, val_loader, args, device)
+			exp.log("Epoch: {} at {}".format(epoch, str(datetime.datetime.now())))
+			if epoch % args.test_interval == 9:	
+				_avg_loss, _rouge_1, _rouge_2 = eval_reconstruction_with_rouge(text_autoencoder, embedding_model, indexer, criterion, val_loader, args, device)
+				exp.log("Evaluation - loss: {}  Rouge1: {}    Rouge2: {}".format(_avg_loss, _rouge_1, _rouge_2))
+			else:
+				_avg_loss = eval_reconstruction(text_autoencoder, embedding_model, indexer, criterion, val_loader, args, device)
+				exp.log("Evaluation - loss: {}".format(_avg_loss))
 
 			if best_loss > _avg_loss:
 				best_loss = _avg_loss
@@ -168,8 +172,6 @@ def train_reconstruction(args):
 					'best_loss': best_loss,
 					'optimizer' : optimizer.state_dict(),
 				}, CONFIG.CHECKPOINT_PATH, "text_autoencoder")
-
-		eval_reconstruction_with_rouge(text_autoencoder, embedding_model, indexer, criterion, val_loader, args, device)
 		print("Finish!!!")
 
 	finally:
@@ -182,7 +184,7 @@ def eval_reconstruction(autoencoder, embedding_model, indexer, criterion, data_i
 	avg_loss = 0.
 	rouge_1 = 0.
 	rouge_2 = 0.
-	for batch in data_iter:
+	for batch in tqdm(data_iter):
 		torch.cuda.empty_cache()
 		with torch.no_grad():
 			feature = Variable(batch).to(device)
@@ -192,7 +194,6 @@ def eval_reconstruction(autoencoder, embedding_model, indexer, criterion, data_i
 		step = step + 1
 		del feature, feature_hat, loss
 	avg_loss = avg_loss / step
-	print("Evaluation - loss: {}".format(avg_loss))
 	print("===============================================================")
 	autoencoder.train()
 
@@ -205,7 +206,7 @@ def eval_reconstruction_with_rouge(autoencoder, embedding_model, indexer, criter
 	avg_loss = 0.
 	rouge_1 = 0.
 	rouge_2 = 0.
-	for batch in data_iter:
+	for batch in tqdm(data_iter):
 		torch.cuda.empty_cache()
 		with torch.no_grad():
 			feature = Variable(batch).to(device)
@@ -222,7 +223,6 @@ def eval_reconstruction_with_rouge(autoencoder, embedding_model, indexer, criter
 	avg_loss = avg_loss / step
 	rouge_1 = rouge_1 / step
 	rouge_2 = rouge_2 / step
-	print("Evaluation - loss: {}  Rouge1: {}    Rouge2: {}".format(avg_loss, rouge_1, rouge_2))
 	print("===============================================================")
 	autoencoder.train()
 
