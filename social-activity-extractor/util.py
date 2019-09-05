@@ -1,6 +1,9 @@
 
+from polyglot.detect import Detector
+from konlpy.tag import Okt
 import re
 
+okt=Okt()
 expression = re.compile('[ㄱ-ㅣ가-힣|a-zA-Z|\s]+') 
 def process_text(text_data):
 	text_data = text_data.replace("#", " ")

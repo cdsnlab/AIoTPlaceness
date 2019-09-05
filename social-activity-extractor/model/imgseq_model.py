@@ -29,10 +29,11 @@ class RNNEncoder(nn.Module):
 		return h[:, -1, :]
 
 class RNNDecoder(nn.Module):
-	def __init__(self, embed_dim, num_layers, latent_size, bidirectional):
+	def __init__(self, sequence_len, embed_dim, num_layers, latent_size, bidirectional):
 		super(RNNDecoder, self).__init__()
 		self.embed_dim = embed_dim
 		self.num_layers = num_layers
+		self.sequence_len = sequence_len
 		self.lstm = nn.LSTM(latent_size, int(embed_dim/2), num_layers, batch_first=True, dropout=0.2, bidirectional=bidirectional)
 
 		# initialize weights
@@ -48,11 +49,10 @@ class RNNDecoder(nn.Module):
 		return x_hat
 
 class ImgseqAutoEncoder(nn.Module):
-	def __init__(self, encoder, decoder, sequence_len):
+	def __init__(self, encoder, decoder):
 		super(ImgseqAutoEncoder, self).__init__()
 		self.encoder = encoder
 		self.decoder = decoder
-		self.sequence_len = sequence_len
 
 	def forward(self, x):
 		h = self.encoder(x)

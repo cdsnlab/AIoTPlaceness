@@ -115,7 +115,7 @@ def train_reconstruction(args):
 		text_encoder.load_state_dict(text_checkpoint['text_encoder'])
 		text_decoder.load_state_dict(text_checkpoint['text_decoder'])
 	imgseq_encoder = imgseq_model.RNNEncoder(image_embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
-	imgseq_decoder = imgseq_model.RNNDecoder(image_embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
+	imgseq_decoder = imgseq_model.RNNDecoder(CONFIG.MAX_SEQUENCE_LEN, image_embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
 	if args.imgseq_pt:
 		imgseq_checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.imgseq_pt), map_location=lambda storage, loc: storage)
 		imgseq_encoder.load_state_dict(imgseq_checkpoint['imgseq_encoder'])

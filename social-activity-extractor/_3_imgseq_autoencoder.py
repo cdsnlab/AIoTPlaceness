@@ -89,7 +89,7 @@ def train_reconstruction(args):
 								  DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
 
 	imgseq_encoder = imgseq_model.RNNEncoder(embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
-	imgseq_decoder = imgseq_model.RNNDecoder(embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
+	imgseq_decoder = imgseq_model.RNNDecoder(CONFIG.MAX_SEQUENCE_LEN, embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
 	if args.resume:
 		print("Restart from checkpoint")
 		checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.resume), map_location=lambda storage, loc: storage)
@@ -102,7 +102,7 @@ def train_reconstruction(args):
 		best_loss = 999999.
 		start_epoch = 0
 	
-	imgseq_autoencoder = imgseq_model.ImgseqAutoEncoder(imgseq_encoder, imgseq_decoder, CONFIG.MAX_SEQUENCE_LEN)
+	imgseq_autoencoder = imgseq_model.ImgseqAutoEncoder(imgseq_encoder, imgseq_decoder)
 	criterion = nn.MSELoss().to(device)
 	imgseq_autoencoder.to(device)
 

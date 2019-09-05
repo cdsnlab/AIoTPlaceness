@@ -25,8 +25,8 @@ class ConvolutionEncoder(nn.Module):
 			)
 
 		self.convs3 = nn.Sequential(
-				nn.Conv2d(filter_size * 2, latent_size, (sentence_len, 1), stride=(1,1))
-				#nn.Tanh()
+				nn.Conv2d(filter_size * 2, latent_size, (sentence_len, 1), stride=(1,1)),
+				nn.Tanh()
 			)
 
 		# weight initialize for conv layer
@@ -63,8 +63,8 @@ class DeconvolutionDecoder(nn.Module):
 				nn.SELU()
 			)
 		self.deconvs3 = nn.Sequential(
-				nn.ConvTranspose2d(filter_size, 1, (filter_shape, embed_dim), stride=(2,1))
-				#nn.Tanh()
+				nn.ConvTranspose2d(filter_size, 1, (filter_shape, embed_dim), stride=(2,1)),
+				nn.Tanh()
 			)
 
 		# weight initialize for conv_transpose layer

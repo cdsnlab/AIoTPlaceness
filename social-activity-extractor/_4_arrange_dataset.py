@@ -177,7 +177,7 @@ def embedding_text(target_dataset):
 			f.close()
 			del text_data, word_list, vector_array
 
-def process_dataset(target_dataset):
+def process_dataset_images(target_dataset):
 
 	img_transform = transforms.Compose([
 					transforms.Resize(256),
@@ -186,6 +186,33 @@ def process_dataset(target_dataset):
 					transforms.Normalize(mean=[0.485, 0.456, 0.406],
 									 std=[0.229, 0.224, 0.225])
 				])	
+	dataset_path = os.path.join(CONFIG.DATA_PATH, 'dataset', target_dataset)
+	if not os.path.exists(dataset_path):
+		os.mkdir(dataset_path)
+	if not os.path.exists(os.path.join(dataset_path, 'original')):
+		os.mkdir(os.path.join(dataset_path, 'original'))
+	df_data = pd.read_csv(os.path.join(CONFIG.TARGET_PATH, 'posts.csv'), encoding='utf-8')
+	pbar = tqdm(total=df_data.shape[0])
+	for index, in_row in df_data.iterrows():
+		pbar.update(1)
+		images = []
+		for image in in_row.iloc[7:]:
+			if not pd.isna(image):
+				image_path = os.path.join(CONFIG.TARGET_PATH, 'original', image)
+				try:
+					images.append(img_transform(pil_loader(image_path)))
+				except OSError as e:
+					print(e)
+					print(image_path)
+		if len(images) > 0:
+			image_data = torch.stack(images).detach().numpy()
+			with open(os.path.join(dataset_path, 'original', in_row.iloc[1]+'.p'), 'wb') as f:
+				cPickle.dump(image_data, f)
+			f.close()
+			del image_data
+	pbar.close()
+
+def process_dataset_text(target_dataset):
 	dataset_path = os.path.join(CONFIG.DATASET_PATH, target_dataset)
 	f_csv = open(os.path.join(dataset_path, 'posts.csv'), 'w', encoding='utf-8')
 	f_corpus = open(os.path.join(dataset_path, 'corpus.txt'), 'w', encoding='utf-8')
@@ -197,16 +224,7 @@ def process_dataset(target_dataset):
 		if pd.isna(in_row.iloc[2]):
 			continue
 		sentence = process_text(in_row.iloc[2])
-		images = []
-		for image in in_row.iloc[7:]:
-			if not pd.isna(image):
-				image_path = os.path.join(CONFIG.TARGET_PATH, 'original', image)
-				try:
-					images.append(img_transform(pil_loader(image_path)))
-				except OSError as e:
-					print(e)
-					print(image_path)
-		if len(sentence) > 0 and len(images) > 0:
+		if len(sentence):
 			image_data = torch.stack(images).detach().numpy()
 			sentence = sentence + ' <EOS>'
 			out_row = []
@@ -214,10 +232,6 @@ def process_dataset(target_dataset):
 			out_row.append(sentence)
 			wr.writerow(out_row)
 			f_corpus.write(sentence + '\n')
-			with open(os.path.join(dataset_path, 'original', in_row.iloc[1]+'.p'), 'wb') as f:
-				cPickle.dump(image_data, f)
-			f.close()
-			del image_data
 	pbar.close()
 
 def test(target_dataset=sys.argv[2]):
@@ -272,10 +286,12 @@ def run(option):
 	elif option == 2:
 		embedding_text(target_dataset=sys.argv[2])
 	elif option == 3:
-		process_dataset(target_dataset=sys.argv[2])
+		process_dataset_images(target_dataset=sys.argv[2])
 	elif option == 4:
-		test(target_dataset=sys.argv[2])
+		process_dataset_text(target_dataset=sys.argv[2])
 	elif option == 5:
+		test(target_dataset=sys.argv[2])
+	elif option == 6:
 		make_toy_dataset(target_dataset=sys.argv[2])
 	else:
 		print("This option does not exist!\n")
