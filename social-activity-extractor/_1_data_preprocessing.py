@@ -230,7 +230,9 @@ def make_word2vec(target_corpus):
 	n_words = len(word2idx)
 	word2idx["<PAD>"] = n_words
 	idx2word[n_words] = "<PAD>"
-	word_vectors.append(np.full(embedding_size, pad_value))
+	pad_array = np.full(embedding_size, pad_value)
+	pad_array = pad_array / np.linalg.norm(pad_array, axis=0, ord=2, keepdims=True)
+	word_vectors.append(pad_array)
 	word_array = np.array(word_vectors, dtype=np.float32)
 	with open(os.path.join(CONFIG.DATASET_PATH, target_corpus, 'word_idx.json'), "w", encoding='utf-8') as f:
 		f.write(json.dumps([idx2word, word2idx]))

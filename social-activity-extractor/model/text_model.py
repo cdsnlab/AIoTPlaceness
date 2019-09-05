@@ -53,7 +53,7 @@ class ConvolutionEncoder(nn.Module):
 		return h
 
 class DeconvolutionDecoder(nn.Module):
-	def __init__(self, embedding, sentence_len, filter_size, filter_shape, latent_size, device):
+	def __init__(self, embedding, tau, sentence_len, filter_size, filter_shape, latent_size, device):
 		super(DeconvolutionDecoder, self).__init__()
 		self.embedding = embedding
 		self.deconvs1 = nn.Sequential(
@@ -70,6 +70,7 @@ class DeconvolutionDecoder(nn.Module):
 				nn.ConvTranspose2d(filter_size, 1, (filter_shape, self.embedding.weight.size()[1]), stride=(2,1)),
 				nn.Tanh()
 			)
+		self.tau = tau
 		self.softmax = nn.LogSoftmax(dim=2)
 		self.device = device
 
@@ -92,7 +93,7 @@ class DeconvolutionDecoder(nn.Module):
 		normalized_x_hat = F.normalize(x_hat, p=2, dim=2)
 		w = Variable(self.embedding.weight.data).to(self.device)
 		normalized_w = F.normalize(w, p=2, dim=1)
-		prob_logits = torch.tensordot(normalized_x_hat, normalized_w, [[2], [1]])
+		prob_logits = torch.tensordot(normalized_x_hat, normalized_w, [[2], [1]]) / self.tau
 		log_prob = self.softmax(prob_logits)
 		return log_prob.transpose(1, 2)
 

@@ -51,6 +51,7 @@ def main():
 						help='how many steps to wait before logging training status')
 	parser.add_argument('-test_interval', type=int, default=10,
 						help='how many epochs to wait before rouge testing')
+    parser.add_argument('-tau', type=float, default=0.01, help='temperature parameter')
 	# data
 	parser.add_argument('-target_dataset', type=str, default=None, help='folder name of target dataset')
 	parser.add_argument('-shuffle', default=True, help='shuffle data every epoch')
@@ -98,7 +99,7 @@ def train_reconstruction(args):
 	args.t3 = t3
 	embedding = nn.Embedding.from_pretrained(torch.FloatTensor(embedding_model))
 	text_encoder = text_model.ConvolutionEncoder(embedding, t3, args.filter_size, args.filter_shape, args.latent_size)
-	text_decoder = text_model.DeconvolutionDecoder(embedding, t3, args.filter_size, args.filter_shape, args.latent_size, device)
+	text_decoder = text_model.DeconvolutionDecoder(embedding, args.tau, t3, args.filter_size, args.filter_shape, args.latent_size, device)
 	if args.resume:
 		print("Restart from checkpoint")
 		checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.resume), map_location=lambda storage, loc: storage)

@@ -100,10 +100,11 @@ def copy_selected_post(target_folder):
 
 class last_layer(nn.Module):
 	def __init__(self):
-		super(fc, self).__init__()
+		super(last_layer, self).__init__()
 		
 	def forward(self, x):
-		return x
+		normalized_x = F.normalize(x, p=2, dim=1)
+		return normalized_x
 
 def embedding_images(target_dataset, arch):
 
@@ -115,13 +116,11 @@ def embedding_images(target_dataset, arch):
 	embedding_model.eval()
 	embedding_model.to(device)
 	print("Loading embedding model completed")
-	# pad_value = np.finfo(np.float32).eps
 	pad_value = 1.
 	embedding_path = os.path.join(dataset_path, arch)
 	if not os.path.exists(embedding_path):
 		os.mkdir(embedding_path)
-	original_path = os.path.join(dataset_path, 'original')
-	step = 0
+	original_path = os.path.join(CONFIG.DATA_PATH, 'dataset', target_dataset, 'original')
 	for image_path in tqdm(os.listdir(original_path)):
 		with open(os.path.join(original_path, image_path), 'rb') as f:
 			image_data = cPickle.load(f)
@@ -138,14 +137,11 @@ def embedding_images(target_dataset, arch):
 									constant_values=(pad_value))
 		else:
 			vector_array = embedded_image
-		vector_array = vector_array / np.linalg.norm(vector_array, axis=1, ord=2, keepdims=True)
+		#vector_array = vector_array / np.linalg.norm(vector_array, axis=1, ord=2, keepdims=True)
 		with open(os.path.join(embedding_path, image_path), 'wb') as f:
 			cPickle.dump(vector_array, f)
 		f.close()
 		del image_data, embedded_image, vector_array
-		step = step + 1
-		if step > 500:
-			break
 
 def embedding_text(target_dataset):
 	print("Loading embedding model...")
