@@ -15,4 +15,5 @@ class Config:
 	EMBEDDING_PATH = './embedding'
 	CSV_PATH = './csv'
 	MAX_SENTENCE_LEN = 513
+	MIN_WORD_COUNT = 10
 	MAX_SEQUENCE_LEN = 10

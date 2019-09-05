@@ -10,10 +10,11 @@ import numpy as np
 from model.component import SiLU, Maxout, PTanh
 
 class ConvolutionEncoder(nn.Module):
-	def __init__(self, embed_dim, sentence_len, filter_size, filter_shape, latent_size):
+	def __init__(self, embedding, sentence_len, filter_size, filter_shape, latent_size):
 		super(ConvolutionEncoder, self).__init__()
+		self.embedding = embedding
 		self.convs1 = nn.Sequential(
-				nn.Conv2d(1, filter_size, (filter_shape, embed_dim), stride=(2,1)),
+				nn.Conv2d(1, filter_size, (filter_shape, self.embedding.weight.size()[1]), stride=(2,1)),
 				nn.BatchNorm2d(filter_size),
 				nn.SELU()
 			)
@@ -37,6 +38,8 @@ class ConvolutionEncoder(nn.Module):
 					torch.nn.init.constant_(m.bias, 0.001)
 
 	def __call__(self, x):
+		x = self.embedding(x)
+
 		# x.size() is (L, emb_dim) if batch_size is 1.
 		# So interpolate x's dimension if batch_size is 1.
 		if len(x.size()) < 3:
@@ -50,8 +53,9 @@ class ConvolutionEncoder(nn.Module):
 		return h
 
 class DeconvolutionDecoder(nn.Module):
-	def __init__(self, embed_dim, sentence_len, filter_size, filter_shape, latent_size):
+	def __init__(self, embedding, sentence_len, filter_size, filter_shape, latent_size, device):
 		super(DeconvolutionDecoder, self).__init__()
+		self.embedding = embedding
 		self.deconvs1 = nn.Sequential(
 				nn.ConvTranspose2d(latent_size, filter_size * 2, (sentence_len, 1), stride=(1,1)),
 				nn.BatchNorm2d(filter_size * 2),
@@ -63,9 +67,11 @@ class DeconvolutionDecoder(nn.Module):
 				nn.SELU()
 			)
 		self.deconvs3 = nn.Sequential(
-				nn.ConvTranspose2d(filter_size, 1, (filter_shape, embed_dim), stride=(2,1)),
+				nn.ConvTranspose2d(filter_size, 1, (filter_shape, self.embedding.weight.size()[1]), stride=(2,1)),
 				nn.Tanh()
 			)
+		self.softmax = nn.LogSoftmax(dim=2)
+		self.device = device
 
 		# weight initialize for conv_transpose layer
 		for m in self.modules():
@@ -83,9 +89,12 @@ class DeconvolutionDecoder(nn.Module):
 		# So interpolate x's dimension if batch_size is 1.
 		if len(x_hat.size()) < 3:
 			x_hat = x_hat.view(1, *x_hat.size())
-		#normalized_x_hat = F.normalize(x_hat, p=2, dim=2)
-		#return normalized_x_hat
-		return x_hat
+		normalized_x_hat = F.normalize(x_hat, p=2, dim=2)
+		w = Variable(self.embedding.weight.data).to(self.device)
+		normalized_w = F.normalize(w, p=2, dim=1)
+		prob_logits = torch.tensordot(normalized_x_hat, normalized_w, [[2], [1]])
+		log_prob = self.softmax(prob_logits)
+		return log_prob.transpose(1, 2)
 
 class TextAutoencoder(nn.Module):
 	def __init__(self, encoder, decoder):
@@ -96,6 +105,6 @@ class TextAutoencoder(nn.Module):
 	def __call__(self, x):
 
 		h = self.encoder(x)
-		x_hat = self.decoder(h)
+		log_prob = self.decoder(h)
 
-		return x_hat
+		return log_prob

@@ -214,25 +214,60 @@ def process_dataset_images(target_dataset):
 
 def process_dataset_text(target_dataset):
 	dataset_path = os.path.join(CONFIG.DATASET_PATH, target_dataset)
-	f_csv = open(os.path.join(dataset_path, 'posts.csv'), 'w', encoding='utf-8')
-	f_corpus = open(os.path.join(dataset_path, 'corpus.txt'), 'w', encoding='utf-8')
-	wr = csv.writer(f_csv)
+	if not os.path.exists(dataset_path):
+		os.mkdir(dataset_path)
 	df_data = pd.read_csv(os.path.join(CONFIG.TARGET_PATH, 'posts.csv'), encoding='utf-8')
+	print("tokenizing sentences...")
 	pbar = tqdm(total=df_data.shape[0])
+	shortcode_list = []
+	word_list_list = []
 	for index, in_row in df_data.iterrows():
 		pbar.update(1)
 		if pd.isna(in_row.iloc[2]):
 			continue
-		sentence = process_text(in_row.iloc[2])
-		if len(sentence):
-			image_data = torch.stack(images).detach().numpy()
-			sentence = sentence + ' <EOS>'
-			out_row = []
-			out_row.append(in_row.iloc[1])
-			out_row.append(sentence)
-			wr.writerow(out_row)
-			f_corpus.write(sentence + '\n')
+		word_list = process_text(in_row.iloc[2])
+		if len(word_list) > 0:
+			shortcode_list.append(in_row.iloc[1])
+			word_list_list.append(word_list)
 	pbar.close()
+	print("counting frequencies...")
+	frequency = {}
+	pbar = tqdm(total=len(word_list_list))
+	for word_list in word_list_list:
+		pbar.update(1)
+		for word in word_list:
+			count = frequency.get(word, 0)
+			frequency[word] = count + 1
+	pbar.close()
+	print("convert too few words to <UNK> token...")
+	pbar = tqdm(total=len(word_list_list))
+	processed_word_list_list = []
+	for word_list in word_list_list:
+		pbar.update(1)
+		processed_word_list = []
+		for word in word_list:
+			if frequency[word] < CONFIG.MIN_WORD_COUNT:
+				processed_word_list.append('UNK')
+			else:
+				processed_word_list.append(word)
+		processed_word_list_list.append(processed_word_list)
+	pbar.close()
+	print("making corpus and csv files...")
+	f_csv = open(os.path.join(dataset_path, 'posts.csv'), 'w', encoding='utf-8')
+	f_corpus = open(os.path.join(dataset_path, 'corpus.txt'), 'w', encoding='utf-8')
+	wr = csv.writer(f_csv)
+	pbar = tqdm(total=len(processed_word_list_list))
+	for processed_word_list in processed_word_list_list:
+		pbar.update(1)
+		sentence = ' '.join(processed_word_list) + ' <EOS>'
+		out_row = []
+		out_row.append(in_row.iloc[1])
+		out_row.append(sentence)
+		wr.writerow(out_row)
+		f_corpus.write(sentence + '\n')
+	pbar.close()
+	f_csv.close()
+	f_corpus.close()
 
 def test(target_dataset=sys.argv[2]):
 	toy_path = os.path.join(CONFIG.DATASET_PATH, 'instagram0830')

@@ -8,6 +8,7 @@ import os
 import math
 import numpy as np
 import pandas as pd
+import _pickle as cPickle
 from sumeval.metrics.rouge import RougeCalculator
 from sumeval.metrics.bleu import BLEUCalculator
 from gensim.models.keyedvectors import FastTextKeyedVectors
@@ -42,8 +43,8 @@ def main():
 	# learning
 	parser.add_argument('-lr', type=float, default=1e-04, help='initial learning rate')
 	parser.add_argument('-weight_decay', type=float, default=1e-05, help='initial weight decay')
-	parser.add_argument('-epochs', type=int, default=200, help='number of epochs for train')
-	parser.add_argument('-batch_size', type=int, default=64, help='batch size for training')
+	parser.add_argument('-epochs', type=int, default=100, help='number of epochs for train')
+	parser.add_argument('-batch_size', type=int, default=16, help='batch size for training')
 	parser.add_argument('-lr_decay_interval', type=int, default=10,
 						help='how many epochs to wait before decrease learning rate')
 	parser.add_argument('-log_interval', type=int, default=25600,
@@ -79,15 +80,13 @@ def main():
 def train_reconstruction(args):
 	device = torch.device(args.gpu)
 	print("Loading embedding model...")
-	model_name = 'FASTTEXT_' + args.target_dataset + '.model'
-	embedding_model = FastTextKeyedVectors.load(os.path.join(CONFIG.EMBEDDING_PATH, model_name))
-	embedding_dim = embedding_model.vector_size	
-	args.embedding_dim = embedding_dim
-	print("Building index...")
-	indexer = AnnoyIndexer(embedding_model, 10)
+	with open(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'word_embedding.p'), "rb") as f:
+		embedding_model = cPickle.load(f)
+	with open(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'word_idx.json'), "r", encoding='utf-8') as f:
+		word_idx = json.load(f)
 	print("Loading embedding model completed")
 	print("Loading dataset...")
-	train_dataset, val_dataset = load_text_data(args, CONFIG, embedding_model)
+	train_dataset, val_dataset = load_text_data(args, CONFIG, word2idx=word_idx[1])
 	print("Loading dataset completed")
 	train_loader, val_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=args.shuffle),\
 								  DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
@@ -96,10 +95,10 @@ def train_reconstruction(args):
 	t1 = CONFIG.MAX_SENTENCE_LEN
 	t2 = int(math.floor((t1 - args.filter_shape) / 2) + 1) # "2" means stride size
 	t3 = int(math.floor((t2 - args.filter_shape) / 2) + 1)
-	args.t3 = t3	
-
-	text_encoder = text_model.ConvolutionEncoder(embedding_dim, t3, args.filter_size, args.filter_shape, args.latent_size)
-	text_decoder = text_model.DeconvolutionDecoder(embedding_dim, t3, args.filter_size, args.filter_shape, args.latent_size)
+	args.t3 = t3
+	embedding = nn.Embedding.from_pretrained(torch.FloatTensor(embedding_model))
+	text_encoder = text_model.ConvolutionEncoder(embedding, t3, args.filter_size, args.filter_shape, args.latent_size)
+	text_decoder = text_model.DeconvolutionDecoder(embedding, t3, args.filter_size, args.filter_shape, args.latent_size, device)
 	if args.resume:
 		print("Restart from checkpoint")
 		checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.resume), map_location=lambda storage, loc: storage)
@@ -113,7 +112,7 @@ def train_reconstruction(args):
 		start_epoch = 0
 	
 	text_autoencoder = text_model.TextAutoencoder(text_encoder, text_decoder)
-	criterion = nn.MSELoss().to(device)
+	criterion = nn.NLLLoss().to(device)
 	text_autoencoder.to(device)
 
 	optimizer = AdamW(text_autoencoder.parameters(), lr=args.lr, weight_decay=args.weight_decay, amsgrad=True)
@@ -135,16 +134,17 @@ def train_reconstruction(args):
 				torch.cuda.empty_cache()
 				feature = Variable(batch).to(device)
 				optimizer.zero_grad()
-				feature_hat = text_autoencoder(feature)
-				loss = criterion(feature_hat, feature)
+				prob = text_autoencoder(feature)
+				loss = criterion(prob, feature)
 				loss.backward()
 				optimizer.step()
 
 				if (steps * args.batch_size) % args.log_interval == 0:					
 					input_data = feature[0]
-					single_data = feature_hat[0]
-					input_sentence = util.transform_vec2sentence(input_data.detach().cpu().numpy(), embedding_model, indexer)
-					predict_sentence = util.transform_vec2sentence(single_data.detach().cpu().numpy(), embedding_model, indexer)	
+					single_data = prob[0]
+					_, predict_index = torch.max(single_data, 1)
+					input_sentence = util.transform_idx2word(input_data.detach().cpu().numpy(), idx2word=word_idx[0])
+					predict_sentence = util.transform_idx2word(predict_index.detach().cpu().numpy(), idx2word=word_idx[0])	
 					print("Epoch: {} at {}".format(epoch, str(datetime.datetime.now())))
 					print("Steps: {}".format(steps))
 					print("Loss: {}".format(loss.detach().item()))
@@ -152,15 +152,15 @@ def train_reconstruction(args):
 					print(input_sentence)
 					print("Output Sentence:")
 					print(predict_sentence)
-					del input_data, single_data
-				del feature, feature_hat, loss
+					del input_data, single_data, _, predict_index
+				del feature, prob, loss
 			
 			exp.log("Epoch: {} at {}".format(epoch, str(datetime.datetime.now())))
 			if epoch % args.test_interval == 9:	
-				_avg_loss, _rouge_1, _rouge_2 = eval_reconstruction_with_rouge(text_autoencoder, embedding_model, indexer, criterion, val_loader, args, device)
+				_avg_loss, _rouge_1, _rouge_2 = eval_reconstruction_with_rouge(text_autoencoder, criterion, val_loader, device)
 				exp.log("Evaluation - loss: {}  Rouge1: {}    Rouge2: {}".format(_avg_loss, _rouge_1, _rouge_2))
 			else:
-				_avg_loss = eval_reconstruction(text_autoencoder, embedding_model, indexer, criterion, val_loader, args, device)
+				_avg_loss = eval_reconstruction(text_autoencoder, word_idx[0], criterion, val_loader, device)
 				exp.log("Evaluation - loss: {}".format(_avg_loss))
 
 			if best_loss > _avg_loss:
@@ -177,7 +177,7 @@ def train_reconstruction(args):
 	finally:
 		exp.end()
 
-def eval_reconstruction(autoencoder, embedding_model, indexer, criterion, data_iter, args, device):
+def eval_reconstruction(autoencoder, criterion, data_iter, args, device):
 	print("=================Eval======================")
 	autoencoder.eval()
 	step = 0
@@ -188,18 +188,18 @@ def eval_reconstruction(autoencoder, embedding_model, indexer, criterion, data_i
 		torch.cuda.empty_cache()
 		with torch.no_grad():
 			feature = Variable(batch).to(device)
-		feature_hat = autoencoder(feature)
-		loss = criterion(feature_hat, feature)	
+		prob = autoencoder(feature)
+		loss = criterion(prob, feature)	
 		avg_loss += loss.detach().item()
 		step = step + 1
-		del feature, feature_hat, loss
+		del feature, prob, loss
 	avg_loss = avg_loss / step
 	print("===============================================================")
 	autoencoder.train()
 
 	return avg_loss
 
-def eval_reconstruction_with_rouge(autoencoder, embedding_model, indexer, criterion, data_iter, args, device):
+def eval_reconstruction_with_rouge(autoencoder, idx2word, criterion, data_iter, device):
 	print("=================Eval======================")
 	autoencoder.eval()
 	step = 0
@@ -210,16 +210,17 @@ def eval_reconstruction_with_rouge(autoencoder, embedding_model, indexer, criter
 		torch.cuda.empty_cache()
 		with torch.no_grad():
 			feature = Variable(batch).to(device)
-		feature_hat = autoencoder(feature)
-		original_sentences = [util.transform_vec2sentence(sentence, embedding_model, indexer) for sentence in feature.detach().cpu().numpy()]		
-		predict_sentences = [util.transform_vec2sentence(sentence, embedding_model, indexer) for sentence in feature_hat.detach().cpu().numpy()]	
+		prob = autoencoder(feature)
+		_, predict_index = torch.max(prob, 2)
+		original_sentences = [util.transform_idx2word(sentence, idx2word=idx2word) for sentence in feature.detach().cpu().numpy()]		
+		predict_sentences = [util.transform_idx2word(sentence, idx2word=idx2word) for sentence in predict_index.detach().cpu().numpy()]	
 		r1, r2 = calc_rouge(original_sentences, predict_sentences)		
 		rouge_1 += r1 / len(batch)
 		rouge_2 += r2 / len(batch)
 		loss = criterion(feature_hat, feature)	
 		avg_loss += loss.detach().item()
 		step = step + 1
-		del feature, feature_hat, loss
+		del feature, prob, loss, _, predict_index
 	avg_loss = avg_loss / step
 	rouge_1 = rouge_1 / step
 	rouge_2 = rouge_2 / step

@@ -8,6 +8,8 @@ import regex
 import re
 import numpy as np
 import pandas as pd
+import json
+import _pickle as cPickle
 from tqdm import tqdm
 
 
@@ -108,8 +110,8 @@ def make_fasttext(target_dataset):
 	print("embedding completed")
 
 def model_to_csv(target_model):
-	model_name = 'FASTTEXT_' + target_model + '.model'
-	model = FastTextKeyedVectors.load(os.path.join(CONFIG.EMBEDDING_PATH,model_name))
+	model_name = 'WORD2VEC_' + target_model + '.model'
+	model = Word2VecKeyedVectors.load(os.path.join(CONFIG.EMBEDDING_PATH,model_name))
 	vocab = list(model.vocab)
 	vocab_list = [x for x in vocab]
 	print("vocab length: ", len(vocab_list))
@@ -205,52 +207,75 @@ def pickle_to_corpus(target_pickle):
 	f_wr.close()
 
 def make_word2vec(target_corpus):
-	target_corpus_name = target_corpus + '.txt'
-	corpus_path = os.path.join(CONFIG.DATA_PATH, "corpus", target_corpus_name)
+	corpus_path = os.path.join(CONFIG.DATASET_PATH, target_corpus, 'corpus.txt')
 	sentences = word2vec.LineSentence(corpus_path) 
-	
+	embedding_size = 300
+	pad_value = 1.
 	print("embedding started")
-	embedding_model = Word2Vec(sentences, size=300, window=5, min_count=1, workers=4, sg = 1, hs=0, negative=5, sample = 0.00001, iter = 100)
+	embedding_model = Word2Vec(size=embedding_size, window=5, min_count=CONFIG.MIN_WORD_COUNT, workers=4, sg = 1, hs=0, negative=5, sample = 0.00001, iter = 100)
+	embedding_model.build_vocab(sentences=sentences)
+	embedding_model.train(sentences=sentences, total_examples=embedding_model.corpus_count, epochs=20)
 	model_name = "WORD2VEC_"+ target_corpus + ".model"
 	embedding_model.wv.save(os.path.join(CONFIG.EMBEDDING_PATH, model_name))
+
+	vocab_list = list(embedding_model.wv.vocab)
+	idx2word = {}
+	word2idx = {}
+	word_vectors = []
+	for idx, word in enumerate(vocab_list):
+		idx2word[idx] = word
+		word2idx[word] = idx
+		word_vectors.append(embedding_model.wv[word])
+	
+	n_words = len(word2idx)
+	word2idx["<PAD>"] = n_words
+	idx2word[n_words] = "<PAD>"
+	word_vectors.append(np.full(embedding_size, pad_value))
+	word_array = np.array(word_vectors, dtype=np.float32)
+	with open(os.path.join(CONFIG.DATASET_PATH, target_corpus, 'word_idx.json'), "w", encoding='utf-8') as f:
+		f.write(json.dumps([idx2word, word2idx]))
+	f.close()
+	with open(os.path.join(CONFIG.DATASET_PATH, target_corpus, 'word_embedding.p'), 'wb') as f:
+		cPickle.dump(word_array, f)
+	f.close()
+	print(word_array.shape)
 	print("embedding completed")
 
 def test():
-	# target_corpus_name = target_corpus + '.txt'
-	# length_list = []
-	# sentence_len = 0
-	# with open(os.path.join(CONFIG.DATA_PATH, 'corpus', target_corpus_name), 'r', encoding='utf-8-sig', newline='\n') as f:
-	# 	while True:
-	# 		line = f.readline()
-	# 		if not line: break;
-	# 		length_list.append(len(line.split()))
-	# 		if len(line.split()) > sentence_len:
-	# 			sentence_len = len(line.split())
-	# 			print(line)
-	# length_array = np.array(length_list)
-	# print("mean: ", np.mean(length_array))
-	# print("max: ", np.max(length_array))
+	length_list = []
+	sentence_len = 0
+	with open(os.path.join(CONFIG.DATASET_PATH, 'instagram0830', 'corpus.txt'), 'r', encoding='utf-8-sig', newline='\n') as f:
+		while True:
+			line = f.readline()
+			if not line: break;
+			length_list.append(len(line.split()))
+			if len(line.split()) > sentence_len:
+				sentence_len = len(line.split())
+				print(line)
+	length_array = np.array(length_list)
+	print("mean: ", np.mean(length_array))
+	print("max: ", np.max(length_array))
 
-	full_data = []
-	full_data_norm = []
-	df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "hongdae.csv"), header=None, encoding='utf-8')
-	pbar = tqdm(total=df_data.shape[0])
-	for index, row in df_data.iterrows():
-		pbar.update(1)
-		text_data = row.iloc[1:]
-		text_data = np.array(text_data, dtype=np.float32)
-		text_data_norm = np.linalg.norm(text_data, axis=0, ord=2)
-		full_data.append(text_data)
-		full_data_norm.append(text_data_norm)
-		del text_data
-	pbar.close()
-	full_data = np.array(full_data, dtype=np.float32)
-	full_data_norm = np.array(full_data_norm, dtype=np.float32)
-	print("mean: ", np.mean(full_data, axis=1))
-	print("std: ", np.std(full_data, axis=1))
-	print("max: ", np.max(full_data, axis=1))
-	print("min: ", np.min(full_data, axis=1))
-	print("norm: ", full_data_norm)
+	# full_data = []
+	# full_data_norm = []
+	# df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "hongdae.csv"), header=None, encoding='utf-8')
+	# pbar = tqdm(total=df_data.shape[0])
+	# for index, row in df_data.iterrows():
+	# 	pbar.update(1)
+	# 	text_data = row.iloc[1:]
+	# 	text_data = np.array(text_data, dtype=np.float32)
+	# 	text_data_norm = np.linalg.norm(text_data, axis=0, ord=2)
+	# 	full_data.append(text_data)
+	# 	full_data_norm.append(text_data_norm)
+	# 	del text_data
+	# pbar.close()
+	# full_data = np.array(full_data, dtype=np.float32)
+	# full_data_norm = np.array(full_data_norm, dtype=np.float32)
+	# print("mean: ", np.mean(full_data, axis=1))
+	# print("std: ", np.std(full_data, axis=1))
+	# print("max: ", np.max(full_data, axis=1))
+	# print("min: ", np.min(full_data, axis=1))
+	# print("norm: ", full_data_norm)
 
 def make_fasttext_pretrained(target_corpus, pretrined_model):
 

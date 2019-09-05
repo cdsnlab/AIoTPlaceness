@@ -1,15 +1,48 @@
-
+from polyglot.text import Text, Word
 from polyglot.detect import Detector
 from konlpy.tag import Okt
 import re
+import nltk
+import sys
+from nltk.tokenize import word_tokenize, sent_tokenize
+from nltk.tag import pos_tag
 
 okt=Okt()
 expression = re.compile('[ㄱ-ㅣ가-힣|a-zA-Z|\s]+') 
 def process_text(text_data):
+	text_data = ''.join(x for x in text_data if x.isprintable())
 	text_data = text_data.replace("#", " ")
 	text_data = text_data.replace("\n", " ")
+	languages = Detector(text_data, quiet=True).languages
+
+
+	word_list = []
+	if languages[0].code in ["ko", "en"]:
+		tokens = okt.pos(text_data)
+		#print(tokens)
+		for token in tokens:
+			word = token[0]
+			if token[1] in ['Foreign', 'Number', 'URL', 'Email', 'ScreenName', 'Hashtag']:
+				# all Hashtag remaining are Japanese
+				continue
+			elif token[1] == 'Alpha':
+				word = word.lower()
+			if word == '그램':
+				if len(word_list) > 0:
+					if word_list[-1] == '스타':
+						word_list[-1] = '스타그램'
+					elif word_list[-1] == '맛스타':
+						word_list[-1] = '맛스타그램'
+					else:
+						word_list.append(word)
+				else:
+					word_list.append(word)
+			else:
+				word_list.append(word)		
+	return word_list
+
+def temp(text_data):
 	text_data = [re.findall(expression, x) for x in text_data if x.isprintable()]
-	#data = [regex.findall('[\p{Hangul}|\p{Latin}|\s]+', x) for x in data if x.isprintable()]
 	word_list = []
 	word = []
 	for character in text_data:
@@ -26,5 +59,3 @@ def process_text(text_data):
 				character[0] = character[0].lower()
 			word.append(character[0])
 	line = ' '.join(word_list)
-
-	return line
