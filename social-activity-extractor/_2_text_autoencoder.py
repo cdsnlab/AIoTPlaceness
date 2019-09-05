@@ -51,7 +51,7 @@ def main():
 						help='how many steps to wait before logging training status')
 	parser.add_argument('-test_interval', type=int, default=10,
 						help='how many epochs to wait before rouge testing')
-    parser.add_argument('-tau', type=float, default=0.01, help='temperature parameter')
+	parser.add_argument('-tau', type=float, default=0.01, help='temperature parameter')
 	# data
 	parser.add_argument('-target_dataset', type=str, default=None, help='folder name of target dataset')
 	parser.add_argument('-shuffle', default=True, help='shuffle data every epoch')
