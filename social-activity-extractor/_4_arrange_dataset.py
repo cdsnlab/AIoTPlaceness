@@ -103,7 +103,8 @@ class last_layer(nn.Module):
 		super(last_layer, self).__init__()
 		
 	def forward(self, x):
-		return x
+		normalized_x = F.normalize(x, p=2, dim=1)
+		return normalized_x
 
 def embedding_images(target_dataset, arch, gpu="cuda"):
 
@@ -115,7 +116,7 @@ def embedding_images(target_dataset, arch, gpu="cuda"):
 	embedding_model.eval()
 	embedding_model.to(device)
 	print("Loading embedding model completed")
-	pad_value = 1.
+	pad_value = 0.
 	embedding_path = os.path.join(dataset_path, arch)
 	if not os.path.exists(embedding_path):
 		os.mkdir(embedding_path)
@@ -136,7 +137,7 @@ def embedding_images(target_dataset, arch, gpu="cuda"):
 									constant_values=(pad_value))
 		else:
 			vector_array = embedded_image
-		vector_array = vector_array / np.linalg.norm(vector_array, axis=1, ord=2, keepdims=True)
+		#vector_array = vector_array / np.linalg.norm(vector_array, axis=1, ord=2, keepdims=True)
 		with open(os.path.join(embedding_path, image_path), 'wb') as f:
 			cPickle.dump(vector_array, f)
 		f.close()
