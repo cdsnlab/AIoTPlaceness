@@ -40,16 +40,14 @@ def slacknoti(contentstr):
 def main():
 	parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
 	# learning
-	parser.add_argument('-lr', type=float, default=3e-04, help='initial learning rate')
-	parser.add_argument('-weight_decay', type=float, default=3e-05, help='initial weight decay')
-	parser.add_argument('-epochs', type=int, default=80, help='number of epochs for train')
+	parser.add_argument('-lr', type=float, default=1e-04, help='initial learning rate')
+	parser.add_argument('-weight_decay', type=float, default=1e-05, help='initial weight decay')
+	parser.add_argument('-epochs', type=int, default=100, help='number of epochs for train')
 	parser.add_argument('-batch_size', type=int, default=16, help='batch size for training')
 	parser.add_argument('-lr_decay_interval', type=int, default=10,
 						help='how many epochs to wait before decrease learning rate')
 	parser.add_argument('-log_interval', type=int, default=1000,
 						help='how many steps to wait before logging training status')
-	parser.add_argument('-test_interval', type=int, default=1,
-						help='how many epochs to wait before testing')
 	parser.add_argument('-save_interval', type=int, default=1,
 						help='how many epochs to wait before saving')
 	# data
@@ -57,7 +55,8 @@ def main():
 	parser.add_argument('-shuffle', default=True, help='shuffle data every epoch')
 	parser.add_argument('-split_rate', type=float, default=0.9, help='split rate between train and validation')
 	# model
-	parser.add_argument('-arch', type=str, default='resnet152', help='image embedding model')
+	parser.add_argument('-arch', type=str, default='resnext101_32x8d', help='image embedding model')
+	parser.add_argument('-embedding_dim', type=int, default=2048, help='embedding dimension of the model')
 	parser.add_argument('-latent_size', type=int, default=900, help='size of latent variable')
 	parser.add_argument('-num_layer', type=int, default=4, help='layer number')
 
@@ -78,18 +77,14 @@ def main():
 
 def train_reconstruction(args):
 	device = torch.device(args.gpu)
-	print("Loading embedding model...")
-	embedding_model = models.__dict__[args.arch](pretrained=True)
-	embedding_dim = embedding_model.fc.in_features
-	args.embedding_dim = embedding_dim
 	print("Loading dataset...")
 	train_dataset, val_dataset = load_imgseq_data(args, CONFIG)
 	print("Loading dataset completed")
 	train_loader, val_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=args.shuffle),\
 								  DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
 
-	imgseq_encoder = imgseq_model.RNNEncoder(embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
-	imgseq_decoder = imgseq_model.RNNDecoder(CONFIG.MAX_SEQUENCE_LEN, embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
+	imgseq_encoder = imgseq_model.RNNEncoder(args.embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
+	imgseq_decoder = imgseq_model.RNNDecoder(CONFIG.MAX_SEQUENCE_LEN, args.embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
 	if args.resume:
 		print("Restart from checkpoint")
 		checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.resume), map_location=lambda storage, loc: storage)
@@ -113,9 +108,10 @@ def train_reconstruction(args):
 
 
 	exp = Experiment("Image-sequence autoencoder")
-	try:
-		avg_loss = []
 
+	for arg, value in vars(args).items():
+		exp.param(arg, value) 
+	try:
 		imgseq_autoencoder.train() 
 
 		for epoch in range(start_epoch, args.epochs):
@@ -137,8 +133,9 @@ def train_reconstruction(args):
 					input_data = feature[0]
 				del feature, feature_hat, loss
 			
-			_avg_loss = eval_reconstruction(imgseq_autoencoder, embedding_model, criterion, val_loader, args, device)
-			avg_loss.append(_avg_loss)
+			exp.log("Epoch: {} at {}".format(epoch, str(datetime.datetime.now())))
+			_avg_loss = eval_reconstruction(imgseq_autoencoder, criterion, val_loader, device)
+			exp.log("Evaluation - loss: {}".format(_avg_loss))
 
 			if best_loss > _avg_loss:
 				best_loss = _avg_loss
@@ -149,21 +146,20 @@ def train_reconstruction(args):
 					'best_loss': best_loss,
 					'optimizer' : optimizer.state_dict(),
 				}, CONFIG.CHECKPOINT_PATH, "imgseq_autoencoder")
-
-		eval_reconstruction(imgseq_autoencoder, embedding_model, criterion, val_loader, args, device)		
+	
 		print("Finish!!!")
 
 	finally:
 		exp.end()
 
-def eval_reconstruction(autoencoder, embedding_model, criterion, data_iter, args, device):
+def eval_reconstruction(autoencoder,criterion, data_iter, device):
 	print("=================Eval======================")
 	autoencoder.eval()
 	step = 0
 	avg_loss = 0.
 	rouge_1 = 0.
 	rouge_2 = 0.
-	for batch in data_iter:
+	for batch in tqdm(data_iter):
 		torch.cuda.empty_cache()
 		with torch.no_grad():
 			feature = Variable(batch).to(device)

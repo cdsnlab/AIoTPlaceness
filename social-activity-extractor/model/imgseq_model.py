@@ -45,7 +45,7 @@ class RNNDecoder(nn.Module):
 	def __call__(self, h):
 
 		# forward propagate lstm
-		x_hat, _ = self.lstm(h.expand(-1, self.sequence_len, -1))
+		x_hat, _ = self.lstm(h.unsqueeze(dim=1).expand(-1, self.sequence_len, -1))
 		return x_hat
 
 class ImgseqAutoEncoder(nn.Module):

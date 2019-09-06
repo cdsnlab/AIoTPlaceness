@@ -103,13 +103,12 @@ class last_layer(nn.Module):
 		super(last_layer, self).__init__()
 		
 	def forward(self, x):
-		normalized_x = F.normalize(x, p=2, dim=1)
-		return normalized_x
+		return x
 
-def embedding_images(target_dataset, arch):
+def embedding_images(target_dataset, arch, gpu="cuda"):
 
 	dataset_path = os.path.join(CONFIG.DATASET_PATH, target_dataset)
-	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+	device = torch.device(args.gpu)
 	print("Loading embedding model...")
 	embedding_model = models.__dict__[arch](pretrained=True)
 	embedding_model.fc = last_layer()
@@ -137,7 +136,7 @@ def embedding_images(target_dataset, arch):
 									constant_values=(pad_value))
 		else:
 			vector_array = embedded_image
-		#vector_array = vector_array / np.linalg.norm(vector_array, axis=1, ord=2, keepdims=True)
+		vector_array = vector_array / np.linalg.norm(vector_array, axis=1, ord=2, keepdims=True)
 		with open(os.path.join(embedding_path, image_path), 'wb') as f:
 			cPickle.dump(vector_array, f)
 		f.close()

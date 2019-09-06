@@ -112,8 +112,8 @@ def load_imgseq_data(args, CONFIG):
 	train_size = int(args.split_rate * len(full_data))
 	val_size = len(full_data) - train_size
 	train_data, val_data = torch.utils.data.random_split(full_data, [train_size, val_size])
-	train_dataset, val_dataset = ImgseqDataset(train_data, embedding_model, CONFIG, transform=ToTensor()), \
-							 ImgseqDataset(val_data, embedding_model, CONFIG, transform=ToTensor())
+	train_dataset, val_dataset = ImgseqDataset(train_data, CONFIG), \
+							 ImgseqDataset(val_data, CONFIG)
 	return train_dataset, val_dataset
 
 
@@ -126,9 +126,7 @@ class ImgseqDataset(Dataset):
 		return len(self.data)
 
 	def __getitem__(self, idx):
-		vector_array = self.data[idx]
-		if self.transform:
-			vector_array = self.transform(vector_array)
+		vector_array = torch.from_numpy(self.data[idx]).type(torch.FloatTensor)
 		return vector_array
 
 def load_multimodal_data(args, CONFIG, text_embedding_model):	
