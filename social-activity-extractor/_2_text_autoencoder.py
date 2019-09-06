@@ -178,7 +178,7 @@ def train_reconstruction(args):
 	finally:
 		exp.end()
 
-def eval_reconstruction(autoencoder, criterion, data_iter, args, device):
+def eval_reconstruction(autoencoder, criterion, data_iter, device):
 	print("=================Eval======================")
 	autoencoder.eval()
 	step = 0
