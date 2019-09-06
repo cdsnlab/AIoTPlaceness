@@ -49,8 +49,6 @@ def main():
 						help='how many epochs to wait before decrease learning rate')
 	parser.add_argument('-log_interval', type=int, default=25600,
 						help='how many steps to wait before logging training status')
-	parser.add_argument('-test_interval', type=int, default=10,
-						help='how many epochs to wait before rouge testing')
 	parser.add_argument('-tau', type=float, default=0.01, help='temperature parameter')
 	# data
 	parser.add_argument('-target_dataset', type=str, default=None, help='folder name of target dataset')
@@ -157,12 +155,8 @@ def train_reconstruction(args):
 				del feature, prob, loss
 			
 			exp.log("Epoch: {} at {}".format(epoch, str(datetime.datetime.now())))
-			if epoch % args.test_interval == 9:	
-				_avg_loss, _rouge_1, _rouge_2 = eval_reconstruction_with_rouge(text_autoencoder, word_idx[0], criterion, val_loader, device)
-				exp.log("Evaluation - loss: {}  Rouge1: {}    Rouge2: {}".format(_avg_loss, _rouge_1, _rouge_2))
-			else:
-				_avg_loss = eval_reconstruction(text_autoencoder, criterion, val_loader, device)
-				exp.log("Evaluation - loss: {}".format(_avg_loss))
+			_avg_loss, _rouge_1, _rouge_2 = eval_reconstruction_with_rouge(text_autoencoder, word_idx[0], criterion, val_loader, device)
+			exp.log("Evaluation - loss: {}  Rouge1: {}    Rouge2: {}".format(_avg_loss, _rouge_1, _rouge_2))
 
 			if best_loss > _avg_loss:
 				best_loss = _avg_loss
