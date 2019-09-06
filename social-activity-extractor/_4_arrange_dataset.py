@@ -109,7 +109,7 @@ class last_layer(nn.Module):
 def embedding_images(target_dataset, arch, gpu="cuda"):
 
 	dataset_path = os.path.join(CONFIG.DATASET_PATH, target_dataset)
-	device = torch.device(args.gpu)
+	device = torch.device(gpu)
 	print("Loading embedding model...")
 	embedding_model = models.__dict__[arch](pretrained=True)
 	embedding_model.fc = last_layer()
@@ -358,7 +358,7 @@ def run(option):
 	if option == 0:
 		copy_selected_post(target_folder=sys.argv[2])
 	elif option == 1:
-		embedding_images(target_dataset=sys.argv[2], arch=sys.argv[3])
+		embedding_images(target_dataset=sys.argv[2], arch=sys.argv[3], gpu=sys.argv[4])
 	elif option == 2:
 		embedding_text(target_dataset=sys.argv[2])
 	elif option == 3:
