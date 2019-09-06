@@ -246,15 +246,17 @@ def make_word2vec(target_corpus):
 def test():
 	length_list = []
 	sentence_len = 0
-	with open(os.path.join(CONFIG.DATASET_PATH, 'instagram0830', 'corpus.txt'), 'r', encoding='utf-8-sig', newline='\n') as f:
+	count = 0
+	with open(os.path.join(CONFIG.DATASET_PATH, 'instagram0830', 'corpus.txt'), 'r', encoding='utf-8', newline='\n') as f:
 		while True:
 			line = f.readline()
 			if not line: break;
 			length_list.append(len(line.split()))
-			if len(line.split()) > sentence_len:
-				sentence_len = len(line.split())
-				print(line)
+			if len(line.split()) > 257:
+				count = count + 1
 	length_array = np.array(length_list)
+	print("total line: ", len(length_array))
+	print("truncated line: ", count)
 	print("mean: ", np.mean(length_array))
 	print("max: ", np.max(length_array))
 
