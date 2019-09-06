@@ -1,4 +1,3 @@
-from polyglot.text import Text, Word
 from polyglot.detect import Detector
 from konlpy.tag import Okt
 import re
