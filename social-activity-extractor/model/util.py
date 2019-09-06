@@ -13,7 +13,7 @@ from tqdm import tqdm
 torch.manual_seed(42)
 def load_text_data(args, CONFIG, word2idx):	
 	full_data = []
-	df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'posts.csv'), header=None, encoding='utf-8')
+	df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'posts.csv'), header=None, encoding='utf-8-sig')
 	pbar = tqdm(total=df_data.shape[0])
 	for index, row in df_data.iterrows():
 		pbar.update(1)
@@ -133,7 +133,7 @@ class ImgseqDataset(Dataset):
 
 def load_multimodal_data(args, CONFIG, text_embedding_model):	
 	full_data = []
-	df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'posts.csv'), header=None, encoding='utf-8')
+	df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'posts.csv'), header=None, encoding='utf-8-sig')
 	print("Using embedding model: ", args.arch)
 	image_dir = os.path.join(CONFIG.DATASET_PATH, args.target_dataset, args.arch)
 	pbar = tqdm(total=df_data.shape[0])
