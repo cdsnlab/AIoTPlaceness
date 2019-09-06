@@ -63,8 +63,8 @@ class TextDataset(Dataset):
 # 		del text_data
 # 	pbar.close()
 # 	train_size = int(args.split_rate * len(full_data))
-# 	val_size = len(full_dataset) - train_size
-# 	train_data, val_data = torch.utils.data.random_split(full_data, [train_size, test_size])
+# 	val_size = len(full_data) - train_size
+# 	train_data, val_data = torch.utils.data.random_split(full_data, [train_size, val_size])
 # 	train_dataset, val_dataset = TextDataset(train_data, embedding_model, CONFIG, transform=ToTensor()), \
 # 							 TextDataset(val_data, embedding_model, CONFIG, transform=ToTensor())
 # 	return train_dataset, val_dataset
@@ -110,9 +110,10 @@ def load_imgseq_data(args, CONFIG):
 		del image_data
 	full_data = np.array(full_data, dtype=np.float32)
 	train_size = int(args.split_rate * len(full_data))
-	train_data, val_data = full_data[:train_size], full_data[train_size:]
-	train_dataset, val_dataset = ImgseqDataset(train_data, CONFIG), \
-							 ImgseqDataset(val_data, CONFIG)
+	val_size = len(full_data) - train_size
+	train_data, val_data = torch.utils.data.random_split(full_data, [train_size, val_size])
+	train_dataset, val_dataset = ImgseqDataset(train_data, embedding_model, CONFIG, transform=ToTensor()), \
+							 ImgseqDataset(val_data, embedding_model, CONFIG, transform=ToTensor())
 	return train_dataset, val_dataset
 
 

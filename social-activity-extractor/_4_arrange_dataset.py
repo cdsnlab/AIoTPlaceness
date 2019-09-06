@@ -212,7 +212,7 @@ def process_dataset_text(target_dataset):
 	dataset_path = os.path.join(CONFIG.DATASET_PATH, target_dataset)
 	if not os.path.exists(dataset_path):
 		os.mkdir(dataset_path)
-	df_data = pd.read_csv(os.path.join(CONFIG.TARGET_PATH, 'posts.csv'), encoding='utf-8')
+	df_data = pd.read_csv(os.path.join(CONFIG.TARGET_PATH, 'posts.csv'), encoding='utf-8-sig')
 	print("tokenizing sentences...")
 	pbar = tqdm(total=df_data.shape[0])
 	shortcode_list = []
@@ -235,7 +235,7 @@ def process_dataset_text(target_dataset):
 			count = frequency.get(word, 0)
 			frequency[word] = count + 1
 	pbar.close()
-	print("convert too few words to <UNK> token...")
+	print("convert too few words to UNK token...")
 	pbar = tqdm(total=len(word_list_list))
 	processed_word_list_list = []
 	for word_list in word_list_list:
@@ -249,15 +249,88 @@ def process_dataset_text(target_dataset):
 		processed_word_list_list.append(processed_word_list)
 	pbar.close()
 	print("making corpus and csv files...")
-	f_csv = open(os.path.join(dataset_path, 'posts.csv'), 'w', encoding='utf-8')
+	f_csv = open(os.path.join(dataset_path, 'posts.csv'), 'w', encoding='utf-8-sig')
 	f_corpus = open(os.path.join(dataset_path, 'corpus.txt'), 'w', encoding='utf-8')
 	wr = csv.writer(f_csv)
 	pbar = tqdm(total=len(processed_word_list_list))
-	for processed_word_list in processed_word_list_list:
+	for index in range(len(processed_word_list_list)):
 		pbar.update(1)
-		sentence = ' '.join(processed_word_list) + ' <EOS>'
+		sentence = ' '.join(processed_word_list_list[index])
+		if len(sentence) > 0:
+			out_row = []
+			out_row.append(shortcode_list[index])
+			out_row.append(sentence + ' <EOS>')
+			wr.writerow(out_row)
+			f_corpus.write(sentence + ' <EOS>\n')
+	pbar.close()
+	f_csv.close()
+	f_corpus.close()
+
+def test(target_dataset):
+	# toy_path = os.path.join(CONFIG.DATASET_PATH, 'instagram0830')
+	# full_data = []
+	# full_data_norm = []
+	# for image_path in os.listdir(os.path.join(toy_path, 'resnext101_32x8d')):
+	# 	with open(os.path.join(toy_path, 'resnext101_32x8d', image_path), "rb") as f:
+	# 		image_data = cPickle.load(f)
+	# 		# print(data)
+	# 		# print(np.max(data))
+	# 		# print(np.min(data))
+	# 		# print(np.mean(data))
+	# 		# print(data.shape)
+	# 	full_data.append(image_data)
+	# 	image_data_norm = np.linalg.norm(image_data, axis=1, ord=2)
+	# 	full_data_norm.append(image_data_norm)
+	# #df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, target_dataset, 'posts.csv'), header=None, encoding='utf-8')
+	# #print(df_data)
+
+	# full_data = np.array(full_data, dtype=np.float32)
+	# full_data_norm = np.array(full_data_norm, dtype=np.float32)
+	# temp = np.mean(np.mean(full_data, axis=2), axis=1)
+	# print(temp.shape)
+	# print("mean: ", np.mean(np.mean(full_data, axis=2), axis=1))
+	# print("std: ", np.mean(np.std(full_data, axis=2), axis=1))
+	# print("max: ", np.mean(np.max(full_data, axis=2), axis=1))
+	# print("min: ", np.mean(np.min(full_data, axis=2), axis=1))
+	# print("norm: ", full_data_norm)
+
+	dataset_path = os.path.join(CONFIG.DATASET_PATH, target_dataset)
+	if not os.path.exists(dataset_path):
+		os.mkdir(dataset_path)
+	with open(os.path.join('./data', 'pickle', 'hotel_reviews.p'), 'rb') as f:
+		dataset = cPickle.load(f, encoding="latin1")
+	f.close()
+	print("tokenizing sentences...")
+	shortcode_list = []
+	word_list_list = []
+	pbar = tqdm(total=len(dataset[0]))
+	for pg in dataset[0]:
+		pbar.update(1)
+		data = " ".join([dataset[3][idx] for idx in pg])
+		data = data.replace("END_TOKEN", "")
+		word_list = process_text(data)
+		if len(word_list) > 0:
+			word_list_list.append(word_list)
+	pbar.close()
+	pbar = tqdm(total=len(dataset[1]))
+	for pg in dataset[1]:
+		pbar.update(1)
+		data = " ".join([dataset[3][idx] for idx in pg])
+		data = data.replace("END_TOKEN", "")
+		word_list = process_text(data)
+		if len(word_list) > 0:
+			word_list_list.append(word_list)
+	pbar.close()
+	print("making corpus and csv files...")
+	f_csv = open(os.path.join(dataset_path, 'posts.csv'), 'w', encoding='utf-8')
+	f_corpus = open(os.path.join(dataset_path, 'corpus.txt'), 'w', encoding='utf-8')
+	wr = csv.writer(f_csv)
+	pbar = tqdm(total=len(word_list_list))
+	for word_list in word_list_list:
+		pbar.update(1)
+		sentence = ' '.join(word_list) + ' <EOS>'
 		out_row = []
-		out_row.append(in_row.iloc[1])
+		out_row.append('asd')
 		out_row.append(sentence)
 		wr.writerow(out_row)
 		f_corpus.write(sentence + '\n')
@@ -265,35 +338,7 @@ def process_dataset_text(target_dataset):
 	f_csv.close()
 	f_corpus.close()
 
-def test(target_dataset=sys.argv[2]):
-	toy_path = os.path.join(CONFIG.DATASET_PATH, 'instagram0830')
-	full_data = []
-	full_data_norm = []
-	for image_path in os.listdir(os.path.join(toy_path, 'resnext101_32x8d')):
-		with open(os.path.join(toy_path, 'resnext101_32x8d', image_path), "rb") as f:
-			image_data = cPickle.load(f)
-			# print(data)
-			# print(np.max(data))
-			# print(np.min(data))
-			# print(np.mean(data))
-			# print(data.shape)
-		full_data.append(image_data)
-		image_data_norm = np.linalg.norm(image_data, axis=1, ord=2)
-		full_data_norm.append(image_data_norm)
-	#df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, target_dataset, 'posts.csv'), header=None, encoding='utf-8')
-	#print(df_data)
-
-	full_data = np.array(full_data, dtype=np.float32)
-	full_data_norm = np.array(full_data_norm, dtype=np.float32)
-	temp = np.mean(np.mean(full_data, axis=2), axis=1)
-	print(temp.shape)
-	print("mean: ", np.mean(np.mean(full_data, axis=2), axis=1))
-	print("std: ", np.mean(np.std(full_data, axis=2), axis=1))
-	print("max: ", np.mean(np.max(full_data, axis=2), axis=1))
-	print("min: ", np.mean(np.min(full_data, axis=2), axis=1))
-	print("norm: ", full_data_norm)
-
-def make_toy_dataset(target_dataset=sys.argv[2]):
+def make_toy_dataset(target_dataset):
 	dataset_path = os.path.join(CONFIG.DATASET_PATH, target_dataset)
 	toy_path = os.path.join(CONFIG.DATASET_PATH, 'toy')
 	df_data = pd.read_csv(os.path.join(dataset_path, 'posts.csv'), header=None, encoding='utf-8')

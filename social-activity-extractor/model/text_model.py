@@ -95,7 +95,7 @@ class DeconvolutionDecoder(nn.Module):
 		normalized_w = F.normalize(w, p=2, dim=1)
 		prob_logits = torch.tensordot(normalized_x_hat, normalized_w, [[2], [1]]) / self.tau
 		log_prob = self.softmax(prob_logits)
-		return log_prob.transpose(1, 2)
+		return log_prob
 
 class TextAutoencoder(nn.Module):
 	def __init__(self, encoder, decoder):

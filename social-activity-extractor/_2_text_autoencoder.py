@@ -136,7 +136,7 @@ def train_reconstruction(args):
 				feature = Variable(batch).to(device)
 				optimizer.zero_grad()
 				prob = text_autoencoder(feature)
-				loss = criterion(prob, feature)
+				loss = criterion(prob.transpose(1, 2), feature)
 				loss.backward()
 				optimizer.step()
 
@@ -190,7 +190,7 @@ def eval_reconstruction(autoencoder, criterion, data_iter, device):
 		with torch.no_grad():
 			feature = Variable(batch).to(device)
 		prob = autoencoder(feature)
-		loss = criterion(prob, feature)	
+		loss = criterion(prob.transpose(1, 2), feature)	
 		avg_loss += loss.detach().item()
 		step = step + 1
 		del feature, prob, loss
@@ -218,7 +218,7 @@ def eval_reconstruction_with_rouge(autoencoder, idx2word, criterion, data_iter, 
 		r1, r2 = calc_rouge(original_sentences, predict_sentences)		
 		rouge_1 += r1 / len(batch)
 		rouge_2 += r2 / len(batch)
-		loss = criterion(feature_hat, feature)	
+		loss = criterion(prob.transpose(1, 2), feature)	
 		avg_loss += loss.detach().item()
 		step = step + 1
 		del feature, prob, loss, _, predict_index
