@@ -147,7 +147,7 @@ def train_reconstruction(args):
 					_, predict_index = torch.max(single_data, 1)
 					input_sentence = util.transform_idx2word(input_data.detach().cpu().numpy(), idx2word=word_idx[0])
 					predict_sentence = util.transform_idx2word(predict_index.detach().cpu().numpy(), idx2word=word_idx[0])	
-					print("Epoch: {} at {}".format(epoch, str(datetime.datetime.now())))
+					print("Epoch: {} at {} lr: {}".format(epoch, str(datetime.datetime.now()), str(scheduler.get_lr())))
 					print("Steps: {}".format(steps))
 					print("Loss: {}".format(loss.detach().item()))
 					print("Input Sentence:")

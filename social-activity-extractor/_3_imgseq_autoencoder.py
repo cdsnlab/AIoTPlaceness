@@ -130,7 +130,7 @@ def train_reconstruction(args):
 				scheduler.step()
 
 				if (steps * args.batch_size) % args.log_interval == 0:
-					print("Epoch: {} at {}".format(epoch, str(datetime.datetime.now())))
+					print("Epoch: {} at {} lr: {}".format(epoch, str(datetime.datetime.now()), str(scheduler.get_lr())))
 					print("Steps: {}".format(steps))
 					print("Loss: {}".format(loss.detach().item()))
 					input_data = feature[0]
