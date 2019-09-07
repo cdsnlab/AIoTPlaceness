@@ -42,6 +42,7 @@ def main():
 	# learning
 	parser.add_argument('-lr', type=float, default=1e-04, help='initial learning rate')
 	parser.add_argument('-lr_factor', type=float, default=10, help='lr_factor for min lr')
+	parser.add_argument('-half_cycle_interval', type=int, default=4, help='lr_factor step size equals to half cycle')
 	parser.add_argument('-weight_decay', type=float, default=1e-05, help='initial weight decay')
 	parser.add_argument('-epochs', type=int, default=100, help='number of epochs for train')
 	parser.add_argument('-batch_size', type=int, default=16, help='batch size for training')
@@ -101,7 +102,7 @@ def train_reconstruction(args):
 	imgseq_autoencoder.to(device)
 
 	optimizer = AdamW(imgseq_autoencoder.parameters(), lr=1., weight_decay=args.weight_decay, amsgrad=True)
-	step_size = 4*len(train_loader)
+	step_size = args.half_cycle_interval*len(train_loader)
 	clr = cyclical_lr(step_size, min_lr=args.lr, max_lr=args.lr*args.lr_factor)
 	scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, [clr])
 
