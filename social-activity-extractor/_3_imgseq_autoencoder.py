@@ -46,7 +46,7 @@ def main():
 	parser.add_argument('-batch_size', type=int, default=16, help='batch size for training')
 	parser.add_argument('-lr_decay_interval', type=int, default=10,
 						help='how many epochs to wait before decrease learning rate')
-	parser.add_argument('-log_interval', type=int, default=1000,
+	parser.add_argument('-log_interval', type=int, default=25600,
 						help='how many steps to wait before logging training status')
 	parser.add_argument('-save_interval', type=int, default=1,
 						help='how many epochs to wait before saving')
