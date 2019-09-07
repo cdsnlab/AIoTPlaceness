@@ -137,7 +137,7 @@ def train_reconstruction(args):
 					input_data = feature[0]
 				del feature, feature_hat, loss
 			
-			exp.log("\nEpoch: {} at {} lr: {}".format(epoch, str(datetime.datetime.now())), scheduler.get_lr())
+			exp.log("\nEpoch: {} at {} lr: {}".format(epoch, str(datetime.datetime.now()), str(scheduler.get_lr())))
 			_avg_loss = eval_reconstruction(imgseq_autoencoder, criterion, val_loader, device)
 			exp.log("\nEvaluation - loss: {}".format(_avg_loss))
 
