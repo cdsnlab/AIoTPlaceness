@@ -120,6 +120,7 @@ def train_reconstruction(args):
 	scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, [clr])
 	if args.resume:
 		optimizer.load_state_dict(checkpoint['optimizer'])
+		scheduler.load_state_dict(checkpoint['scheduler'])
 	exp = Experiment("Text autoencoder", capture_io=False)
 
 	for arg, value in vars(args).items():
@@ -169,6 +170,7 @@ def train_reconstruction(args):
 					'text_decoder': text_decoder.state_dict(),
 					'best_loss': best_loss,
 					'optimizer' : optimizer.state_dict(),
+					'scheduler' : scheduler.state_dict()
 				}, CONFIG.CHECKPOINT_PATH, "text_autoencoder")
 		print("Finish!!!")
 
