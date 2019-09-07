@@ -40,12 +40,11 @@ def slacknoti(contentstr):
 def main():
 	parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
 	# learning
-	parser.add_argument('-lr', type=float, default=5e-04, help='initial learning rate')
+	parser.add_argument('-lr', type=float, default=4e-04, help='initial learning rate')
+	parser.add_argument('-lr_factor', type=float, default=4, help='lr_factor for min lr')
 	parser.add_argument('-weight_decay', type=float, default=1e-05, help='initial weight decay')
 	parser.add_argument('-epochs', type=int, default=100, help='number of epochs for train')
 	parser.add_argument('-batch_size', type=int, default=16, help='batch size for training')
-	parser.add_argument('-lr_decay_interval', type=int, default=10,
-						help='how many epochs to wait before decrease learning rate')
 	parser.add_argument('-log_interval', type=int, default=25600,
 						help='how many steps to wait before logging training status')
 	parser.add_argument('-save_interval', type=int, default=1,
@@ -101,9 +100,9 @@ def train_reconstruction(args):
 	criterion = nn.MSELoss().to(device)
 	imgseq_autoencoder.to(device)
 
-	optimizer = AdamW(imgseq_autoencoder.parameters(), lr=args.lr/10, weight_decay=args.weight_decay, amsgrad=True)
+	optimizer = AdamW(imgseq_autoencoder.parameters(), lr=args.lr/args.lr_factor, weight_decay=args.weight_decay, amsgrad=True)
 	step_size = 4*len(train_loader)
-	clr = cyclical_lr(step_size, min_lr=args.lr/10, max_lr=args.lr)
+	clr = cyclical_lr(step_size, min_lr=args.lr/args.lr_factor, max_lr=args.lr)
 	scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, [clr])
 
 	if args.resume:
