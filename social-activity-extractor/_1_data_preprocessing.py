@@ -278,7 +278,7 @@ def test():
 		return lr_lambda
 	func = cyclical_lr(5574*4)
 	lr_list = []
-	for i in range(0, 5574*40, 5574):
+	for i in range(0, 5574*320, 5574):
 		lr_list.append(func(i))
 	plt.plot(lr_list)
 	plt.show()
