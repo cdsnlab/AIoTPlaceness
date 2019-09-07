@@ -26,7 +26,7 @@ from torch.optim.adam import Adam
 from torch.optim.lr_scheduler import StepLR, CyclicLR
 from model import util
 from model import imgseq_model
-from model.component import AdamW, Identity
+from model.component import AdamW, cyclical_lr
 from model.util import load_imgseq_data
 
 
@@ -40,7 +40,7 @@ def slacknoti(contentstr):
 def main():
 	parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
 	# learning
-	parser.add_argument('-lr', type=float, default=1e-04, help='initial learning rate')
+	parser.add_argument('-lr', type=float, default=3e-03, help='initial learning rate')
 	parser.add_argument('-weight_decay', type=float, default=1e-05, help='initial weight decay')
 	parser.add_argument('-epochs', type=int, default=100, help='number of epochs for train')
 	parser.add_argument('-batch_size', type=int, default=16, help='batch size for training')
@@ -102,9 +102,13 @@ def train_reconstruction(args):
 	imgseq_autoencoder.to(device)
 
 	optimizer = AdamW(imgseq_autoencoder.parameters(), lr=args.lr, weight_decay=args.weight_decay, amsgrad=True)
+	step_size = 4*len(train_loader)
+	clr = cyclical_lr(step_size, min_lr=args.lr/6, max_lr=args.lr)
+	scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, [clr])
 
 	if args.resume:
 		optimizer.load_state_dict(checkpoint['optimizer'])
+		scheduler.load_state_dict(checkpoint['scheduler'])
 
 
 	exp = Experiment("Image-sequence autoencoder")
@@ -133,9 +137,9 @@ def train_reconstruction(args):
 					input_data = feature[0]
 				del feature, feature_hat, loss
 			
-			exp.log("Epoch: {} at {}".format(epoch, str(datetime.datetime.now())))
+			exp.log("\nEpoch: {} at {}".format(epoch, str(datetime.datetime.now())))
 			_avg_loss = eval_reconstruction(imgseq_autoencoder, criterion, val_loader, device)
-			exp.log("Evaluation - loss: {}".format(_avg_loss))
+			exp.log("\nEvaluation - loss: {}".format(_avg_loss))
 
 			if best_loss > _avg_loss:
 				best_loss = _avg_loss
@@ -145,6 +149,7 @@ def train_reconstruction(args):
 					'imgseq_decoder': imgseq_decoder.state_dict(),
 					'best_loss': best_loss,
 					'optimizer' : optimizer.state_dict(),
+					'scheduler' : scheduler.state_dict()
 				}, CONFIG.CHECKPOINT_PATH, "imgseq_autoencoder")
 	
 		print("Finish!!!")
