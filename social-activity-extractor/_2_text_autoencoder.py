@@ -27,7 +27,7 @@ from torch.optim.lr_scheduler import StepLR, CyclicLR
 from model import util
 from model import text_model
 from model.util import load_text_data
-from model.component import AdamW
+from model.component import AdamW, cyclical_lr
 
 
 
@@ -41,7 +41,7 @@ def slacknoti(contentstr):
 def main():
 	parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
 	# learning
-	parser.add_argument('-lr', type=float, default=1e-04, help='initial learning rate')
+	parser.add_argument('-lr', type=float, default=3e-03, help='initial learning rate')
 	parser.add_argument('-weight_decay', type=float, default=1e-05, help='initial weight decay')
 	parser.add_argument('-epochs', type=int, default=100, help='number of epochs for train')
 	parser.add_argument('-batch_size', type=int, default=16, help='batch size for training')
@@ -115,7 +115,9 @@ def train_reconstruction(args):
 	text_autoencoder.to(device)
 
 	optimizer = AdamW(text_autoencoder.parameters(), lr=args.lr, weight_decay=args.weight_decay, amsgrad=True)
-
+	step_size = 4*len(train_loader)
+	clr = cyclical_lr(step_size, min_lr=end_lr/6, max_lr=args.lr)
+	scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, [clr])
 	if args.resume:
 		optimizer.load_state_dict(checkpoint['optimizer'])
 	exp = Experiment("Text autoencoder", capture_io=False)
@@ -136,6 +138,7 @@ def train_reconstruction(args):
 				prob = text_autoencoder(feature)
 				loss = criterion(prob.transpose(1, 2), feature)
 				loss.backward()
+				scheduler.step()
 				optimizer.step()
 
 				if (steps * args.batch_size) % args.log_interval == 0:					
