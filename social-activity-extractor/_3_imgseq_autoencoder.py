@@ -40,7 +40,7 @@ def slacknoti(contentstr):
 def main():
 	parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
 	# learning
-	parser.add_argument('-lr', type=float, default=6e-04, help='initial learning rate')
+	parser.add_argument('-lr', type=float, default=3e-03, help='initial learning rate')
 	parser.add_argument('-weight_decay', type=float, default=1e-05, help='initial weight decay')
 	parser.add_argument('-epochs', type=int, default=100, help='number of epochs for train')
 	parser.add_argument('-batch_size', type=int, default=16, help='batch size for training')
