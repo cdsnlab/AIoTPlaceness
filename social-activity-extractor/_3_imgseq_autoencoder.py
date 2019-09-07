@@ -129,7 +129,7 @@ def train_reconstruction(args):
 				loss.backward()
 				optimizer.step()
 
-				if steps % args.log_interval == 0:
+				if (steps * args.batch_size) % args.log_interval == 0:
 					print("Epoch: {} at {}".format(epoch, str(datetime.datetime.now())))
 					print("Steps: {}".format(steps))
 					print("Loss: {}".format(loss.detach().item()))
