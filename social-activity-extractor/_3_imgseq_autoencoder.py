@@ -111,7 +111,7 @@ def train_reconstruction(args):
 		scheduler.load_state_dict(checkpoint['scheduler'])
 
 
-	exp = Experiment("Image-sequence autoencoder")
+	exp = Experiment("Image-sequence autoencoder", capture_io=False)
 
 	for arg, value in vars(args).items():
 		exp.param(arg, value) 
