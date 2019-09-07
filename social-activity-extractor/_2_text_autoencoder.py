@@ -116,7 +116,7 @@ def train_reconstruction(args):
 
 	optimizer = AdamW(text_autoencoder.parameters(), lr=args.lr, weight_decay=args.weight_decay, amsgrad=True)
 	step_size = 4*len(train_loader)
-	clr = cyclical_lr(step_size, min_lr=end_lr/6, max_lr=args.lr)
+	clr = cyclical_lr(step_size, min_lr=args.lr/6, max_lr=args.lr)
 	scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, [clr])
 	if args.resume:
 		optimizer.load_state_dict(checkpoint['optimizer'])
