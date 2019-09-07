@@ -261,7 +261,7 @@ def test():
 	# print("mean: ", np.mean(length_array))
 	# print("max: ", np.max(length_array))
 
-	def cyclical_lr(stepsize, min_lr=3e-4, max_lr=3e-3):
+	def cyclical_lr(stepsize, min_lr=1e-4, max_lr=1e-3):
 
 		# Scaler: we can adapt this if we do not want the triangular CLR
 		scaler = lambda x: 1/x
@@ -276,9 +276,9 @@ def test():
 			return max(0, (1 - x)) * scaler(cycle)
 
 		return lr_lambda
-	func = cyclical_lr(22296)
+	func = cyclical_lr(5574*4)
 	lr_list = []
-	for i in range(0, 22296*10, 5574):
+	for i in range(0, 5574*40, 5574):
 		lr_list.append(func(i))
 	plt.plot(lr_list)
 	plt.show()

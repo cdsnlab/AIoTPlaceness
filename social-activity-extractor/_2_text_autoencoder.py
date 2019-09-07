@@ -114,7 +114,7 @@ def train_reconstruction(args):
 	criterion = nn.NLLLoss().to(device)
 	text_autoencoder.to(device)
 
-	optimizer = AdamW(text_autoencoder.parameters(), lr=args.lr, weight_decay=args.weight_decay, amsgrad=True)
+	optimizer = AdamW(text_autoencoder.parameters(), lr=args.lr/10, weight_decay=args.weight_decay, amsgrad=True)
 	step_size = 4*len(train_loader)
 	clr = cyclical_lr(step_size, min_lr=args.lr/10, max_lr=args.lr)
 	scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, [clr])
@@ -139,8 +139,8 @@ def train_reconstruction(args):
 				prob = text_autoencoder(feature)
 				loss = criterion(prob.transpose(1, 2), feature)
 				loss.backward()
-				scheduler.step()
 				optimizer.step()
+				scheduler.step()
 
 				if (steps * args.batch_size) % args.log_interval == 0:					
 					input_data = feature[0]

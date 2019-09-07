@@ -101,7 +101,7 @@ def train_reconstruction(args):
 	criterion = nn.MSELoss().to(device)
 	imgseq_autoencoder.to(device)
 
-	optimizer = AdamW(imgseq_autoencoder.parameters(), lr=args.lr, weight_decay=args.weight_decay, amsgrad=True)
+	optimizer = AdamW(imgseq_autoencoder.parameters(), lr=args.lr/10, weight_decay=args.weight_decay, amsgrad=True)
 	step_size = 4*len(train_loader)
 	clr = cyclical_lr(step_size, min_lr=args.lr/10, max_lr=args.lr)
 	scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, [clr])
@@ -128,6 +128,7 @@ def train_reconstruction(args):
 				loss = criterion(feature_hat, feature)
 				loss.backward()
 				optimizer.step()
+				scheduler.step()
 
 				if (steps * args.batch_size) % args.log_interval == 0:
 					print("Epoch: {} at {}".format(epoch, str(datetime.datetime.now())))
