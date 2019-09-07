@@ -274,7 +274,7 @@ class WarmupCosineWithHardRestartsSchedule(LambdaLR):
 def cyclical_lr(stepsize, min_lr=3e-4, max_lr=3e-3):
 
     # Scaler: we can adapt this if we do not want the triangular CLR
-    scaler = lambda x: 1.
+    scaler = lambda x: 1/x
 
     # Lambda function to calculate the LR
     lr_lambda = lambda it: min_lr + (max_lr - min_lr) * relative(it, stepsize)

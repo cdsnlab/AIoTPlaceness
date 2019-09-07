@@ -41,7 +41,7 @@ def slacknoti(contentstr):
 def main():
 	parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
 	# learning
-	parser.add_argument('-lr', type=float, default=3e-03, help='initial learning rate')
+	parser.add_argument('-lr', type=float, default=1e-03, help='initial learning rate')
 	parser.add_argument('-weight_decay', type=float, default=1e-05, help='initial weight decay')
 	parser.add_argument('-epochs', type=int, default=100, help='number of epochs for train')
 	parser.add_argument('-batch_size', type=int, default=16, help='batch size for training')
@@ -116,7 +116,7 @@ def train_reconstruction(args):
 
 	optimizer = AdamW(text_autoencoder.parameters(), lr=args.lr, weight_decay=args.weight_decay, amsgrad=True)
 	step_size = 4*len(train_loader)
-	clr = cyclical_lr(step_size, min_lr=args.lr/6, max_lr=args.lr)
+	clr = cyclical_lr(step_size, min_lr=args.lr/10, max_lr=args.lr)
 	scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, [clr])
 	if args.resume:
 		optimizer.load_state_dict(checkpoint['optimizer'])

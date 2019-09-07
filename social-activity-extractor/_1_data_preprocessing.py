@@ -1,5 +1,6 @@
 # -*- coding: UTF-8 -*-
 import sys
+import math
 import os
 import config
 import csv
@@ -11,7 +12,7 @@ import pandas as pd
 import json
 import _pickle as cPickle
 from tqdm import tqdm
-
+from matplotlib import pyplot as plt
 
 from nltk import word_tokenize
 #from konlpy.tag import Okt
@@ -244,22 +245,43 @@ def make_word2vec(target_corpus):
 	print("embedding completed")
 
 def test():
-	length_list = []
-	sentence_len = 0
-	count = 0
-	with open(os.path.join(CONFIG.DATASET_PATH, 'instagram0830', 'corpus.txt'), 'r', encoding='utf-8', newline='\n') as f:
-		while True:
-			line = f.readline()
-			if not line: break;
-			length_list.append(len(line.split()))
-			if len(line.split()) > 257:
-				count = count + 1
-	length_array = np.array(length_list)
-	print("total line: ", len(length_array))
-	print("truncated line: ", count)
-	print("mean: ", np.mean(length_array))
-	print("max: ", np.max(length_array))
+	# length_list = []
+	# sentence_len = 0
+	# count = 0
+	# with open(os.path.join(CONFIG.DATASET_PATH, 'instagram0830', 'corpus.txt'), 'r', encoding='utf-8', newline='\n') as f:
+	# 	while True:
+	# 		line = f.readline()
+	# 		if not line: break;
+	# 		length_list.append(len(line.split()))
+	# 		if len(line.split()) > 257:
+	# 			count = count + 1
+	# length_array = np.array(length_list)
+	# print("total line: ", len(length_array))
+	# print("truncated line: ", count)
+	# print("mean: ", np.mean(length_array))
+	# print("max: ", np.max(length_array))
 
+	def cyclical_lr(stepsize, min_lr=3e-4, max_lr=3e-3):
+
+		# Scaler: we can adapt this if we do not want the triangular CLR
+		scaler = lambda x: 1/x
+
+		# Lambda function to calculate the LR
+		lr_lambda = lambda it: min_lr + (max_lr - min_lr) * relative(it, stepsize)
+
+		# Additional function to see where on the cycle we are
+		def relative(it, stepsize):
+			cycle = math.floor(1 + it / (2 * stepsize))
+			x = abs(it / stepsize - 2 * cycle + 1)
+			return max(0, (1 - x)) * scaler(cycle)
+
+		return lr_lambda
+	func = cyclical_lr(22296)
+	lr_list = []
+	for i in range(0, 22296*10, 5574):
+		lr_list.append(func(i))
+	plt.plot(lr_list)
+	plt.show()
 	# full_data = []
 	# full_data_norm = []
 	# df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "hongdae.csv"), header=None, encoding='utf-8')
