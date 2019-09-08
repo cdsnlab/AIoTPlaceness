@@ -17,3 +17,4 @@ class Config:
 	MAX_SENTENCE_LEN = 257
 	MIN_WORD_COUNT = 5
 	MAX_SEQUENCE_LEN = 10
+	SVG_PATH = './svg'

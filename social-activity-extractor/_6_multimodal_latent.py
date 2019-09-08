@@ -5,6 +5,7 @@ import json
 import pickle
 import datetime
 import os
+import csv
 import math
 import numpy as np
 import pandas as pd
@@ -26,9 +27,7 @@ from torch.optim.adam import Adam
 from torch.optim.lr_scheduler import StepLR, CyclicLR
 from model import util
 from model import text_model, imgseq_model, multimodal_model
-from model.util import load_multimodal_data
-from model.component import AdamW, cyclical_lr
-
+from model.util import load_fullmultimodal_data
 
 
 CONFIG = config.Config
@@ -45,6 +44,8 @@ def main():
 	parser.add_argument('-target_dataset', type=str, default=None, help='folder name of target dataset')
 	parser.add_argument('-shuffle', default=True, help='shuffle data every epoch')
 	parser.add_argument('-split_rate', type=float, default=0.9, help='split rate between train and validation')
+	parser.add_argument('-batch_size', type=int, default=16, help='batch size for training')
+
 	# model
 	parser.add_argument('-latent_size', type=int, default=900, help='size of latent variable')
 	parser.add_argument('-filter_size', type=int, default=300, help='filter size of convolution')
@@ -79,7 +80,7 @@ def get_latent(args):
 		word_idx = json.load(f)
 	print("Loading embedding model completed")
 	print("Loading dataset...")
-	full_dataset = load_full_data(args, CONFIG, text_embedding_model)
+	full_dataset = load_fullmultimodal_data(args, CONFIG, word2idx=word_idx[1])
 	print("Loading dataset completed")
 	full_loader = DataLoader(full_dataset, batch_size=args.batch_size, shuffle=False)
 	
@@ -101,14 +102,17 @@ def get_latent(args):
 	multimodal_encoder.eval() 
 
 	f_csv = open(os.path.join(CONFIG.CSV_PATH, 'latent_' + args.target_dataset + '.csv'), 'w', encoding='utf-8-sig')
-	for steps, (text_batch, imgseq_batch, short_code) in enumerate(train_loader):
+	wr = csv.writer(f_csv)
+	for text_batch, imgseq_batch, short_code in tqdm(full_loader):
 		torch.cuda.empty_cache()
 		with torch.no_grad():	
 			text_feature = Variable(text_batch).to(device)
 			imgseq_feature = Variable(imgseq_batch).to(device)
-		h = multimodal_autoencoder(text_feature, imgseq_feature)
-		row = [short_code] + h.detach().cpu().numpy().tolist()
-		wr.writerow(row)
+		h = multimodal_encoder(text_feature, imgseq_feature)
+
+		for _short_code, _h in zip(short_code, h):
+			row = [_short_code] + _h.detach().cpu().numpy().tolist()
+			wr.writerow(row)
 		del text_feature, imgseq_feature
 	f_csv.close()
 	print("Finish!!!")

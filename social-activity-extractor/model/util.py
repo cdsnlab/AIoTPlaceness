@@ -134,7 +134,7 @@ class MultimodalDataset(Dataset):
 
 		return text_tensor, imgseq_tensor
 
-def load_full_data(args, CONFIG, word2idx):	
+def load_fullmultimodal_data(args, CONFIG, word2idx):	
 	full_data = []
 	df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'posts.csv'), header=None, encoding='utf-8-sig')
 	image_dir = os.path.join(CONFIG.DATASET_PATH, args.target_dataset, args.arch)
@@ -152,13 +152,11 @@ def load_full_data(args, CONFIG, word2idx):
 		else:
 			del text_data
 			continue
-		if len(full_data) > 500:
-			break
 	pbar.close()
 	full_dataset = FullMultimodalDataset(full_data, CONFIG, word2idx)
 	return full_dataset
 
-class FullDataset(Dataset):
+class FullMultimodalDataset(Dataset):
 	def __init__(self, data_list, CONFIG, word2idx):
 		self.data = data_list
 		self.word2idx = word2idx

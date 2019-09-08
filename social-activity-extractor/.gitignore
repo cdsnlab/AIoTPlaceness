@@ -18,6 +18,9 @@ model/rec_checkpoint/*
 csv/*
 !csv/.keep
 
+svg/*
+!svg/.keep
+
 embedding/*
 !embedding/.keep
 
