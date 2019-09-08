@@ -89,8 +89,8 @@ def train_reconstruction(args):
 		print("Restart from checkpoint")
 		checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.resume), map_location=lambda storage, loc: storage)
 		start_epoch = checkpoint['epoch']
-		imageseq_encoder.load_state_dict(checkpoint['imgseq_encoder'])
-		imageseq_decoder.load_state_dict(checkpoint['imgseq_decoder'])
+		imgseq_encoder.load_state_dict(checkpoint['imgseq_encoder'])
+		imgseq_decoder.load_state_dict(checkpoint['imgseq_decoder'])
 	else:		
 		print("Start from initial")
 		start_epoch = 0
