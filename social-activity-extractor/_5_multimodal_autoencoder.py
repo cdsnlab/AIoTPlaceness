@@ -204,7 +204,7 @@ def eval_reconstruction_with_rouge(autoencoder, idx2word, text_criterion, imgseq
 	avg_loss = 0.
 	rouge_1 = 0.
 	rouge_2 = 0.
-	for batch in tqdm(data_iter):
+	for text_batch, imgseq_batch in tqdm(data_iter):
 		torch.cuda.empty_cache()
 		with torch.no_grad():
 			text_feature = Variable(text_batch).to(device)
