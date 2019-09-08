@@ -88,13 +88,11 @@ def train_reconstruction(args):
 	if args.resume:
 		print("Restart from checkpoint")
 		checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.resume), map_location=lambda storage, loc: storage)
-		best_loss = checkpoint['best_loss']
 		start_epoch = checkpoint['epoch']
 		imageseq_encoder.load_state_dict(checkpoint['imgseq_encoder'])
 		imageseq_decoder.load_state_dict(checkpoint['imgseq_decoder'])
 	else:		
 		print("Start from initial")
-		best_loss = 999999.
 		start_epoch = 0
 	
 	imgseq_autoencoder = imgseq_model.ImgseqAutoEncoder(imgseq_encoder, imgseq_decoder)
@@ -141,16 +139,14 @@ def train_reconstruction(args):
 			_avg_loss = eval_reconstruction(imgseq_autoencoder, criterion, val_loader, device)
 			exp.log("\nEvaluation - loss: {}".format(_avg_loss))
 
-			if best_loss > _avg_loss:
-				best_loss = _avg_loss
-				util.save_models({
-					'epoch': epoch + 1,
-					'imgseq_encoder': imgseq_encoder.state_dict(),
-					'imgseq_decoder': imgseq_decoder.state_dict(),
-					'best_loss': best_loss,
-					'optimizer' : optimizer.state_dict(),
-					'scheduler' : scheduler.state_dict()
-				}, CONFIG.CHECKPOINT_PATH, "imgseq_autoencoder")
+			util.save_models({
+				'epoch': epoch + 1,
+				'imgseq_encoder': imgseq_encoder.state_dict(),
+				'imgseq_decoder': imgseq_decoder.state_dict(),
+				'avg_loss': _avg_loss,
+				'optimizer' : optimizer.state_dict(),
+				'scheduler' : scheduler.state_dict()
+			}, CONFIG.CHECKPOINT_PATH, "imgseq_autoencoder")
 	
 		print("Finish!!!")
 

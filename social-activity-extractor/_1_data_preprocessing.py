@@ -281,7 +281,7 @@ def test():
 			return max(0, (1 - x)) * scaler(cycle)
 
 		return lr_lambda
-	func = cyclical_lr(5574*4)
+	func = cyclical_lr(5574*20, 1e-4, 1)
 	lr_list = []
 	for i in range(0, 5574*40, 5574):
 		lr_list.append(func(i))

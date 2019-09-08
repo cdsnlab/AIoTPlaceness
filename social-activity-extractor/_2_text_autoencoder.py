@@ -42,7 +42,7 @@ def main():
 	parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
 	# learning
 	parser.add_argument('-lr', type=float, default=1e-04, help='initial learning rate')
-	parser.add_argument('-lr_factor', type=int, default=10, help='lr_factor for min lr')
+	parser.add_argument('-lr_factor', type=float, default=10, help='lr_factor for min lr')
 	parser.add_argument('-half_cycle_interval', type=int, default=4, help='lr_factor step size equals to half cycle')
 	parser.add_argument('-weight_decay', type=float, default=1e-05, help='initial weight decay')
 	parser.add_argument('-epochs', type=int, default=100, help='number of epochs for train')
@@ -101,13 +101,11 @@ def train_reconstruction(args):
 	if args.resume:
 		print("Restart from checkpoint")
 		checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.resume), map_location=lambda storage, loc: storage)
-		best_loss = checkpoint['best_loss']
 		start_epoch = checkpoint['epoch']
 		text_encoder.load_state_dict(checkpoint['text_encoder'])
 		text_decoder.load_state_dict(checkpoint['text_decoder'])
 	else:		
 		print("Start from initial")
-		best_loss = 999999.
 		start_epoch = 0
 	
 	text_autoencoder = text_model.TextAutoencoder(text_encoder, text_decoder)
@@ -126,8 +124,6 @@ def train_reconstruction(args):
 	for arg, value in vars(args).items():
 		exp.param(arg, value) 
 	try:
-		avg_loss = []
-
 		text_autoencoder.train() 
 
 		for epoch in range(start_epoch, args.epochs):
@@ -160,18 +156,19 @@ def train_reconstruction(args):
 			
 			exp.log("\nEpoch: {} at {} lr: {}".format(epoch, str(datetime.datetime.now()), str(scheduler.get_lr())))
 			_avg_loss, _rouge_1, _rouge_2 = eval_reconstruction_with_rouge(text_autoencoder, word_idx[0], criterion, val_loader, device)
-			exp.log("\nEvaluation - loss: {}  Rouge1: {}    Rouge2: {}".format(_avg_loss, _rouge_1, _rouge_2))
+			exp.log("\nEvaluation - loss: {}  Rouge1: {} Rouge2: {}".format(_avg_loss, _rouge_1, _rouge_2))
 
-			if best_loss > _avg_loss:
-				best_loss = _avg_loss
-				util.save_models({
-					'epoch': epoch + 1,
-					'text_encoder': text_encoder.state_dict(),
-					'text_decoder': text_decoder.state_dict(),
-					'best_loss': best_loss,
-					'optimizer' : optimizer.state_dict(),
-					'scheduler' : scheduler.state_dict()
-				}, CONFIG.CHECKPOINT_PATH, "text_autoencoder")
+			util.save_models({
+				'epoch': epoch + 1,
+				'text_encoder': text_encoder.state_dict(),
+				'text_decoder': text_decoder.state_dict(),
+				'avg_loss': _avg_loss,
+				'Rouge1:': _rouge_1,
+				'Rouge2': _rouge_2,
+				'optimizer' : optimizer.state_dict(),
+				'scheduler' : scheduler.state_dict()
+			}, CONFIG.CHECKPOINT_PATH, "text_autoencoder")
+
 		print("Finish!!!")
 
 	finally:
