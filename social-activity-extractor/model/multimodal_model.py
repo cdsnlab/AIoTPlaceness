@@ -22,7 +22,7 @@ class MultimodalEncoder(nn.Module):
 	def __call__(self, text, imgseq):
 		text_h = self.text_encoder(text)
 		imgseq_h = self.imgseq_encoder(imgseq)
-		h = self.multimodal_encoder(torch.cat((text_h, imgseq_h), dim=1))
+		h = self.multimodal_encoder(torch.cat((text_h, imgseq_h), dim=-1))
 		return h
 
 class MultimodalDecoder(nn.Module):
@@ -39,7 +39,7 @@ class MultimodalDecoder(nn.Module):
 			nn.Tanh())
 
 	def __call__(self, h):
-		decode_h = torch.split(self.multimodal_decoder(h), self.latent_size, dim=1)
+		decode_h = torch.split(self.multimodal_decoder(h), self.latent_size, dim=-1)
 		text_hat = self.text_decoder(decode_h[0])
 		imgseq_hat = self.imgseq_decoder(decode_h[1])
 		return text_hat, imgseq_hat

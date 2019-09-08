@@ -8,7 +8,6 @@ import os
 import math
 import numpy as np
 import pandas as pd
-import _pickle as cPickle
 from sumeval.metrics.rouge import RougeCalculator
 from sumeval.metrics.bleu import BLEUCalculator
 from gensim.models.keyedvectors import FastTextKeyedVectors
@@ -20,6 +19,7 @@ from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision.models as models
 from torch.utils.data import DataLoader
 from torch.autograd import Variable
 from torch.optim.adam import Adam
@@ -27,7 +27,7 @@ from torch.optim.lr_scheduler import StepLR, CyclicLR
 from model import util
 from model import text_model, imgseq_model, multimodal_model
 from model.util import load_multimodal_data
-from model.component import AdamW, cyclical_lr
+from model.component import AdamW
 
 
 
@@ -41,26 +41,28 @@ def slacknoti(contentstr):
 def main():
 	parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
 	# learning
-	parser.add_argument('-lr', type=float, default=1e-04, help='initial learning rate')
-	parser.add_argument('-lr_factor', type=float, default=10, help='lr_factor for min lr')
-	parser.add_argument('-half_cycle_interval', type=int, default=4, help='lr_factor step size equals to half cycle')
-	parser.add_argument('-weight_decay', type=float, default=1e-05, help='initial weight decay')
-	parser.add_argument('-epochs', type=int, default=100, help='number of epochs for train')
+	parser.add_argument('-lr', type=float, default=3e-04, help='initial learning rate')
+	parser.add_argument('-weight_decay', type=float, default=3e-05, help='initial weight decay')
+	parser.add_argument('-epochs', type=int, default=40, help='number of epochs for train')
 	parser.add_argument('-batch_size', type=int, default=16, help='batch size for training')
-	parser.add_argument('-log_interval', type=int, default=25600,
+	parser.add_argument('-lr_decay_interval', type=int, default=10,
+						help='how many epochs to wait before decrease learning rate')
+	parser.add_argument('-log_interval', type=int, default=1000,
 						help='how many steps to wait before logging training status')
-	parser.add_argument('-tau', type=float, default=0.01, help='temperature parameter')
+	parser.add_argument('-test_interval', type=int, default=1,
+						help='how many epochs to wait before testing')
+	parser.add_argument('-save_interval', type=int, default=1,
+						help='how many epochs to wait before saving')
 	# data
 	parser.add_argument('-target_dataset', type=str, default=None, help='folder name of target dataset')
 	parser.add_argument('-shuffle', default=True, help='shuffle data every epoch')
 	parser.add_argument('-split_rate', type=float, default=0.9, help='split rate between train and validation')
 	# model
+	parser.add_argument('-arch', type=str, default='resnet152', help='image embedding model')
 	parser.add_argument('-latent_size', type=int, default=900, help='size of latent variable')
 	parser.add_argument('-filter_size', type=int, default=300, help='filter size of convolution')
 	parser.add_argument('-filter_shape', type=int, default=5,
 						help='filter shape to use for convolution')
-	parser.add_argument('-arch', type=str, default='resnext101_32x8d', help='image embedding model')
-	parser.add_argument('-image_embedding_dim', type=int, default=2048, help='embedding dimension of the model')
 	parser.add_argument('-num_layer', type=int, default=4, help='layer number')
 	parser.add_argument('-text_pt', type=str, default=None, help='filename of checkpoint of text autoencoder')
 	parser.add_argument('-imgseq_pt', type=str, default=None, help='filename of checkpoint of image sequence autoencoder')
@@ -84,13 +86,18 @@ def main():
 def train_reconstruction(args):
 	device = torch.device(args.gpu)
 	print("Loading embedding model...")
-	with open(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'word_embedding.p'), "rb") as f:
-		text_embedding_model = cPickle.load(f)
-	with open(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'word_idx.json'), "r", encoding='utf-8') as f:
-		word_idx = json.load(f)
+	image_embedding_model = models.__dict__[args.arch](pretrained=True)
+	image_embedding_dim = image_embedding_model.fc.in_features
+	args.image_embedding_dim = image_embedding_dim
+	model_name = 'FASTTEXT_' + args.target_dataset + '.model'
+	text_embedding_model = FastTextKeyedVectors.load(os.path.join(CONFIG.EMBEDDING_PATH, model_name))
+	text_embedding_dim = text_embedding_model.vector_size	
+	args.text_embedding_dim = text_embedding_dim
+	print("Building index...")
+	indexer = AnnoyIndexer(text_embedding_model, 10)
 	print("Loading embedding model completed")
 	print("Loading dataset...")
-	train_dataset, val_dataset = load_multimodal_data(args, CONFIG, word2idx=word_idx[1])
+	train_dataset, val_dataset = load_multimodal_data(args, CONFIG, text_embedding_model)
 	print("Loading dataset completed")
 	train_loader, val_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=args.shuffle),\
 								  DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
@@ -99,50 +106,47 @@ def train_reconstruction(args):
 	t1 = CONFIG.MAX_SENTENCE_LEN
 	t2 = int(math.floor((t1 - args.filter_shape) / 2) + 1) # "2" means stride size
 	t3 = int(math.floor((t2 - args.filter_shape) / 2) + 1)
-	args.t3 = t3
-	text_embedding = nn.Embedding.from_pretrained(torch.FloatTensor(text_embedding_model))
-	text_encoder = text_model.ConvolutionEncoder(text_embedding, t3, args.filter_size, args.filter_shape, args.latent_size)
-	text_decoder = text_model.DeconvolutionDecoder(text_embedding, args.tau, t3, args.filter_size, args.filter_shape, args.latent_size, device)
+	args.t3 = t3	
+
+	text_encoder = text_model.ConvolutionEncoder(text_embedding_dim, t3, args.filter_size, args.filter_shape, args.latent_size)
+	text_decoder = text_model.DeconvolutionDecoder(text_embedding_dim, t3, args.filter_size, args.filter_shape, args.latent_size)
 	if args.text_pt:
 		text_checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.text_pt), map_location=lambda storage, loc: storage)
 		text_encoder.load_state_dict(text_checkpoint['text_encoder'])
 		text_decoder.load_state_dict(text_checkpoint['text_decoder'])
-	imgseq_encoder = imgseq_model.RNNEncoder(args.image_embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
-	imgseq_decoder = imgseq_model.RNNDecoder(CONFIG.MAX_SEQUENCE_LEN, args.image_embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
+	imgseq_encoder = imgseq_model.RNNEncoder(image_embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
+	imgseq_decoder = imgseq_model.RNNDecoder(CONFIG.MAX_SEQUENCE_LEN, image_embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
 	if args.imgseq_pt:
 		imgseq_checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.imgseq_pt), map_location=lambda storage, loc: storage)
 		imgseq_encoder.load_state_dict(imgseq_checkpoint['imgseq_encoder'])
 		imgseq_decoder.load_state_dict(imgseq_checkpoint['imgseq_decoder'])
 	multimodal_encoder = multimodal_model.MultimodalEncoder(text_encoder, imgseq_encoder, args.latent_size)
 	multimodal_decoder = multimodal_model.MultimodalDecoder(text_decoder, imgseq_decoder, args.latent_size, CONFIG.MAX_SEQUENCE_LEN)
-
 	if args.resume:
 		print("Restart from checkpoint")
 		checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.resume), map_location=lambda storage, loc: storage)
+		best_loss = checkpoint['best_loss']
 		start_epoch = checkpoint['epoch']
 		multimodal_encoder.load_state_dict(checkpoint['multimodal_encoder'])
 		multimodal_decoder.load_state_dict(checkpoint['multimodal_decoder'])
 	else:		
 		print("Start from initial")
+		best_loss = 999999.
 		start_epoch = 0
-	
 	multimodal_autoencoder = multimodal_model.MultimodalAutoEncoder(multimodal_encoder, multimodal_decoder)
-	text_criterion = nn.NLLLoss().to(device)
-	imgseq_criterion = nn.MSELoss().to(device)
+	criterion = nn.MSELoss().to(device)
 	multimodal_autoencoder.to(device)
 
-	optimizer = AdamW(multimodal_autoencoder.parameters(), lr=1., weight_decay=args.weight_decay, amsgrad=True)
-	step_size = args.half_cycle_interval*len(train_loader)
-	clr = cyclical_lr(step_size, min_lr=args.lr, max_lr=args.lr*args.lr_factor)
-	scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, [clr])
+	optimizer = AdamW(multimodal_autoencoder.parameters(), lr=args.lr, weight_decay=args.weight_decay, amsgrad=True)
+
 	if args.resume:
 		optimizer.load_state_dict(checkpoint['optimizer'])
-		scheduler.load_state_dict(checkpoint['scheduler'])
-	exp = Experiment("Multimodal autoencoder", capture_io=False)
 
-	for arg, value in vars(args).items():
-		exp.param(arg, value) 
+
+	exp = Experiment("Multimodal autoencoder")
 	try:
+		avg_loss = []
+
 		multimodal_autoencoder.train() 
 
 		for epoch in range(start_epoch, args.epochs):
@@ -151,79 +155,102 @@ def train_reconstruction(args):
 				torch.cuda.empty_cache()
 				text_feature = Variable(text_batch).to(device)
 				imgseq_feature = Variable(imgseq_batch).to(device)
+				feature = torch.cat((text_feature.view(text_feature.size()[0], -1), imgseq_feature.view(imgseq_feature.size()[0], -1)), dim=1)
 				optimizer.zero_grad()
-				text_prob, imgseq_feature_hat = multimodal_autoencoder(text_feature, imgseq_feature)
-				text_loss = text_criterion(text_prob.transpose(1, 2), text_feature)
-				imgseq_loss = imgseq_criterion(imgseq_feature_hat, imgseq_feature)
-				loss = text_loss + imgseq_loss
+				text_feature_hat, imgseq_feature_hat = multimodal_autoencoder(text_feature, imgseq_feature)
+				feature_hat = torch.cat((text_feature_hat.contiguous().view(text_feature.size()[0], -1), imgseq_feature_hat.contiguous().view(imgseq_feature.size()[0], -1)), dim=1)
+				loss = criterion(feature_hat, feature)
 				loss.backward()
 				optimizer.step()
-				scheduler.step()
 
-				if (steps * args.batch_size) % args.log_interval == 0:					
+				if steps % args.log_interval == 0:					
 					input_data = text_feature[0]
-					single_data = text_prob[0]
-					_, predict_index = torch.max(single_data, 1)
-					input_sentence = util.transform_idx2word(input_data.detach().cpu().numpy(), idx2word=word_idx[0])
-					predict_sentence = util.transform_idx2word(predict_index.detach().cpu().numpy(), idx2word=word_idx[0])	
-					print("Epoch: {} at {} lr: {}".format(epoch, str(datetime.datetime.now()), str(scheduler.get_lr())))
+					single_data = text_feature_hat[0]
+					input_sentence = util.transform_vec2sentence(input_data.detach().cpu().numpy(), text_embedding_model, indexer)
+					predict_sentence = util.transform_vec2sentence(single_data.detach().cpu().numpy(), text_embedding_model, indexer)
+					print("Epoch: {} at {}".format(epoch, str(datetime.datetime.now())))
 					print("Steps: {}".format(steps))
 					print("Loss: {}".format(loss.detach().item()))
+					exp.metric("Loss", loss.detach().item())
 					print("Input Sentence:")
 					print(input_sentence)
 					print("Output Sentence:")
 					print(predict_sentence)
-					del input_data, single_data, _, predict_index
-				del text_feature, text_prob, imgseq_feature, imgseq_feature_hat, text_loss, imgseq_loss, loss
+					del input_data, single_data
+				del text_feature, text_feature_hat, imgseq_feature, imgseq_feature_hat, feature, feature_hat, loss
 			
-			exp.log("\nEpoch: {} at {} lr: {}".format(epoch, str(datetime.datetime.now()), str(scheduler.get_lr())))
-			_avg_loss, _rouge_1, _rouge_2 = eval_reconstruction_with_rouge(multimodal_autoencoder, word_idx[0], text_criterion, imgseq_criterion, val_loader, device)
-			exp.log("\nEvaluation - loss: {}  Rouge1: {} Rouge2: {}".format(_avg_loss, _rouge_1, _rouge_2))
+			_avg_loss = eval_reconstruction(multimodal_autoencoder, text_embedding_model, indexer, criterion, val_loader, args, device)
 
-			util.save_models({
-				'epoch': epoch + 1,
-				'text_encoder': text_encoder.state_dict(),
-				'text_decoder': text_decoder.state_dict(),
-				'avg_loss': _avg_loss,
-				'Rouge1:': _rouge_1,
-				'Rouge2': _rouge_2,
-				'optimizer' : optimizer.state_dict(),
-				'scheduler' : scheduler.state_dict()
-			}, CONFIG.CHECKPOINT_PATH, "text_autoencoder")
+			if best_loss > _avg_loss:
+				best_loss = _avg_loss
+				util.save_models({
+					'epoch': epoch + 1,
+					'multimodal_encoder': multimodal_encoder.state_dict(),
+					'multimodal_decoder': multimodal_decoder.state_dict(),
+					'best_loss': best_loss,
+					'optimizer' : optimizer.state_dict(),
+				}, CONFIG.CHECKPOINT_PATH, "multimodal_autoencoder")
 
+		eval_reconstruction_with_rouge(multimodal_autoencoder, text_embedding_model, indexer, criterion, val_loader, args, device)
 		print("Finish!!!")
 
 	finally:
 		exp.end()
 
-def eval_reconstruction_with_rouge(autoencoder, idx2word, text_criterion, imgseq_criterion, data_iter, device):
+def eval_reconstruction(autoencoder, embedding_model, indexer, criterion, data_iter, args, device):
 	print("=================Eval======================")
 	autoencoder.eval()
 	step = 0
 	avg_loss = 0.
 	rouge_1 = 0.
 	rouge_2 = 0.
-	for batch in tqdm(data_iter):
+	for text_batch, imgseq_batch in data_iter:
+		torch.cuda.empty_cache()
+		with torch.no_grad():			
+			text_feature = Variable(text_batch).to(device)
+			imgseq_feature = Variable(imgseq_batch).to(device)
+			feature = torch.cat((text_feature.view(text_feature.size()[0], -1), imgseq_feature.view(imgseq_feature.size()[0], -1)), dim=1)
+		text_feature_hat, imgseq_feature_hat = autoencoder(text_feature, imgseq_feature)
+		feature_hat = torch.cat((text_feature_hat.contiguous().view(text_feature.size()[0], -1), imgseq_feature_hat.contiguous().view(imgseq_feature.size()[0], -1)), dim=1)
+		loss = criterion(feature_hat, feature)	
+		avg_loss += loss.detach().item()
+		step = step + 1
+		del text_feature, text_feature_hat, imgseq_feature, imgseq_feature_hat, feature, feature_hat, loss
+	avg_loss = avg_loss / step
+	print("Evaluation - loss: {}".format(avg_loss))
+	print("===============================================================")
+	autoencoder.train()
+
+	return avg_loss
+
+def eval_reconstruction_with_rouge(autoencoder, embedding_model, indexer, criterion, data_iter, args, device):
+	print("=================Eval======================")
+	autoencoder.eval()
+	step = 0
+	avg_loss = 0.
+	rouge_1 = 0.
+	rouge_2 = 0.
+	for text_batch, imgseq_batch in data_iter:
 		torch.cuda.empty_cache()
 		with torch.no_grad():
 			text_feature = Variable(text_batch).to(device)
 			imgseq_feature = Variable(imgseq_batch).to(device)
-		text_prob, imgseq_feature_hat = autoencoder(text_feature, imgseq_feature)
-		_, predict_index = torch.max(text_prob, 2)
-		original_sentences = [util.transform_idx2word(sentence, idx2word=idx2word) for sentence in feature.detach().cpu().numpy()]		
-		predict_sentences = [util.transform_idx2word(sentence, idx2word=idx2word) for sentence in predict_index.detach().cpu().numpy()]	
+			feature = torch.cat((text_feature.view(text_feature.size()[0], -1), imgseq_feature.view(imgseq_feature.size()[0], -1)), dim=1)
+		feature_hat = autoencoder(feature)
+		feature_hat = torch.cat((text_feature_hat.contiguous().view(text_feature.size()[0], -1), imgseq_feature_hat.contiguous().view(imgseq_feature.size()[0], -1)), dim=1)
+		original_sentences = [util.transform_vec2sentence(sentence, embedding_model, indexer) for sentence in text_feature.detach().cpu().numpy()]		
+		predict_sentences = [util.transform_vec2sentence(sentence, embedding_model, indexer) for sentence in text_feature_hat.detach().cpu().numpy()]	
 		r1, r2 = calc_rouge(original_sentences, predict_sentences)		
 		rouge_1 += r1 / len(batch)
 		rouge_2 += r2 / len(batch)
-		text_loss = text_criterion(text_prob.transpose(1, 2), text_feature)
-		imgseq_loss = imgseq_criterion(imgseq_feature_hat, imgseq_feature)
-		loss = text_loss + imgseq_loss
+		loss = criterion(feature_hat, feature)	
 		avg_loss += loss.detach().item()
 		step = step + 1
-		del text_feature, text_prob, text_loss, imgseq_feature, imgseq_feature_hat, imgseq_loss, loss, _, predict_index
+		del text_feature, text_feature_hat, imgseq_feature, imgseq_feature_hat, feature, feature_hat, loss
 	avg_loss = avg_loss / step
 	rouge_1 = rouge_1 / step
 	rouge_2 = rouge_2 / step
+	print("Evaluation - loss: {}  Rouge1: {}    Rouge2: {}".format(avg_loss, rouge_1, rouge_2))
 	print("===============================================================")
 	autoencoder.train()
 

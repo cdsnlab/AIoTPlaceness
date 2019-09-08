@@ -48,55 +48,9 @@ class TextDataset(Dataset):
 			word_list = word_list + ['<PAD>'] * (self.CONFIG.MAX_SENTENCE_LEN - len(word_list))
 		for word in word_list:
 			index_list.append(self.word2idx[word])
-		index_array = np.array(index_list)
-		index_tensor = torch.from_numpy(index_array).type(torch.LongTensor)
-		return index_tensor
-
-# def load_text_data(args, CONFIG, embedding_model):	
-# 	full_data = []
-# 	df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'posts.csv'), header=None, encoding='utf-8')
-# 	pbar = tqdm(total=df_data.shape[0])
-# 	for index, row in df_data.iterrows():
-# 		pbar.update(1)
-# 		text_data = row.iloc[1]
-# 		full_data.append(text_data)
-# 		del text_data
-# 	pbar.close()
-# 	train_size = int(args.split_rate * len(full_data))
-# 	val_size = len(full_data) - train_size
-# 	train_data, val_data = torch.utils.data.random_split(full_data, [train_size, val_size])
-# 	train_dataset, val_dataset = TextDataset(train_data, embedding_model, CONFIG, transform=ToTensor()), \
-# 							 TextDataset(val_data, embedding_model, CONFIG, transform=ToTensor())
-# 	return train_dataset, val_dataset
-
-# class TextDataset(Dataset):
-# 	def __init__(self, data_list, embedding_model, CONFIG, transform=None):
-# 		self.data = data_list
-# 		self.embedding_model = embedding_model
-# 		self.CONFIG = CONFIG
-# 		self.transform = transform
-
-# 	def __len__(self):
-# 		return len(self.data)
-
-# 	def __getitem__(self, idx):
-# 		word_list = self.data[idx].split()
-# 		vector_list = []
-# 		if len(word_list) > self.CONFIG.MAX_SENTENCE_LEN:
-# 			# truncate sentence if sentence length is longer than `max_sentence_len`
-# 			word_list = word_list[:self.CONFIG.MAX_SENTENCE_LEN]
-# 			word_list[-1] = '<EOS>'
-# 		else:
-# 			word_list = word_list + ['<PAD>'] * (self.CONFIG.MAX_SENTENCE_LEN - len(word_list))
-# 		for word in word_list:
-# 			vector = self.embedding_model.get_vector(word)
-# 			vector_list.append(vector)
-# 		vector_array = np.array(vector_list, dtype=np.float32)
-# 		del word_list, vector_list
-
-# 		if self.transform:
-# 			vector_array = self.transform(vector_array)
-# 		return vector_array
+		text_array = np.array(index_list)
+		text_tensor = torch.from_numpy(text_array).type(torch.LongTensor)
+		return text_tensor
 
 def load_imgseq_data(args, CONFIG):
 	full_data = []
@@ -126,35 +80,38 @@ class ImgseqDataset(Dataset):
 		return len(self.data)
 
 	def __getitem__(self, idx):
-		vector_array = torch.from_numpy(self.data[idx]).type(torch.FloatTensor)
-		return vector_array
+		imgseq_tensor = torch.from_numpy(self.data[idx]).type(torch.FloatTensor)
+		return imgseq_tensor
 
-def load_multimodal_data(args, CONFIG, text_embedding_model):	
+def load_multimodal_data(args, CONFIG, word2idx):	
 	full_data = []
 	df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'posts.csv'), header=None, encoding='utf-8-sig')
-	print("Using embedding model: ", args.arch)
 	image_dir = os.path.join(CONFIG.DATASET_PATH, args.target_dataset, args.arch)
 	pbar = tqdm(total=df_data.shape[0])
 	for index, row in df_data.iterrows():
 		pbar.update(1)
-		short_code = row.iloc[0]
 		text_data = row.iloc[1]
-		with open(os.path.join(image_dir, short_code + '.p'), "rb") as f:
-			image_data = cPickle.load(f)
-		f.close()
-		full_data.append([text_data, image_data])
-		del short_code, text_data, image_data
+		image_path = os.path.join(image_dir, row.iloc[0]) + '.p'
+		if os.path.exists(image_path):
+			with open(image_path, "rb") as f:
+				image_data = cPickle.load(f)
+			full_data.append([text_data, image_data])
+			del text_data, image_data
+		else:
+			del text_data
+			continue
 	pbar.close()
 	train_size = int(args.split_rate * len(full_data))
-	train_data, val_data = full_data[:train_size], full_data[train_size:]
-	train_dataset, val_dataset = MultimodalDataset(train_data, text_embedding_model, CONFIG), \
-							 MultimodalDataset(val_data, text_embedding_model, CONFIG)
+	val_size = len(full_data) - train_size
+	train_data, val_data = torch.utils.data.random_split(full_data, [train_size, val_size])
+	train_dataset, val_dataset = MultimodalDataset(train_data, CONFIG, word2idx), \
+							 MultimodalDataset(val_data, CONFIG, word2idx)
 	return train_dataset, val_dataset
 
 class MultimodalDataset(Dataset):
-	def __init__(self, data_list, text_embedding_model, CONFIG):
+	def __init__(self, data_list, CONFIG, word2idx):
 		self.data = data_list
-		self.text_embedding_model = text_embedding_model
+		self.word2idx = word2idx
 		self.CONFIG = CONFIG
 
 	def __len__(self):
@@ -162,7 +119,7 @@ class MultimodalDataset(Dataset):
 
 	def __getitem__(self, idx):
 		word_list = self.data[idx][0].split()
-		vector_list = []
+		index_list = []
 		if len(word_list) > self.CONFIG.MAX_SENTENCE_LEN:
 			# truncate sentence if sentence length is longer than `max_sentence_len`
 			word_list = word_list[:self.CONFIG.MAX_SENTENCE_LEN]
@@ -170,14 +127,12 @@ class MultimodalDataset(Dataset):
 		else:
 			word_list = word_list + ['<PAD>'] * (self.CONFIG.MAX_SENTENCE_LEN - len(word_list))
 		for word in word_list:
-			vector = self.text_embedding_model.get_vector(word)
-			vector_list.append(vector)
-		vector_array = np.array(vector_list, dtype=np.float32)
-		del word_list, vector_list
-		text_vector_array = self.transform(vector_array)
-		imgseq_vector_array = self.transform(self.data[idx][1])
+			index_list.append(self.word2idx[word])
+		text_array = np.array(index_list)
+		text_tensor = torch.from_numpy(text_array).type(torch.LongTensor)
+		imgseq_tensor = torch.from_numpy(self.data[idx][1]).type(torch.FloatTensor)
 
-		return text_vector_array, imgseq_vector_array
+		return text_tensor, imgseq_tensor
 
 def load_full_data(args, CONFIG, text_embedding_model):	
 	full_data = []
