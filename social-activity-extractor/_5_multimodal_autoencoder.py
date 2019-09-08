@@ -183,14 +183,14 @@ def train_reconstruction(args):
 
 			util.save_models({
 				'epoch': epoch + 1,
-				'text_encoder': text_encoder.state_dict(),
-				'text_decoder': text_decoder.state_dict(),
+				'multimodal_encoder': multimodal_encoder.state_dict(),
+				'multimodal_decoder': multimodal_decoder.state_dict(),
 				'avg_loss': _avg_loss,
 				'Rouge1:': _rouge_1,
 				'Rouge2': _rouge_2,
 				'optimizer' : optimizer.state_dict(),
 				'scheduler' : scheduler.state_dict()
-			}, CONFIG.CHECKPOINT_PATH, "text_autoencoder")
+			}, CONFIG.CHECKPOINT_PATH, "multimodal_autoencoder")
 
 		print("Finish!!!")
 

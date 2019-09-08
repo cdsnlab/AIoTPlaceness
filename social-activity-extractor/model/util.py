@@ -134,38 +134,42 @@ class MultimodalDataset(Dataset):
 
 		return text_tensor, imgseq_tensor
 
-def load_full_data(args, CONFIG, text_embedding_model):	
+def load_full_data(args, CONFIG, word2idx):	
 	full_data = []
-	df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'posts.csv'), header=None, encoding='utf-8')
-	print("Using embedding model: ", args.arch)
+	df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'posts.csv'), header=None, encoding='utf-8-sig')
 	image_dir = os.path.join(CONFIG.DATASET_PATH, args.target_dataset, args.arch)
 	pbar = tqdm(total=df_data.shape[0])
 	for index, row in df_data.iterrows():
 		pbar.update(1)
 		short_code = row.iloc[0]
 		text_data = row.iloc[1]
-		with open(os.path.join(image_dir, short_code + '.p'), "rb") as f:
-			image_data = cPickle.load(f)
-		f.close()
-		full_data.append([text_data, image_data, short_code])
-		del short_code, text_data, image_data
+		image_path = os.path.join(image_dir, row.iloc[0]) + '.p'
+		if os.path.exists(image_path):
+			with open(image_path, "rb") as f:
+				image_data = cPickle.load(f)
+			full_data.append([text_data, image_data, short_code])
+			del text_data, image_data
+		else:
+			del text_data
+			continue
+		if len(full_data) > 500:
+			break
 	pbar.close()
-	full_dataset = FullMultimodalDataset(full_data, text_embedding_model, CONFIG, transform=ToTensor())
+	full_dataset = FullMultimodalDataset(full_data, CONFIG, word2idx)
 	return full_dataset
 
-class FullMultimodalDataset(Dataset):
-	def __init__(self, data_list, text_embedding_model, CONFIG, transform=None):
+class FullDataset(Dataset):
+	def __init__(self, data_list, CONFIG, word2idx):
 		self.data = data_list
-		self.text_embedding_model = text_embedding_model
+		self.word2idx = word2idx
 		self.CONFIG = CONFIG
-		self.transform = transform
 
 	def __len__(self):
 		return len(self.data)
 
 	def __getitem__(self, idx):
 		word_list = self.data[idx][0].split()
-		vector_list = []
+		index_list = []
 		if len(word_list) > self.CONFIG.MAX_SENTENCE_LEN:
 			# truncate sentence if sentence length is longer than `max_sentence_len`
 			word_list = word_list[:self.CONFIG.MAX_SENTENCE_LEN]
@@ -173,17 +177,12 @@ class FullMultimodalDataset(Dataset):
 		else:
 			word_list = word_list + ['<PAD>'] * (self.CONFIG.MAX_SENTENCE_LEN - len(word_list))
 		for word in word_list:
-			vector = self.text_embedding_model.get_vector(word)
-			vector_list.append(vector)
-		vector_array = np.array(vector_list, dtype=np.float32)
-		del word_list, vector_list
-		text_vector_array = self.transform(vector_array)
-		imgseq_vector_array = self.transform(self.data[idx][1])
+			index_list.append(self.word2idx[word])
+		text_array = np.array(index_list)
+		text_tensor = torch.from_numpy(text_array).type(torch.LongTensor)
+		imgseq_tensor = torch.from_numpy(self.data[idx][1]).type(torch.FloatTensor)
 
-		return text_vector_array, imgseq_vector_array, self.data[idx][2]
-
-def transform_vec2sentence(vector_list, embedding_model, indexer):
-	return " ".join([embedding_model.most_similar(positive=[vector], topn=1, indexer=indexer)[0][0] for vector in vector_list])
+		return text_tensor, imgseq_tensor, self.data[idx][2]
 
 def transform_idx2word(index, idx2word):
 	return " ".join([idx2word[str(idx)] for idx in index])
