@@ -156,6 +156,7 @@ def train_reconstruction(args):
 				text_loss = text_criterion(text_prob.transpose(1, 2), text_feature)
 				imgseq_loss = imgseq_criterion(imgseq_feature_hat, imgseq_feature)
 				loss = text_loss + imgseq_loss
+				del text_loss, imgseq_loss
 				loss.backward()
 				optimizer.step()
 				scheduler.step()
@@ -174,7 +175,7 @@ def train_reconstruction(args):
 					print("Output Sentence:")
 					print(predict_sentence)
 					del input_data, single_data, _, predict_index
-				del text_feature, text_prob, imgseq_feature, imgseq_feature_hat, text_loss, imgseq_loss, loss
+				del text_feature, text_prob, imgseq_feature, imgseq_feature_hat, loss
 			
 			exp.log("\nEpoch: {} at {} lr: {}".format(epoch, str(datetime.datetime.now()), str(scheduler.get_lr())))
 			_avg_loss, _rouge_1, _rouge_2 = eval_reconstruction_with_rouge(multimodal_autoencoder, word_idx[0], text_criterion, imgseq_criterion, val_loader, device)
@@ -218,9 +219,10 @@ def eval_reconstruction_with_rouge(autoencoder, idx2word, text_criterion, imgseq
 		text_loss = text_criterion(text_prob.transpose(1, 2), text_feature)
 		imgseq_loss = imgseq_criterion(imgseq_feature_hat, imgseq_feature)
 		loss = text_loss + imgseq_loss
+		del text_loss, imgseq_loss
 		avg_loss += loss.detach().item()
 		step = step + 1
-		del text_feature, text_prob, text_loss, imgseq_feature, imgseq_feature_hat, imgseq_loss, loss, _, predict_index
+		del text_feature, text_prob, imgseq_feature, imgseq_feature_hat, loss, _, predict_index
 	avg_loss = avg_loss / step
 	rouge_1 = rouge_1 / step
 	rouge_2 = rouge_2 / step
