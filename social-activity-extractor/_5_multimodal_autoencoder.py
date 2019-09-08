@@ -211,11 +211,11 @@ def eval_reconstruction_with_rouge(autoencoder, idx2word, text_criterion, imgseq
 			imgseq_feature = Variable(imgseq_batch).to(device)
 		text_prob, imgseq_feature_hat = autoencoder(text_feature, imgseq_feature)
 		_, predict_index = torch.max(text_prob, 2)
-		original_sentences = [util.transform_idx2word(sentence, idx2word=idx2word) for sentence in feature.detach().cpu().numpy()]		
+		original_sentences = [util.transform_idx2word(sentence, idx2word=idx2word) for sentence in text_feature.detach().cpu().numpy()]		
 		predict_sentences = [util.transform_idx2word(sentence, idx2word=idx2word) for sentence in predict_index.detach().cpu().numpy()]	
 		r1, r2 = calc_rouge(original_sentences, predict_sentences)		
-		rouge_1 += r1 / len(batch)
-		rouge_2 += r2 / len(batch)
+		rouge_1 += r1 / len(text_batch)
+		rouge_2 += r2 / len(text_batch)
 		text_loss = text_criterion(text_prob.transpose(1, 2), text_feature)
 		imgseq_loss = imgseq_criterion(imgseq_feature_hat, imgseq_feature)
 		loss = text_loss + imgseq_loss
