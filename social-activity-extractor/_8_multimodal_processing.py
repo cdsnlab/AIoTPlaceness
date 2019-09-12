@@ -61,7 +61,7 @@ def clustering_spectral(target_dataset, num_clusters):
 	print(tsne_pca.iloc[:100])
 
 	start_time = time.time()
-	clustering = SpectralClustering(n_clusters=num_clusters, assign_labels="discretize", random_state=42, n_jobs=4).fit(df_data)
+	clustering = SpectralClustering(n_clusters=num_clusters, random_state=42, n_jobs=4).fit(df_data)
 	print(clustering.labels_)
 	print("time elapsed: " + str(time.time()-start_time))
 	cluster_list = np.array(clustering.labels_).tolist()
