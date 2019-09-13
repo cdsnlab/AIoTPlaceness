@@ -17,13 +17,15 @@ CONFIG = config.Config
 def clustering_dbscan(target_dataset):
 	df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'latent_' + target_dataset + '.csv'), index_col=0, header=None, encoding='utf-8-sig')
 	df_data.index.name = 'short_code'
+	print(df_data.iloc[:100])
+
 	tsne_pca = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'tsne_' + target_dataset + '.csv'), index_col=0, header=0, encoding='utf-8-sig')
 	tsne_pca = tsne_pca.iloc[1:]
 	tsne_pca.index.name = 'short_code'
 	print(tsne_pca.iloc[:100])
 
 	start_time = time.time()
-	clustering = DBSCAN(eps=3, min_samples=5).fit(tsne_pca)
+	clustering = DBSCAN(eps=3, min_samples=5).fit(df_data)
 	#clustering = SpectralClustering(n_clusters=num_clusters, assign_labels="discretize", affinity= 'nearest_neighbors', n_neighbors=24, random_state=42, n_jobs=4).fit(df_pca_data)
 	#clustering = AgglomerativeClustering(n_clusters=num_clusters).fit(data.loc[filtered_columns.index,:])# data, df_pca_data
 	#clustering = KMeans(n_clusters=num_clusters).fit(df_data)# data, df_pca_data
@@ -36,13 +38,15 @@ def clustering_dbscan(target_dataset):
 def clustering_optics(target_dataset):
 	df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'latent_' + target_dataset + '.csv'), index_col=0, header=None, encoding='utf-8-sig')
 	df_data.index.name = 'short_code'
+	print(df_data.iloc[:100])
+
 	tsne_pca = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'tsne_' + target_dataset + '.csv'), index_col=0, header=0, encoding='utf-8-sig')
 	tsne_pca = tsne_pca.iloc[1:]
 	tsne_pca.index.name = 'short_code'
 	print(tsne_pca.iloc[:100])
 
 	start_time = time.time()
-	clustering = OPTICS(min_samples=5).fit(tsne_pca)
+	clustering = OPTICS(min_samples=5).fit(df_data)
 	#clustering = SpectralClustering(n_clusters=num_clusters, assign_labels="discretize", affinity= 'nearest_neighbors', n_neighbors=24, random_state=42, n_jobs=4).fit(df_pca_data)
 	#clustering = AgglomerativeClustering(n_clusters=num_clusters).fit(data.loc[filtered_columns.index,:])# data, df_pca_data
 	#clustering = KMeans(n_clusters=num_clusters).fit(df_data)# data, df_pca_data
@@ -55,6 +59,8 @@ def clustering_optics(target_dataset):
 def clustering_spectral(target_dataset, num_clusters):
 	df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'latent_' + target_dataset + '.csv'), index_col=0, header=None, encoding='utf-8-sig')
 	df_data.index.name = 'short_code'
+	print(df_data.iloc[:100])
+	
 	tsne_pca = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'tsne_' + target_dataset + '.csv'), index_col=0, header=0, encoding='utf-8-sig')
 	tsne_pca = tsne_pca.iloc[1:]
 	tsne_pca.index.name = 'short_code'
