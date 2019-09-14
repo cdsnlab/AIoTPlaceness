@@ -24,7 +24,7 @@ def clustering_dbscan(target_dataset):
 	print(tsne_pca.iloc[:100])
 
 	start_time = time.time()
-	clustering = DBSCAN(eps=0.3, min_samples=100).fit(df_data)
+	clustering = DBSCAN(eps=0.01, min_samples=15).fit(tsne_pca)
 	print("time elapsed: " + str(time.time()-start_time))
 	print(clustering.labels_)
 	count_percentage(clustering.labels_)
@@ -43,7 +43,7 @@ def clustering_optics(target_dataset):
 	print(tsne_pca.iloc[:100])
 
 	start_time = time.time()
-	clustering = OPTICS(min_samples=5).fit(df_data)
+	clustering = OPTICS(min_samples=20).fit(tsne_pca)
 	print("time elapsed: " + str(time.time()-start_time))
 	print(clustering.labels_)
 	count_percentage(clustering.labels_)
@@ -51,7 +51,7 @@ def clustering_optics(target_dataset):
 	tsne_pca['cluster'] = clustering.labels_
 	tsne_pca.to_csv(os.path.join(CONFIG.CSV_PATH, 'clustered_optics_' + target_dataset + '.csv'), encoding='utf-8-sig')
 
-def clustering_spectral(target_dataset, num_clusters):
+def clustering_spectral(target_dataset):
 	df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'latent_' + target_dataset + '.csv'), index_col=0, header=None, encoding='utf-8-sig')
 	df_data.index.name = 'short_code'
 	print(df_data.iloc[:100])
@@ -62,7 +62,7 @@ def clustering_spectral(target_dataset, num_clusters):
 	print(tsne_pca.iloc[:100])
 
 	start_time = time.time()
-	clustering = SpectralClustering(n_clusters=int(num_clusters), random_state=42, n_jobs=4).fit(df_data)
+	clustering = SpectralClustering(n_clusters=24, random_state=42).fit(df_data)
 	print("time elapsed: " + str(time.time()-start_time))
 	print(clustering.labels_)
 	count_percentage(clustering.labels_)
@@ -82,7 +82,7 @@ def run(option):
 	elif option == 1:
 		clustering_optics(target_dataset=sys.argv[2])
 	elif option == 2:
-		clustering_spectral(target_dataset=sys.argv[2], num_clusters=sys.argv[3])
+		clustering_spectral(target_dataset=sys.argv[2])
 	else:
 		print("This option does not exist!\n")
 
