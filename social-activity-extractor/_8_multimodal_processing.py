@@ -9,7 +9,7 @@ import csv
 import time
 import numpy as np
 import pandas as pd
-from sklearn.cluster import SpectralClustering, AffinityPropagation, AgglomerativeClustering, KMeans, DBSCAN, OPTICS
+from sklearn.cluster import Birch, SpectralClustering, AffinityPropagation, AgglomerativeClustering, KMeans, DBSCAN, OPTICS
 
 CONFIG = config.Config
 
@@ -25,7 +25,7 @@ def do_clustering(target_dataset, cluster_method):
 
 	start_time = time.time()
 	if cluster_method == 0:
-		clustering = DBSCAN(eps=0.5, min_samples=30).fit(tsne_pca)
+		clustering = DBSCAN(eps=0.3, min_samples=20).fit(tsne_pca)
 		csv_name = 'clustered_dbscan_' + target_dataset + '.csv'
 	elif cluster_method == 1:
 		clustering = OPTICS(min_samples=20).fit(tsne_pca)
@@ -33,9 +33,12 @@ def do_clustering(target_dataset, cluster_method):
 	elif cluster_method == 2:
 		clustering = SpectralClustering(n_clusters=24, random_state=42).fit(df_data)
 		csv_name = 'clustered_spectral_' + target_dataset + '.csv'
-	else:
+	elif cluster_method == 3:
 		clustering = AgglomerativeClustering(n_clusters=24).fit(tsne_pca)
 		csv_name = 'clustered_agglomerative_' + target_dataset + '.csv'
+	else:
+		clustering = Birch(n_clusters=None).fit(tsne_pca)
+		csv_name = 'clustered_birch_' + target_dataset + '.csv'
 	print("time elapsed: " + str(time.time()-start_time))
 	print(clustering.get_params())
 	print(clustering.labels_)
