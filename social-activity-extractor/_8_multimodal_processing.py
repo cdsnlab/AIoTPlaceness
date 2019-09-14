@@ -13,8 +13,8 @@ from sklearn.cluster import SpectralClustering, AffinityPropagation, Agglomerati
 
 CONFIG = config.Config
 
-def clustering_dbscan(target_dataset):
-	df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'latent_' + target_dataset + '.csv'), index_col=0, header=None, encoding='utf-8-sig')
+def do_clustering(target_dataset, cluster_method):
+	df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'normalized_' + target_dataset + '.csv'), index_col=0, header=None, encoding='utf-8-sig')
 	df_data.index.name = 'short_code'
 	print(df_data.iloc[:100])
 
@@ -24,51 +24,25 @@ def clustering_dbscan(target_dataset):
 	print(tsne_pca.iloc[:100])
 
 	start_time = time.time()
-	clustering = DBSCAN(eps=0.01, min_samples=15).fit(tsne_pca)
+	if cluster_method == 0:
+		clustering = DBSCAN(eps=0.5, min_samples=30).fit(tsne_pca)
+		csv_name = 'clustered_dbscan_' + target_dataset + '.csv'
+	elif cluster_method == 1:
+		clustering = OPTICS(min_samples=20).fit(tsne_pca)
+		csv_name = 'clustered_optics_' + target_dataset + '.csv'
+	elif cluster_method == 2:
+		clustering = SpectralClustering(n_clusters=24, random_state=42).fit(df_data)
+		csv_name = 'clustered_spectral_' + target_dataset + '.csv'
+	else:
+		clustering = AgglomerativeClustering(n_clusters=24).fit(tsne_pca)
+		csv_name = 'clustered_agglomerative_' + target_dataset + '.csv'
 	print("time elapsed: " + str(time.time()-start_time))
+	print(clustering.get_params())
 	print(clustering.labels_)
 	count_percentage(clustering.labels_)
 	cluster_list = np.array(clustering.labels_).tolist()
 	tsne_pca['cluster'] = clustering.labels_
-	tsne_pca.to_csv(os.path.join(CONFIG.CSV_PATH, 'clustered_dbscan_' + target_dataset + '.csv'), encoding='utf-8-sig')
-
-def clustering_optics(target_dataset):
-	df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'latent_' + target_dataset + '.csv'), index_col=0, header=None, encoding='utf-8-sig')
-	df_data.index.name = 'short_code'
-	print(df_data.iloc[:100])
-
-	tsne_pca = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'tsne_' + target_dataset + '.csv'), index_col=0, header=0, encoding='utf-8-sig')
-	tsne_pca = tsne_pca.iloc[1:]
-	tsne_pca.index.name = 'short_code'
-	print(tsne_pca.iloc[:100])
-
-	start_time = time.time()
-	clustering = OPTICS(min_samples=20).fit(tsne_pca)
-	print("time elapsed: " + str(time.time()-start_time))
-	print(clustering.labels_)
-	count_percentage(clustering.labels_)
-	cluster_list = np.array(clustering.labels_).tolist()
-	tsne_pca['cluster'] = clustering.labels_
-	tsne_pca.to_csv(os.path.join(CONFIG.CSV_PATH, 'clustered_optics_' + target_dataset + '.csv'), encoding='utf-8-sig')
-
-def clustering_spectral(target_dataset):
-	df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'latent_' + target_dataset + '.csv'), index_col=0, header=None, encoding='utf-8-sig')
-	df_data.index.name = 'short_code'
-	print(df_data.iloc[:100])
-
-	tsne_pca = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'tsne_' + target_dataset + '.csv'), index_col=0, header=0, encoding='utf-8-sig')
-	tsne_pca = tsne_pca.iloc[1:]
-	tsne_pca.index.name = 'short_code'
-	print(tsne_pca.iloc[:100])
-
-	start_time = time.time()
-	clustering = SpectralClustering(n_clusters=24, random_state=42).fit(df_data)
-	print("time elapsed: " + str(time.time()-start_time))
-	print(clustering.labels_)
-	count_percentage(clustering.labels_)
-	cluster_list = np.array(clustering.labels_).tolist()
-	tsne_pca['cluster'] = clustering.labels_
-	tsne_pca.to_csv(os.path.join(CONFIG.CSV_PATH, 'clustered_spectral_' + target_dataset + '.csv'), encoding='utf-8-sig')
+	tsne_pca.to_csv(os.path.join(CONFIG.CSV_PATH, csv_name), encoding='utf-8-sig')
 
 def count_percentage(cluster_labels):
 	count = collections.Counter(cluster_labels)
@@ -78,11 +52,7 @@ def count_percentage(cluster_labels):
 
 def run(option): 
 	if option == 0:
-		clustering_dbscan(target_dataset=sys.argv[2])
-	elif option == 1:
-		clustering_optics(target_dataset=sys.argv[2])
-	elif option == 2:
-		clustering_spectral(target_dataset=sys.argv[2])
+		do_clustering(target_dataset=sys.argv[2], cluster_method=int(sys.argv[3]))
 	else:
 		print("This option does not exist!\n")
 
