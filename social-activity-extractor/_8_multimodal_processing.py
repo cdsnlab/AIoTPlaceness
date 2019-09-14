@@ -79,9 +79,9 @@ def count_percentage(cluster_labels):
 def run(option): 
 	if option == 0:
 		clustering_dbscan(target_dataset=sys.argv[2])
-	if option == 1:
+	elif option == 1:
 		clustering_optics(target_dataset=sys.argv[2])
-	if option == 2:
+	elif option == 2:
 		clustering_spectral(target_dataset=sys.argv[2], num_clusters=sys.argv[3])
 	else:
 		print("This option does not exist!\n")
