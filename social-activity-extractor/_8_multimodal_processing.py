@@ -14,33 +14,27 @@ from sklearn.cluster import Birch, SpectralClustering, AffinityPropagation, Aggl
 CONFIG = config.Config
 
 def do_clustering(target_dataset, cluster_method):
-	df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'normalized_' + target_dataset + '.csv'), index_col=0, header=None, encoding='utf-8-sig')
+	df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'ds_' + target_dataset + '.csv'), index_col=0, header=None, encoding='utf-8-sig')
 	df_data.index.name = 'short_code'
 	print(df_data.iloc[:100])
 
-	df_pca_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'pca_' + target_dataset + '.csv'), index_col=0, header=0, encoding='utf-8-sig')
-	df_pca_data.index.name = 'short_code'
-	print(df_pca_data.iloc[:100])
-
 	tsne_pca = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'tsne_' + target_dataset + '.csv'), index_col=0, header=0, encoding='utf-8-sig')
-	tsne_pca = tsne_pca.iloc[1:]
-	tsne_pca.index.name = 'short_code'
 	print(tsne_pca.iloc[:100])
 
 	start_time = time.time()
 	if cluster_method == 0:
-		clustering = DBSCAN(eps=0.3, min_samples=20).fit(tsne_pca)
+		clustering = DBSCAN(eps=0.3, min_samples=20).fit(df_data)
 		csv_name = 'clustered_dbscan_' + target_dataset + '.csv'
 	elif cluster_method == 1:
-		clustering = OPTICS(min_samples=20).fit(tsne_pca)
+		clustering = OPTICS(min_samples=20).fit(df_data)
 		csv_name = 'clustered_optics_' + target_dataset + '.csv'
 	elif cluster_method == 2:
-		clustering = SpectralClustering(n_clusters=21, random_state=42).fit(df_pca_data)
+		clustering = SpectralClustering(n_clusters=21, random_state=42).fit(df_data)
 		csv_name = 'clustered_spectral_' + target_dataset + '.csv'
 	elif cluster_method == 3:
-		clustering = AgglomerativeClustering(n_clusters=21).fit(df_pca_data)
+		clustering = AgglomerativeClustering(n_clusters=21).fit(df_data)
 		csv_name = 'clustered_agglomerative_' + target_dataset + '.csv'
-	else:
+	elif cluster_method == 4:
 		clustering = Birch(n_clusters=21).fit(df_data)
 		csv_name = 'clustered_birch_' + target_dataset + '.csv'
 	print("time elapsed: " + str(time.time()-start_time))
