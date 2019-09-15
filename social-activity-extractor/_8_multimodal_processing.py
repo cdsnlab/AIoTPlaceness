@@ -18,9 +18,6 @@ def do_clustering(target_dataset, cluster_method):
 	df_data.index.name = 'short_code'
 	print(df_data.iloc[:100])
 
-	tsne_pca = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'tsne_' + target_dataset + '.csv'), index_col=0, header=0, encoding='utf-8-sig')
-	print(tsne_pca.iloc[:100])
-
 	start_time = time.time()
 	if cluster_method == 0:
 		clustering = DBSCAN(eps=0.3, min_samples=20).fit(df_data)
@@ -41,9 +38,8 @@ def do_clustering(target_dataset, cluster_method):
 	print(clustering.get_params())
 	print(clustering.labels_)
 	count_percentage(clustering.labels_)
-	cluster_list = np.array(clustering.labels_).tolist()
-	tsne_pca['cluster'] = clustering.labels_
-	tsne_pca.to_csv(os.path.join(CONFIG.CSV_PATH, csv_name), encoding='utf-8-sig')
+	result_df = pd.DataFrame(data=clustering.labels_, index=df_data.index, columns=['cluster'])
+	result_df_data.to_csv(os.path.join(CONFIG.CSV_PATH, csv_name), encoding='utf-8-sig')
 
 def count_percentage(cluster_labels):
 	count = collections.Counter(cluster_labels)
