@@ -21,16 +21,19 @@ def do_clustering(target_dataset, cluster_method):
 
 	start_time = time.time()
 	if cluster_method == 0:
-		clustering = DBSCAN(eps=0.3, min_samples=20).fit(df_data)
+		clustering = DBSCAN(eps=0.3, min_samples=20)
+		clustering.fit(df_data)
 		csv_name = 'clustered_dbscan_' + target_dataset + '.csv'
 	elif cluster_method == 1:
-		clustering = OPTICS(min_samples=20).fit(df_data)
+		clustering = OPTICS(min_samples=20)
+		clustering.fit(df_data)
 		csv_name = 'clustered_optics_' + target_dataset + '.csv'
 	elif cluster_method == 2:
-		ds_data = df_data.sample(frac=0.5)
-		print(ds_data.iloc[:100])
-		print(ds_data.shape)
-		clustering = SpectralClustering(n_clusters=21, random_state=42).fit(ds_data)
+		#ds_data = df_data.sample(frac=0.8)
+		#print(ds_data.iloc[:100])
+		#print(ds_data.shape)
+		clustering = SpectralClustering(n_clusters=21, random_state=42)
+		clustering.fit(df_data)
 		csv_name = 'clustered_spectral_' + target_dataset + '.csv'
 	elif cluster_method == 3:
 		clustering = AgglomerativeClustering(n_clusters=21).fit(df_data)
