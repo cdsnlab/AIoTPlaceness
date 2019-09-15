@@ -27,7 +27,10 @@ def do_clustering(target_dataset, cluster_method):
 		clustering = OPTICS(min_samples=20).fit(df_data)
 		csv_name = 'clustered_optics_' + target_dataset + '.csv'
 	elif cluster_method == 2:
-		clustering = SpectralClustering(n_clusters=21, random_state=42).fit(df_data)
+		ds_data = df_data.sample(frac=0.5)
+		print(ds_data.iloc[:100])
+		print(ds_data.shape)
+		clustering = SpectralClustering(n_clusters=21, random_state=42).fit(ds_data)
 		csv_name = 'clustered_spectral_' + target_dataset + '.csv'
 	elif cluster_method == 3:
 		clustering = AgglomerativeClustering(n_clusters=21).fit(df_data)
