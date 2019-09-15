@@ -9,7 +9,7 @@ import csv
 import time
 import numpy as np
 import pandas as pd
-from sklearn.metrics import silhouette_score
+from sklearn.metrics import calinski_harabasz_score, davies_bouldin_score, silhouette_score
 from sklearn.cluster import Birch, SpectralClustering, AffinityPropagation, AgglomerativeClustering, KMeans, DBSCAN, OPTICS
 
 CONFIG = config.Config
@@ -42,13 +42,18 @@ def do_clustering(target_dataset, cluster_method):
 		clustering = Birch(n_clusters=num_cluster)
 		clustering.fit(df_data)
 		csv_name = 'clustered_birch_' + target_dataset + '.csv'
-	print("time elapsed: " + str(time.time()-start_time))
+	print("time elapsed for clustering: " + str(time.time()-start_time))
 	print(clustering.get_params())
 	print(clustering.labels_)
 	count_percentage(clustering.labels_)
 	result_df = pd.DataFrame(data=clustering.labels_, index=df_data.index, columns=['cluster'])
 
-	print("silhouette_score: ", silhouette_score(df_data, clustering.labels_, metric = 'cosine'))
+
+	start_time = time.time()
+	print("calinski_harabasz_score: ", calinski_harabasz_score(df_data, result_df['cluster'].squeeze()))
+	print("silhouette_score: ", silhouette_score(df_data, result_df['cluster'].squeeze()))
+	print("davies_bouldin_score: ", davies_bouldin_score(df_data, result_df['cluster'].squeeze()))
+	print("time elapsed for scoring: " + str(time.time()-start_time))
 	result_df.to_csv(os.path.join(CONFIG.CSV_PATH, csv_name), encoding='utf-8-sig')
 
 def count_percentage(cluster_labels):
@@ -68,17 +73,24 @@ def do_spectral_clustering(target_dataset):
 	clustering = SpectralClustering(n_clusters=num_cluster, random_state=42, assign_labels='discretize')
 	clustering.fit(ds_data)
 
-	print("time elapsed: " + str(time.time()-start_time))
+	print("time elapsed for clustering: " + str(time.time()-start_time))
 	print(clustering.get_params())
 	print(clustering.labels_)
 	count_percentage(clustering.labels_)
+	start_time = time.time()
 	result_ds = pd.DataFrame(data=clustering.labels_, index=ds_data.index, columns=['cluster'])
 	ns_label = clustering.fit_predict(ns_data)
 	result_ns = pd.DataFrame(data=ns_label, index=ns_data.index, columns=['cluster'])
 	result_df = pd.concat([result_ds, result_ns])
 	result_df.sort_index(inplace=True)
+	print("time elapsed for prediction: " + str(time.time()-start_time))
 
-	print("silhouette_score: ", silhouette_score(df_data, result_df['cluster'].squeeze(), metric = 'cosine'))
+
+	start_time = time.time()
+	print("calinski_harabasz_score: ", calinski_harabasz_score(df_data, result_df['cluster'].squeeze()))
+	print("silhouette_score: ", silhouette_score(df_data, result_df['cluster'].squeeze()))
+	print("davies_bouldin_score: ", davies_bouldin_score(df_data, result_df['cluster'].squeeze()))
+	print("time elapsed for scoring: " + str(time.time()-start_time))
 	result_df.to_csv(os.path.join(CONFIG.CSV_PATH, 'clustered_spectral_' + target_dataset + '.csv'), encoding='utf-8-sig')
 
 
