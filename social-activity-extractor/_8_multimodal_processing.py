@@ -29,10 +29,8 @@ def do_clustering(target_dataset, cluster_method):
 		clustering.fit(df_data)
 		csv_name = 'clustered_optics_' + target_dataset + '.csv'
 	elif cluster_method == 2:
-		#ds_data = df_data.sample(frac=0.8)
-		#print(ds_data.iloc[:100])
-		#print(ds_data.shape)
-		clustering = SpectralClustering(n_clusters=21, random_state=42)
+		df_data = df_data.sample(frac=0.5)
+		clustering = SpectralClustering(affinity='cosine', n_clusters=21, random_state=42, assign_labels='discretize')
 		clustering.fit(df_data)
 		csv_name = 'clustered_spectral_' + target_dataset + '.csv'
 	elif cluster_method == 3:
