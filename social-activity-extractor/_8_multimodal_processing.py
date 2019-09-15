@@ -14,7 +14,7 @@ from sklearn.cluster import Birch, SpectralClustering, AffinityPropagation, Aggl
 CONFIG = config.Config
 
 def do_clustering(target_dataset, cluster_method):
-	df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'ds_' + target_dataset + '.csv'), index_col=0, header=None, encoding='utf-8-sig')
+	df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'normalized_' + target_dataset + '.csv'), index_col=0, header=None, encoding='utf-8-sig')
 	df_data.index.name = 'short_code'
 	print(df_data.iloc[:100])
 	print(df_data.shape)
