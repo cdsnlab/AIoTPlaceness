@@ -16,7 +16,7 @@ def process_text(text_data):
 
 
 	word_list = []
-	if languages[0].code in ["ko", "en"]:
+	if languages[0].code in ["ko"]:
 		tokens = okt.pos(text_data)
 		#print(tokens)
 		for token in tokens:

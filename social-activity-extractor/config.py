@@ -18,3 +18,4 @@ class Config:
 	MIN_WORD_COUNT = 5
 	MAX_SEQUENCE_LEN = 10
 	SVG_PATH = './svg'
+	RESULT_PATH = './result'

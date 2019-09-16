@@ -7,6 +7,8 @@ import re
 import sys
 import csv
 import time
+import random
+from tqdm import tqdm
 import numpy as np
 import pandas as pd
 from sklearn.metrics import calinski_harabasz_score, davies_bouldin_score, silhouette_score
@@ -97,12 +99,75 @@ def do_spectral_clustering(target_dataset):
 	print("time elapsed for scoring: " + str(time.time()-start_time))
 	result_df.to_csv(os.path.join(CONFIG.CSV_PATH, 'clustered_spectral_' + target_dataset + '.csv'), encoding='utf-8-sig')
 
+sample_length = 10
+def sample_from_cluster(target_dataset, target_clustering):
+
+	df_clustered = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'clustered_' + target_clustering + '_' + target_dataset + '.csv'), index_col=0, header=0, encoding='utf-8-sig')
+	df_clustered.index.name = 'short_code'
+	print(df_clustered.iloc[:100])
+	print(df_clustered.shape)
+	num_cluster = np.max(df_clustered, axis=0)[0] + 1
+
+	result_path = os.path.join(CONFIG.RESULT_PATH, target_dataset)
+	if not os.path.exists(result_path):
+		os.mkdir(result_path)
+	result_path = os.path.join(result_path, target_clustering)
+	if not os.path.exists(result_path):
+		os.mkdir(result_path)
+	for cluster_id in range(num_cluster):
+		cluster_path = os.path.join(result_path, str(cluster_id))
+		if not os.path.exists(cluster_path):
+			os.mkdir(cluster_path)
+
+	print("making cluster dict...")
+	cluster_dict = {i: [] for i in range(num_cluster)}
+	pbar = tqdm(total=df_clustered.shape[0])
+	for index, row in df_clustered.iterrows():
+		cluster_dict[row[0]].append(index)
+		pbar.update(1)
+	pbar.close()
+
+	print("making sampled short_code dict...")
+	short_code_dict = {}
+	pbar = tqdm(total=len(cluster_dict))
+	for key, value in cluster_dict.items():
+		if len(value) > sample_length:
+			sampled = random.sample(value, sample_length)
+		else:
+			sampled = value
+		for short_code in sampled:
+			short_code_dict[short_code] = key
+		pbar.update(1)
+	pbar.close()
+
+	print("copying sampled posts...")
+	df_original = pd.read_csv(os.path.join(CONFIG.TARGET_PATH, 'posts.csv'), encoding='utf-8-sig')
+	pbar = tqdm(total=df_original.shape[0])
+	for index, row in df_original.iterrows():
+		if row[1] in short_code_dict:
+			cluster_id = short_code_dict[row[1]]
+			post_path = os.path.join(result_path, str(cluster_id), row[1])
+			if not os.path.exists(post_path):
+				os.mkdir(post_path)
+			f_wr = open(os.path.join(post_path, 'caption.txt'), 'w', encoding='utf-8')
+			f_wr.write(row[2])
+			f_wr.close()
+			for image in row[7:]:
+				if not pd.isna(image):
+					shutil.copy2(os.path.join(CONFIG.TARGET_PATH, 'original', image), os.path.join(post_path, image))
+		pbar.update(1)
+	pbar.close()
+
+
+
 
 def run(option): 
 	if option == 0:
 		do_clustering(target_dataset=sys.argv[2], cluster_method=int(sys.argv[3]))
 	elif option == 1:
 		do_spectral_clustering(target_dataset=sys.argv[2])
+	elif option == 2:
+		sample_from_cluster(target_dataset=sys.argv[2], target_clustering=sys.argv[3])
 	else:
 		print("This option does not exist!\n")
 

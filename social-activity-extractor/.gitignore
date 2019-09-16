@@ -24,5 +24,8 @@ svg/*
 embedding/*
 !embedding/.keep
 
+result/*
+!result/.keep
+
 checkpoint/*
 dependency/*
