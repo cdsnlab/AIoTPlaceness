@@ -42,6 +42,10 @@ def do_clustering(target_dataset, cluster_method):
 		clustering = Birch(n_clusters=num_cluster)
 		clustering.fit(df_data)
 		csv_name = 'clustered_birch_' + target_dataset + '.csv'
+	elif cluster_method == 5:
+		clustering = KMeans(n_clusters=num_cluster)
+		clustering.fit(df_data)
+		csv_name = 'clustered_kmeans_' + target_dataset + '.csv'
 	print("time elapsed for clustering: " + str(time.time()-start_time))
 	print(clustering.get_params())
 	print(clustering.labels_)
