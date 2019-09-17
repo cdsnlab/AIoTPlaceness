@@ -57,7 +57,7 @@ def main():
 	# model
 	parser.add_argument('-arch', type=str, default='resnext101_32x8d', help='image embedding model')
 	parser.add_argument('-embedding_dim', type=int, default=2048, help='embedding dimension of the model')
-	parser.add_argument('-latent_size', type=int, default=900, help='size of latent variable')
+	parser.add_argument('-latent_size', type=int, default=1000, help='size of latent variable')
 	parser.add_argument('-num_layer', type=int, default=4, help='layer number')
 
 	# train
@@ -109,7 +109,7 @@ def train_reconstruction(args):
 		scheduler.load_state_dict(checkpoint['scheduler'])
 
 
-	exp = Experiment("Image-sequence autoencoder", capture_io=False)
+	exp = Experiment("Image-sequence autoencoder " + str(args.latent_size), capture_io=False)
 
 	for arg, value in vars(args).items():
 		exp.param(arg, value) 
@@ -146,7 +146,7 @@ def train_reconstruction(args):
 				'avg_loss': _avg_loss,
 				'optimizer' : optimizer.state_dict(),
 				'scheduler' : scheduler.state_dict()
-			}, CONFIG.CHECKPOINT_PATH, "imgseq_autoencoder")
+			}, CONFIG.CHECKPOINT_PATH, "imgseq_autoencoder_" + str(args.latent_size))
 	
 		print("Finish!!!")
 

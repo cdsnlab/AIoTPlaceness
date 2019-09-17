@@ -55,7 +55,7 @@ def main():
 	parser.add_argument('-shuffle', default=True, help='shuffle data every epoch')
 	parser.add_argument('-split_rate', type=float, default=0.9, help='split rate between train and validation')
 	# model
-	parser.add_argument('-latent_size', type=int, default=900, help='size of latent variable')
+	parser.add_argument('-latent_size', type=int, default=1000, help='size of latent variable')
 	parser.add_argument('-filter_size', type=int, default=300, help='filter size of convolution')
 	parser.add_argument('-filter_shape', type=int, default=5,
 						help='filter shape to use for convolution')
@@ -119,7 +119,7 @@ def train_reconstruction(args):
 	if args.resume:
 		optimizer.load_state_dict(checkpoint['optimizer'])
 		scheduler.load_state_dict(checkpoint['scheduler'])
-	exp = Experiment("Text autoencoder", capture_io=False)
+	exp = Experiment("Text autoencoder " + str(args.latent_size), capture_io=False)
 
 	for arg, value in vars(args).items():
 		exp.param(arg, value) 
@@ -167,7 +167,7 @@ def train_reconstruction(args):
 				'Rouge2': _rouge_2,
 				'optimizer' : optimizer.state_dict(),
 				'scheduler' : scheduler.state_dict()
-			}, CONFIG.CHECKPOINT_PATH, "text_autoencoder")
+			}, CONFIG.CHECKPOINT_PATH, "text_autoencoder_" + str(args.latent_size))
 
 		print("Finish!!!")
 
