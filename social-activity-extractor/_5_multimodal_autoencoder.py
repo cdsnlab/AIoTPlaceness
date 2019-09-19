@@ -55,7 +55,7 @@ def main():
 	parser.add_argument('-shuffle', default=True, help='shuffle data every epoch')
 	parser.add_argument('-split_rate', type=float, default=0.9, help='split rate between train and validation')
 	# model
-	parser.add_argument('-latent_size', type=int, default=900, help='size of latent variable')
+	parser.add_argument('-latent_size', type=int, default=1000, help='size of latent variable')
 	parser.add_argument('-filter_size', type=int, default=300, help='filter size of convolution')
 	parser.add_argument('-filter_shape', type=int, default=5,
 						help='filter shape to use for convolution')
@@ -64,6 +64,7 @@ def main():
 	parser.add_argument('-num_layer', type=int, default=4, help='layer number')
 	parser.add_argument('-text_pt', type=str, default=None, help='filename of checkpoint of text autoencoder')
 	parser.add_argument('-imgseq_pt', type=str, default=None, help='filename of checkpoint of image sequence autoencoder')
+	parser.add_argument('-normalize', action='store_true', default=False, help='normalize before fusion')
 
 	# train
 	parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
@@ -113,7 +114,7 @@ def train_reconstruction(args):
 		imgseq_checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.imgseq_pt), map_location=lambda storage, loc: storage)
 		imgseq_encoder.load_state_dict(imgseq_checkpoint['imgseq_encoder'])
 		imgseq_decoder.load_state_dict(imgseq_checkpoint['imgseq_decoder'])
-	multimodal_encoder = multimodal_model.MultimodalEncoder(text_encoder, imgseq_encoder, args.latent_size)
+	multimodal_encoder = multimodal_model.MultimodalEncoder(text_encoder, imgseq_encoder, args.latent_size, args.normalize)
 	multimodal_decoder = multimodal_model.MultimodalDecoder(text_decoder, imgseq_decoder, args.latent_size, CONFIG.MAX_SEQUENCE_LEN)
 
 	if args.resume:

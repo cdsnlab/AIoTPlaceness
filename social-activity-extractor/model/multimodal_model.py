@@ -10,7 +10,7 @@ import numpy as np
 from model.component import SiLU, Maxout, PTanh
 
 class MultimodalEncoder(nn.Module):
-	def __init__(self, text_encoder, imgseq_encoder, latent_size):
+	def __init__(self, text_encoder, imgseq_encoder, latent_size, normalize=False):
 		super(MultimodalEncoder, self).__init__()
 		self.text_encoder = text_encoder
 		self.imgseq_encoder = imgseq_encoder
@@ -19,9 +19,13 @@ class MultimodalEncoder(nn.Module):
 			nn.Linear(latent_size*2, int(latent_size*2/3)),
 			nn.SELU(),
 			nn.Linear(int(latent_size*2/3), latent_size))
+		self.normalize = normalize
 	def __call__(self, text, imgseq):
 		text_h = self.text_encoder(text)
 		imgseq_h = self.imgseq_encoder(imgseq)
+		if self.normalize:
+			text_h = F.normalize(text_h, p=2, dim=1)
+			imgseq_h = F.normalize(imgseq_h, p=2, dim=1)
 		h = self.multimodal_encoder(torch.cat((text_h, imgseq_h), dim=-1))
 		return h
 
