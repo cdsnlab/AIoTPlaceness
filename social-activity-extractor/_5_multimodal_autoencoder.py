@@ -179,8 +179,8 @@ def train_reconstruction(args):
 				del text_feature, text_prob, imgseq_feature, imgseq_feature_hat, loss
 			
 			exp.log("\nEpoch: {} at {} lr: {}".format(epoch, str(datetime.datetime.now()), str(scheduler.get_lr())))
-			_avg_loss, _rouge_1, _rouge_2 = eval_reconstruction_with_rouge(multimodal_autoencoder, word_idx[0], text_criterion, imgseq_criterion, val_loader, device)
-			exp.log("\nEvaluation - loss: {}  Rouge1: {} Rouge2: {}".format(_avg_loss, _rouge_1, _rouge_2))
+			_avg_text_loss, _avg_imgseq_loss, _avg_loss, _rouge_1, _rouge_2 = eval_reconstruction_with_rouge(multimodal_autoencoder, word_idx[0], text_criterion, imgseq_criterion, val_loader, device)
+			exp.log("\nEvaluation - text_loss: {} imgseq_loss: {} loss: {}  Rouge1: {} Rouge2: {}".format(_avg_text_loss, _avg_imgseq_loss, _avg_loss, _rouge_1, _rouge_2))
 
 			util.save_models({
 				'epoch': epoch + 1,
@@ -203,6 +203,8 @@ def eval_reconstruction_with_rouge(autoencoder, idx2word, text_criterion, imgseq
 	autoencoder.eval()
 	step = 0
 	avg_loss = 0.
+	avg_text_loss = 0.
+	avg_imgseq_loss = 0.
 	rouge_1 = 0.
 	rouge_2 = 0.
 	for text_batch, imgseq_batch in tqdm(data_iter):
@@ -218,19 +220,23 @@ def eval_reconstruction_with_rouge(autoencoder, idx2word, text_criterion, imgseq
 		rouge_1 += r1 / len(text_batch)
 		rouge_2 += r2 / len(text_batch)
 		text_loss = text_criterion(text_prob.transpose(1, 2), text_feature)
+		avg_text_loss += text_loss.detach().item()
 		imgseq_loss = imgseq_criterion(imgseq_feature_hat, imgseq_feature)
+		avg_imgseq_loss += imgseq_loss.detach().item()
 		loss = text_loss + imgseq_loss
 		del text_loss, imgseq_loss
 		avg_loss += loss.detach().item()
 		step = step + 1
 		del text_feature, text_prob, imgseq_feature, imgseq_feature_hat, loss, _, predict_index
+	avg_text_loss = avg_text_loss / step
+	avg_imgseq_loss = avg_imgseq_loss / step
 	avg_loss = avg_loss / step
 	rouge_1 = rouge_1 / step
 	rouge_2 = rouge_2 / step
 	print("===============================================================")
 	autoencoder.train()
 
-	return avg_loss, rouge_1, rouge_2
+	return avg_text_loss, avg_imgseq_loss, avg_loss, rouge_1, rouge_2
 
 def calc_rouge(original_sentences, predict_sentences):
 	rouge_1 = 0.0
