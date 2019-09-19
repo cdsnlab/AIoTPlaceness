@@ -18,7 +18,8 @@ class MultimodalEncoder(nn.Module):
 		self.multimodal_encoder = nn.Sequential(
 			nn.Linear(latent_size*2, int(latent_size*2/3)),
 			nn.SELU(),
-			nn.Linear(int(latent_size*2/3), latent_size))
+			nn.Linear(int(latent_size*2/3), latent_size),
+			nn.Tanh())
 		self.normalize = normalize
 		self.add_latent = add_latent
 	def __call__(self, text, imgseq):
