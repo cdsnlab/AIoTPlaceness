@@ -65,6 +65,8 @@ def main():
 	parser.add_argument('-text_pt', type=str, default=None, help='filename of checkpoint of text autoencoder')
 	parser.add_argument('-imgseq_pt', type=str, default=None, help='filename of checkpoint of image sequence autoencoder')
 	parser.add_argument('-normalize', action='store_true', default=False, help='normalize before fusion')
+	parser.add_argument('-add_latent', action='store_true', default=False, help='add latent or concat')
+	parser.add_argument('-no_decode', action='store_true', default=False, help='no decode')
 
 	# train
 	parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
@@ -114,8 +116,8 @@ def train_reconstruction(args):
 		imgseq_checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.imgseq_pt), map_location=lambda storage, loc: storage)
 		imgseq_encoder.load_state_dict(imgseq_checkpoint['imgseq_encoder'])
 		imgseq_decoder.load_state_dict(imgseq_checkpoint['imgseq_decoder'])
-	multimodal_encoder = multimodal_model.MultimodalEncoder(text_encoder, imgseq_encoder, args.latent_size, args.normalize)
-	multimodal_decoder = multimodal_model.MultimodalDecoder(text_decoder, imgseq_decoder, args.latent_size, CONFIG.MAX_SEQUENCE_LEN)
+	multimodal_encoder = multimodal_model.MultimodalEncoder(text_encoder, imgseq_encoder, args.latent_size, args.normalize, args.add_latent)
+	multimodal_decoder = multimodal_model.MultimodalDecoder(text_decoder, imgseq_decoder, args.latent_size, CONFIG.MAX_SEQUENCE_LEN, args.no_decode)
 
 	if args.resume:
 		print("Restart from checkpoint")
@@ -139,7 +141,15 @@ def train_reconstruction(args):
 	if args.resume:
 		optimizer.load_state_dict(checkpoint['optimizer'])
 		scheduler.load_state_dict(checkpoint['scheduler'])
-	exp = Experiment("Multimodal autoencoder", capture_io=False)
+
+	exp_name = "Multimodal autoencoder"
+	if args.normalize:
+		exp_name = exp_name + "normalize"
+	if args.add_latent:
+		exp_name = exp_name + "add_latent"
+	if args.no_decode:
+		exp_name = exp_name + "no_decode"
+	exp = Experiment(exp_name, capture_io=False)
 
 	for arg, value in vars(args).items():
 		exp.param(arg, value) 
@@ -182,6 +192,15 @@ def train_reconstruction(args):
 			_avg_text_loss, _avg_imgseq_loss, _avg_loss, _rouge_1, _rouge_2 = eval_reconstruction_with_rouge(multimodal_autoencoder, word_idx[0], text_criterion, imgseq_criterion, val_loader, device)
 			exp.log("\nEvaluation - text_loss: {} imgseq_loss: {} loss: {}  Rouge1: {} Rouge2: {}".format(_avg_text_loss, _avg_imgseq_loss, _avg_loss, _rouge_1, _rouge_2))
 
+
+			save_name = "multimodal_autoencoder"
+			if args.normalize:
+				save_name = save_name + "_normalize"
+			if args.add_latent:
+				save_name = save_name + "_add_latent"
+			if args.no_decode:
+				save_name = save_name + "_no_decode"
+				
 			util.save_models({
 				'epoch': epoch + 1,
 				'multimodal_encoder': multimodal_encoder.state_dict(),
@@ -191,7 +210,7 @@ def train_reconstruction(args):
 				'Rouge2': _rouge_2,
 				'optimizer' : optimizer.state_dict(),
 				'scheduler' : scheduler.state_dict()
-			}, CONFIG.CHECKPOINT_PATH, "multimodal_autoencoder")
+			}, CONFIG.CHECKPOINT_PATH, save_name)
 
 		print("Finish!!!")
 
