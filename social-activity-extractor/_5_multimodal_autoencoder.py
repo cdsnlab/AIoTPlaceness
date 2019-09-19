@@ -62,8 +62,9 @@ def main():
 	parser.add_argument('-arch', type=str, default='resnext101_32x8d', help='image embedding model')
 	parser.add_argument('-image_embedding_dim', type=int, default=2048, help='embedding dimension of the model')
 	parser.add_argument('-num_layer', type=int, default=4, help='layer number')
-	parser.add_argument('-text_pt', type=str, default=None, help='filename of checkpoint of text autoencoder')
-	parser.add_argument('-imgseq_pt', type=str, default=None, help='filename of checkpoint of image sequence autoencoder')
+	parser.add_argument('-encode_latent', type=int, default=1000, help='latent vector size of encoder')
+	parser.add_argument('-decode_latent', type=int, default=1000, help='latent vector size of decoder')
+	parser.add_argument('-pretrained', action='store_true', default=True, help='load pretrained')
 	parser.add_argument('-normalize', action='store_true', default=False, help='normalize before fusion')
 	parser.add_argument('-add_latent', action='store_true', default=False, help='add latent or concat')
 	parser.add_argument('-no_decode', action='store_true', default=False, help='no decode')
@@ -104,18 +105,27 @@ def train_reconstruction(args):
 	t3 = int(math.floor((t2 - args.filter_shape) / 2) + 1)
 	args.t3 = t3
 	text_embedding = nn.Embedding.from_pretrained(torch.FloatTensor(text_embedding_model))
-	text_encoder = text_model.ConvolutionEncoder(text_embedding, t3, args.filter_size, args.filter_shape, args.latent_size)
-	text_decoder = text_model.DeconvolutionDecoder(text_embedding, args.tau, t3, args.filter_size, args.filter_shape, args.latent_size, device)
-	if args.text_pt:
-		text_checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.text_pt), map_location=lambda storage, loc: storage)
-		text_encoder.load_state_dict(text_checkpoint['text_encoder'])
-		text_decoder.load_state_dict(text_checkpoint['text_decoder'])
-	imgseq_encoder = imgseq_model.RNNEncoder(args.image_embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
-	imgseq_decoder = imgseq_model.RNNDecoder(CONFIG.MAX_SEQUENCE_LEN, args.image_embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
-	if args.imgseq_pt:
-		imgseq_checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.imgseq_pt), map_location=lambda storage, loc: storage)
-		imgseq_encoder.load_state_dict(imgseq_checkpoint['imgseq_encoder'])
-		imgseq_decoder.load_state_dict(imgseq_checkpoint['imgseq_decoder'])
+
+	text_encoder = text_model.ConvolutionEncoder(text_embedding, t3, args.filter_size, args.filter_shape, args.encode_latent)
+	imgseq_encoder = imgseq_model.RNNEncoder(args.image_embedding_dim, args.num_layer, args.encode_latent, bidirectional=True)
+	text_decoder = text_model.DeconvolutionDecoder(text_embedding, args.tau, t3, args.filter_size, args.filter_shape, args.decode_latent, device)
+	imgseq_decoder = imgseq_model.RNNDecoder(CONFIG.MAX_SEQUENCE_LEN, args.image_embedding_dim, args.num_layer, args.decode_latent, bidirectional=True)
+	
+	if args.pretrained:
+		text_encoder_checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, ("text_autoencoder_" + str(args.encode_latent) + "_epoch_100.pt")), map_location=lambda storage, loc: storage)
+		text_encoder.load_state_dict(text_encoder_checkpoint['text_encoder'])
+		del text_encoder_checkpoint
+		text_decoder_checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, ("text_autoencoder_" + str(args.decode_latent) + "_epoch_100.pt")), map_location=lambda storage, loc: storage)
+		text_decoder.load_state_dict(text_decoder_checkpoint['text_decoder'])
+		del text_decoder_checkpoint
+		imgseq_encoder_checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, ("imgseq_autoencoder_" + str(args.encode_latent) + "_epoch_100.pt")), map_location=lambda storage, loc: storage)
+		imgseq_encoder.load_state_dict(imgseq_encoder_checkpoint['imgseq_encoder'])
+		del imgseq_encoder_checkpoint
+		imgseq_decoder_checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, ("imgseq_autoencoder_" + str(args.decode_latent) + "_epoch_100.pt")), map_location=lambda storage, loc: storage)
+		imgseq_decoder.load_state_dict(imgseq_decoder_checkpoint['imgseq_decoder'])
+		del imgseq_decoder_checkpoint
+
+
 	multimodal_encoder = multimodal_model.MultimodalEncoder(text_encoder, imgseq_encoder, args.latent_size, args.normalize, args.add_latent)
 	multimodal_decoder = multimodal_model.MultimodalDecoder(text_decoder, imgseq_decoder, args.latent_size, CONFIG.MAX_SEQUENCE_LEN, args.no_decode)
 
@@ -200,7 +210,7 @@ def train_reconstruction(args):
 				save_name = save_name + "_add_latent"
 			if args.no_decode:
 				save_name = save_name + "_no_decode"
-				
+
 			util.save_models({
 				'epoch': epoch + 1,
 				'multimodal_encoder': multimodal_encoder.state_dict(),
