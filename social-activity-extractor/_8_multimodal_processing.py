@@ -170,7 +170,7 @@ def apply_tsne(target_csv=sys.argv[2]):
 		for perp in perp_list:     
 			start_time = time.time()
 			#tsne_pca = do_tsne(TSNE(n_components=2, perplexity=50, early_exaggeration=12.0, learning_rate=100, n_iter=5000, random_state=42, verbose=1), df_pca_data)
-			tsne_pca = do_tsne(TSNE(n_components=2, perplexity=perp, learning_rate=lr, n_iter=2000, random_state=42, n_jobs=4, verbose=1), df_pca_data)
+			tsne_pca = do_tsne(TSNE(n_components=2, perplexity=perp, learning_rate=lr, n_iter=2000, random_state=42), df_pca_data)
 			print("time elapsed: " + str(time.time()-start_time))
 			scatterplot_pointlabels(tsne_pca, 0.2)
 			plt.title('t-SNE on PCA data lr: ' + str(lr) + ' perp: ' + str(perp) )
