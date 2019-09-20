@@ -104,6 +104,15 @@ def get_latent(args):
 	multimodal_encoder.to(device)
 	multimodal_encoder.eval() 
 
+
+	csv_name = 'latent_' + args.target_dataset
+	if args.normalize:
+		csv_name = save_name + "_normalize"
+	if args.add_latent:
+		csv_name = save_name + "_add_latent"
+	if args.no_decode:
+		csv_name = save_name + "_no_decode"
+	csv_name = csv_name + '.csv'
 	#f_csv = open(os.path.join(CONFIG.CSV_PATH, 'latent_' + args.target_dataset + '.csv'), 'w', encoding='utf-8-sig')
 	#wr = csv.writer(f_csv)
 	short_code_list = []
@@ -124,7 +133,7 @@ def get_latent(args):
 	#f_csv.close()
 	result_df = pd.DataFrame(data=row_list, index=short_code_list, columns=[i for i in range(args.latent_size)])
 	result_df.sort_index(inplace=True)
-	result_df.to_csv(os.path.join(CONFIG.CSV_PATH, 'clustered_spectral_' + target_dataset + '.csv'), encoding='utf-8-sig')
+	result_df.to_csv(os.path.join(CONFIG.CSV_PATH, csv_name), encoding='utf-8-sig')
 	print("Finish!!!")
 
 
