@@ -11,6 +11,9 @@ import random
 from tqdm import tqdm
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+from sklearn.manifold import TSNE
 from sklearn.metrics import calinski_harabasz_score, davies_bouldin_score, silhouette_score
 from sklearn.cluster import Birch, SpectralClustering, AffinityPropagation, AgglomerativeClustering, KMeans, DBSCAN, OPTICS
 
@@ -159,7 +162,31 @@ def sample_from_cluster(target_dataset, target_clustering):
 	pbar.close()
 
 
+def apply_tsne(target_csv=sys.argv[2]):
+	df_pca_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'pca_' + target_csv + '.csv'), index_col=0, header=0, encoding='utf-8-sig')
+	lr_list = [20, 100, 200]
+	perp_list = [50, 200, 500, 1000, 2000]
+	for lr in lr_list:
+		for perp in perp_list:     
+			start_time = time.time()
+			#tsne_pca = do_tsne(TSNE(n_components=2, perplexity=50, early_exaggeration=12.0, learning_rate=100, n_iter=5000, random_state=42, verbose=1), df_pca_data)
+			tsne_pca = do_tsne(TSNE(n_components=2, perplexity=perp, learning_rate=lr, n_iter=2000, random_state=42, n_jobs=4, verbose=1), df_pca_data)
+			print("time elapsed: " + str(time.time()-start_time))
+			scatterplot_pointlabels(tsne_pca, 0.2)
+			plt.title('t-SNE on PCA data lr: ' + str(lr) + ' perp: ' + str(perp) )
+			plt.savefig(os.path.join(CONFIG.SVG_PATH, 'tsne_pca_' + target_csv + '_' + str(lr) + '_' + str(perp) + '.svg'))
+			tsne_pca.to_csv(os.path.join(CONFIG.CSV_PATH, 'tsne_pca_' + target_csv + '_' + str(lr) + '_' + str(perp) + '.csv'), encoding='utf-8-sig')
 
+def do_tsne(tsne_object, data_to_pass):
+    data_tsne = pd.DataFrame(tsne_object.fit_transform(data_to_pass))
+    data_tsne.index = data_to_pass.index
+    data_tsne.columns = [['tsne1', 'tsne2']]
+    return data_tsne
+
+def scatterplot_pointlabels(df_twocols, markersize=None):
+    # basic scatterplot
+    fig = plt.figure()
+    plt.plot(df_twocols.iloc[:, 0], df_twocols.iloc[:, 1], marker='.', linestyle='None', markersize=markersize)
 
 def run(option): 
 	if option == 0:
@@ -168,6 +195,8 @@ def run(option):
 		do_spectral_clustering(target_dataset=sys.argv[2])
 	elif option == 2:
 		sample_from_cluster(target_dataset=sys.argv[2], target_clustering=sys.argv[3])
+	elif option == 3:
+		apply_tsne(target_dataset=sys.argv[2])
 	else:
 		print("This option does not exist!\n")
 
