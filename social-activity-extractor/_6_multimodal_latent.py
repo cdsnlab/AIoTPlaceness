@@ -107,11 +107,11 @@ def get_latent(args):
 
 	csv_name = 'latent_' + args.target_dataset
 	if args.normalize:
-		csv_name = save_name + "_normalize"
+		csv_name = csv_name + "_normalize"
 	if args.add_latent:
-		csv_name = save_name + "_add_latent"
+		csv_name = csv_name + "_add_latent"
 	if args.no_decode:
-		csv_name = save_name + "_no_decode"
+		csv_name = csv_name + "_no_decode"
 	csv_name = csv_name + '.csv'
 	#f_csv = open(os.path.join(CONFIG.CSV_PATH, 'latent_' + args.target_dataset + '.csv'), 'w', encoding='utf-8-sig')
 	#wr = csv.writer(f_csv)
