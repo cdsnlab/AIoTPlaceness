@@ -196,7 +196,7 @@ def run(option):
 	elif option == 2:
 		sample_from_cluster(target_dataset=sys.argv[2], target_clustering=sys.argv[3])
 	elif option == 3:
-		apply_tsne(target_dataset=sys.argv[2])
+		apply_tsne(target_csv=sys.argv[2])
 	else:
 		print("This option does not exist!\n")
 
