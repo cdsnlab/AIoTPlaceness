@@ -25,6 +25,13 @@ class MultimodalEncoder(nn.Module):
 	def __call__(self, text, imgseq):
 		text_h = self.text_encoder(text)
 		imgseq_h = self.imgseq_encoder(imgseq)
+
+		# if batch_size == 1, unsqueeze
+		if len(text_h.size()) < 2:
+			text_h = text_h.view(1, *text_h.size())
+		if len(imgseq_h.size()) < 2:
+			imgseq_h = imgseq_h.view(1, *imgseq_h.size())
+
 		if self.normalize:
 			text_h = F.normalize(text_h, p=2, dim=1)
 			imgseq_h = F.normalize(imgseq_h, p=2, dim=1)
