@@ -125,13 +125,14 @@ def get_latent(args):
 		h = multimodal_encoder(text_feature, imgseq_feature)
 
 		for _short_code, _h in zip(short_code, h):
-			short_code_list.append(short_code)
+			short_code_list.append(_short_code)
 			row_list.append(_h.detach().cpu().numpy().tolist())
 			# row = [_short_code] + _h.detach().cpu().numpy().tolist()
 			# wr.writerow(row)
 		del text_feature, imgseq_feature
 	#f_csv.close()
 	result_df = pd.DataFrame(data=row_list, index=short_code_list, columns=[i for i in range(args.latent_size)])
+	result_df.index.name = short_code
 	result_df.sort_index(inplace=True)
 	result_df.to_csv(os.path.join(CONFIG.CSV_PATH, csv_name), encoding='utf-8-sig')
 	print("Finish!!!")
