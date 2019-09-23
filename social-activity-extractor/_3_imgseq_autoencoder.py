@@ -83,8 +83,10 @@ def train_reconstruction(args):
 	train_loader, val_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=args.shuffle),\
 								  DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
 
-	imgseq_encoder = imgseq_model.RNNEncoder(args.embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
-	imgseq_decoder = imgseq_model.RNNDecoder(CONFIG.MAX_SEQUENCE_LEN, args.embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
+	#imgseq_encoder = imgseq_model.RNNEncoder(args.embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
+	#imgseq_decoder = imgseq_model.RNNDecoder(CONFIG.MAX_SEQUENCE_LEN, args.embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
+	imgseq_encoder = imgseq_model.ConvolutionEncoder(embedding_dim=args.embedding_dim, t3=1, filter_size=300, filter_shape=3, latent_size=1000)
+	imgseq_encoder = imgseq_model.DeconvolutionDecoder(embedding_dim=args.embedding_dim, t3=1, filter_size=300, filter_shape=3, latent_size=1000)
 	if args.resume:
 		print("Restart from checkpoint")
 		checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.resume), map_location=lambda storage, loc: storage)
@@ -109,7 +111,7 @@ def train_reconstruction(args):
 		scheduler.load_state_dict(checkpoint['scheduler'])
 
 
-	exp = Experiment("Image-sequence autoencoder " + str(args.latent_size), capture_io=False)
+	exp = Experiment("Image-sequence autoencoder2 " + str(args.latent_size), capture_io=False)
 
 	for arg, value in vars(args).items():
 		exp.param(arg, value) 
@@ -146,7 +148,7 @@ def train_reconstruction(args):
 				'avg_loss': _avg_loss,
 				'optimizer' : optimizer.state_dict(),
 				'scheduler' : scheduler.state_dict()
-			}, CONFIG.CHECKPOINT_PATH, "imgseq_autoencoder_" + str(args.latent_size))
+			}, CONFIG.CHECKPOINT_PATH, "imgseq_autoencoder2_" + str(args.latent_size))
 	
 		print("Finish!!!")
 
