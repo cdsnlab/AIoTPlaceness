@@ -14,7 +14,7 @@ class RNNEncoder(nn.Module):
 		super(RNNEncoder, self).__init__()
 		self.latent_size = latent_size
 		self.num_layers = num_layers
-		self.lstm = nn.LSTM(embed_dim, int(latent_size/2), num_layers, batch_first=True, dropout=0.2, bidirectional=bidirectional)
+		self.lstm = nn.LSTM(embed_dim, latent_size, num_layers, batch_first=True, dropout=0.2, bidirectional=False)
 
 		# initialize weights
 		#nn.init.xavier_uniform_(self.lstm.weight_ih_l0, gain=np.sqrt(2))
@@ -34,7 +34,7 @@ class RNNDecoder(nn.Module):
 		self.embed_dim = embed_dim
 		self.num_layers = num_layers
 		self.sequence_len = sequence_len
-		self.lstm = nn.LSTM(latent_size, int(embed_dim/2), num_layers, batch_first=True, dropout=0.2, bidirectional=bidirectional)
+		self.lstm = nn.LSTM(latent_size, embed_dim, num_layers, batch_first=True, dropout=0.2, bidirectional=False)
 
 		# initialize weights
 		#nn.init.xavier_uniform_(self.lstm.weight_ih_l0, gain=np.sqrt(2))

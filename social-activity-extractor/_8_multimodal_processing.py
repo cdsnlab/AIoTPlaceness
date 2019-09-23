@@ -107,9 +107,9 @@ def do_spectral_clustering(target_csv):
 	result_df.to_csv(os.path.join(CONFIG.CSV_PATH, 'clustered_spectral_' + target_csv + '.csv'), encoding='utf-8-sig')
 
 sample_length = 10
-def sample_from_cluster(target_dataset, target_clustering):
+def sample_from_cluster(target_csv, target_dataset, target_clustering):
 
-	df_clustered = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'clustered_' + target_clustering + '_' + target_dataset + '.csv'), index_col=0, header=0, encoding='utf-8-sig')
+	df_clustered = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv + '.csv'), index_col=0, header=0, encoding='utf-8-sig')
 	df_clustered.index.name = 'short_code'
 	print(df_clustered.iloc[:100])
 	print(df_clustered.shape)
@@ -198,7 +198,7 @@ def run(option):
 	elif option == 1:
 		do_spectral_clustering(target_csv=sys.argv[2])
 	elif option == 2:
-		sample_from_cluster(target_dataset=sys.argv[2], target_clustering=sys.argv[3])
+		sample_from_cluster(target_csv=sys.argv[2], target_dataset=sys.argv[3], target_clustering=sys.argv[4])
 	elif option == 3:
 		apply_tsne(target_csv=sys.argv[2])
 	else:

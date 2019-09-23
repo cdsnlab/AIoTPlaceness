@@ -17,6 +17,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
 import torchvision.transforms as transforms
+from torchvision.utils import save_image
 from torchvision.datasets.folder import pil_loader
 from gensim.models.keyedvectors import FastTextKeyedVectors
 from gensim.similarities.index import AnnoyIndexer
@@ -292,50 +293,13 @@ def test(target_dataset):
 	# print("max: ", np.mean(np.max(full_data, axis=2), axis=1))
 	# print("min: ", np.mean(np.min(full_data, axis=2), axis=1))
 	# print("norm: ", full_data_norm)
-
-	dataset_path = os.path.join(CONFIG.DATASET_PATH, target_dataset)
-	if not os.path.exists(dataset_path):
-		os.mkdir(dataset_path)
-	with open(os.path.join('./data', 'pickle', 'hotel_reviews.p'), 'rb') as f:
-		dataset = cPickle.load(f, encoding="latin1")
+	dataset_path = os.path.join(CONFIG.DATA_PATH, 'dataset', target_dataset)
+	with open(os.path.join(dataset_path, 'resize224', 'BsFudrehNdL.p'), 'rb') as f:
+		image_data = cPickle.load(f)
 	f.close()
-	print("tokenizing sentences...")
-	shortcode_list = []
-	word_list_list = []
-	pbar = tqdm(total=len(dataset[0]))
-	for pg in dataset[0]:
-		pbar.update(1)
-		data = " ".join([dataset[3][idx] for idx in pg])
-		data = data.replace("END_TOKEN", "")
-		word_list = process_text(data)
-		if len(word_list) > 0:
-			word_list_list.append(word_list)
-	pbar.close()
-	pbar = tqdm(total=len(dataset[1]))
-	for pg in dataset[1]:
-		pbar.update(1)
-		data = " ".join([dataset[3][idx] for idx in pg])
-		data = data.replace("END_TOKEN", "")
-		word_list = process_text(data)
-		if len(word_list) > 0:
-			word_list_list.append(word_list)
-	pbar.close()
-	print("making corpus and csv files...")
-	f_csv = open(os.path.join(dataset_path, 'posts.csv'), 'w', encoding='utf-8')
-	f_corpus = open(os.path.join(dataset_path, 'corpus.txt'), 'w', encoding='utf-8')
-	wr = csv.writer(f_csv)
-	pbar = tqdm(total=len(word_list_list))
-	for word_list in word_list_list:
-		pbar.update(1)
-		sentence = ' '.join(word_list) + ' <EOS>'
-		out_row = []
-		out_row.append('asd')
-		out_row.append(sentence)
-		wr.writerow(out_row)
-		f_corpus.write(sentence + '\n')
-	pbar.close()
-	f_csv.close()
-	f_corpus.close()
+	imgseq_tensor = torch.from_numpy(image_data).type(torch.FloatTensor)
+	save_image(imgseq_tensor, './result/temp.png', nrow=5, padding=0)
+	
 
 def make_toy_dataset(target_dataset):
 	dataset_path = os.path.join(CONFIG.DATASET_PATH, target_dataset)
@@ -352,6 +316,39 @@ def make_toy_dataset(target_dataset):
 		wr.writerow(row)
 		short_code = row.iloc[0] + '.p'
 		shutil.copy2(os.path.join(dataset_path, 'resnet152', short_code), os.path.join(toy_path, 'resnet152', short_code))
+
+def process_resize_images(target_dataset):
+
+	img_transform = transforms.Compose([
+					transforms.Resize(224),
+					transforms.CenterCrop(224),
+					transforms.ToTensor()
+					])	
+	dataset_path = os.path.join(CONFIG.DATA_PATH, 'dataset', target_dataset)
+	if not os.path.exists(dataset_path):
+		os.mkdir(dataset_path)
+	if not os.path.exists(os.path.join(dataset_path, 'resize224')):
+		os.mkdir(os.path.join(dataset_path, 'resize224'))
+	df_data = pd.read_csv(os.path.join(CONFIG.TARGET_PATH, 'posts.csv'), encoding='utf-8')
+	pbar = tqdm(total=df_data.shape[0])
+	for index, in_row in df_data.iterrows():
+		pbar.update(1)
+		images = []
+		for image in in_row.iloc[7:]:
+			if not pd.isna(image):
+				image_path = os.path.join(CONFIG.TARGET_PATH, 'original', image)
+				try:
+					images.append(img_transform(pil_loader(image_path)))
+				except OSError as e:
+					print(e)
+					print(image_path)
+		if len(images) > 0:
+			image_data = torch.stack(images).detach().numpy()
+			with open(os.path.join(dataset_path, 'resize224', in_row.iloc[1]+'.p'), 'wb') as f:
+				cPickle.dump(image_data, f)
+			f.close()
+			del image_data
+	pbar.close()
 	
 def run(option): 
 	if option == 0:
@@ -368,6 +365,8 @@ def run(option):
 		test(target_dataset=sys.argv[2])
 	elif option == 6:
 		make_toy_dataset(target_dataset=sys.argv[2])
+	elif option == 7:
+		process_resize_images(target_dataset=sys.argv[2])
 	else:
 		print("This option does not exist!\n")
 
