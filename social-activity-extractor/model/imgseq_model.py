@@ -79,8 +79,7 @@ class ConvolutionEncoder(nn.Module):
 		x = x.view(x.size()[0], 1, x.size()[1], x.size()[2])
 		# x = F.relu(x)
 		h1 = self.convs1(x)
-		h2 = self.convs2(h1)
-		h = self.convs3(h2).squeeze().squeeze()
+		h = self.convs2(h1).squeeze().squeeze()
 		return h
 
 class DeconvolutionDecoder(nn.Module):
@@ -104,9 +103,8 @@ class DeconvolutionDecoder(nn.Module):
 					torch.nn.init.constant_(m.bias, 0.001)
 
 	def __call__(self, h):
-		h2 = self.deconvs1(h.unsqueeze(dim=-1).unsqueeze(dim=-1))
-		h1 = self.deconvs2(h2)
-		x_hat = self.deconvs3(h1).squeeze()
+		h1 = self.deconvs1(h.unsqueeze(dim=-1).unsqueeze(dim=-1))
+		x_hat = self.deconvs2(h1).squeeze()
 		
 		return x_hat
 
