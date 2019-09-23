@@ -20,8 +20,8 @@ from sklearn.cluster import Birch, SpectralClustering, AffinityPropagation, Aggl
 CONFIG = config.Config
 
 num_cluster = 12
-def do_clustering(target_dataset, cluster_method):
-	df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'normalized_' + target_dataset + '.csv'), index_col=0, header=0, encoding='utf-8-sig')
+def do_clustering(target_csv, cluster_method):
+	df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv + '.csv'), index_col=0, header=0, encoding='utf-8-sig')
 	df_data.index.name = 'short_code'
 	print(df_data.iloc[:100])
 	print(df_data.shape)
@@ -70,8 +70,8 @@ def count_percentage(cluster_labels):
 	for k in count:
 		print("cluster {} : {:.2%}".format(str(k), count[k]/len(cluster_labels)))
 
-def do_spectral_clustering(target_dataset):
-	df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'normalized_' + target_dataset + '.csv'), index_col=0, header=0, encoding='utf-8-sig')
+def do_spectral_clustering(target_csv):
+	df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv + '.csv'), index_col=0, header=0, encoding='utf-8-sig')
 	df_data.index.name = 'short_code'
 	print(df_data.iloc[:100])
 	print(df_data.shape)
@@ -100,7 +100,7 @@ def do_spectral_clustering(target_dataset):
 	print("silhouette_score: ", silhouette_score(df_data, result_df['cluster'].squeeze()))
 	print("davies_bouldin_score: ", davies_bouldin_score(df_data, result_df['cluster'].squeeze()))
 	print("time elapsed for scoring: " + str(time.time()-start_time))
-	result_df.to_csv(os.path.join(CONFIG.CSV_PATH, 'clustered_spectral_' + target_dataset + '.csv'), encoding='utf-8-sig')
+	result_df.to_csv(os.path.join(CONFIG.CSV_PATH, 'clustered_spectral_' + target_csv + '.csv'), encoding='utf-8-sig')
 
 sample_length = 10
 def sample_from_cluster(target_dataset, target_clustering):
@@ -190,9 +190,9 @@ def scatterplot_pointlabels(df_twocols, markersize=None):
 
 def run(option): 
 	if option == 0:
-		do_clustering(target_dataset=sys.argv[2], cluster_method=int(sys.argv[3]))
+		do_clustering(target_csv=sys.argv[2], cluster_method=int(sys.argv[3]))
 	elif option == 1:
-		do_spectral_clustering(target_dataset=sys.argv[2])
+		do_spectral_clustering(target_csv=sys.argv[2])
 	elif option == 2:
 		sample_from_cluster(target_dataset=sys.argv[2], target_clustering=sys.argv[3])
 	elif option == 3:
