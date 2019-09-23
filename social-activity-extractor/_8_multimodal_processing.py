@@ -30,27 +30,31 @@ def do_clustering(target_csv, cluster_method):
 	if cluster_method == 0:
 		clustering = DBSCAN(eps=0.3, min_samples=20)
 		clustering.fit(df_data)
-		csv_name = 'clustered_dbscan_' + target_dataset + '.csv'
+		csv_name = 'clustered_dbscan_' + target_csv + '.csv'
 	elif cluster_method == 1:
 		clustering = OPTICS(min_samples=20)
 		clustering.fit(df_data)
-		csv_name = 'clustered_optics_' + target_dataset + '.csv'
+		csv_name = 'clustered_optics_' + target_csv + '.csv'
 	elif cluster_method == 2:
 		clustering = AgglomerativeClustering(n_clusters=num_cluster)
 		clustering.fit(df_data)
-		csv_name = 'clustered_ward_' + target_dataset + '.csv'
+		csv_name = 'clustered_ward_' + target_csv + '.csv'
 	elif cluster_method == 3:
 		clustering = AgglomerativeClustering(affinity='cosine', linkage='complete', n_clusters=num_cluster)
 		clustering.fit(df_data)
-		csv_name = 'clustered_agglo_complete_' + target_dataset + '.csv'
+		csv_name = 'clustered_agglo_complete_' + target_csv + '.csv'
 	elif cluster_method == 4:
 		clustering = Birch(n_clusters=num_cluster)
 		clustering.fit(df_data)
-		csv_name = 'clustered_birch_' + target_dataset + '.csv'
+		csv_name = 'clustered_birch_' + target_csv + '.csv'
 	elif cluster_method == 5:
 		clustering = KMeans(n_clusters=num_cluster)
 		clustering.fit(df_data)
-		csv_name = 'clustered_kmeans_' + target_dataset + '.csv'
+		csv_name = 'clustered_kmeans_' + target_csv + '.csv'
+	elif cluster_method == 6:
+		clustering = SpectralClustering(n_clusters=num_cluster, random_state=42, assign_labels='discretize')
+		clustering.fit(df_data)
+		csv_name = 'clustered_spectral_' + target_csv + '.csv'
 	print("time elapsed for clustering: " + str(time.time()-start_time))
 	print(clustering.get_params())
 	print(clustering.labels_)
