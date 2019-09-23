@@ -86,7 +86,7 @@ def train_reconstruction(args):
 	#imgseq_encoder = imgseq_model.RNNEncoder(args.embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
 	#imgseq_decoder = imgseq_model.RNNDecoder(CONFIG.MAX_SEQUENCE_LEN, args.embedding_dim, args.num_layer, args.latent_size, bidirectional=True)
 	imgseq_encoder = imgseq_model.ConvolutionEncoder(embedding_dim=args.embedding_dim, t3=1, filter_size=300, filter_shape=3, latent_size=1000)
-	imgseq_encoder = imgseq_model.DeconvolutionDecoder(embedding_dim=args.embedding_dim, t3=1, filter_size=300, filter_shape=3, latent_size=1000)
+	imgseq_decoder = imgseq_model.DeconvolutionDecoder(embedding_dim=args.embedding_dim, t3=1, filter_size=300, filter_shape=3, latent_size=1000)
 	if args.resume:
 		print("Restart from checkpoint")
 		checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.resume), map_location=lambda storage, loc: storage)
