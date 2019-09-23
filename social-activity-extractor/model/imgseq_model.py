@@ -49,7 +49,7 @@ class RNNDecoder(nn.Module):
 		return x_hat
 
 class ConvolutionEncoder(nn.Module):
-	def __init__(self, embedding_dim, t3, filter_size, filter_shape, latent_size):
+	def __init__(self, embedding_dim, t2, filter_size, filter_shape, latent_size):
 		super(ConvolutionEncoder, self).__init__()
 		self.convs1 = nn.Sequential(
 				nn.Conv2d(1, filter_size, (filter_shape, embedding_dim), stride=(2,1)),
@@ -58,15 +58,10 @@ class ConvolutionEncoder(nn.Module):
 			)
 
 		self.convs2 = nn.Sequential(
-				nn.Conv2d(filter_size, filter_size * 2, (filter_shape, 1), stride=(2,1)),
-				nn.BatchNorm2d(filter_size * 2),
-				nn.SELU()
-			)
-
-		self.convs3 = nn.Sequential(
-				nn.Conv2d(filter_size * 2, latent_size, (t3, 1), stride=(1,1)),
+				nn.Conv2d(filter_size, latent_size, (t2, 1), stride=(2,1)),
 				nn.Tanh()
 			)
+
 
 		# weight initialize for conv layer
 		for m in self.modules():
@@ -89,20 +84,15 @@ class ConvolutionEncoder(nn.Module):
 		return h
 
 class DeconvolutionDecoder(nn.Module):
-	def __init__(self, embedding_dim, t3, filter_size, filter_shape, latent_size):
+	def __init__(self, embedding_dim, t2, filter_size, filter_shape, latent_size):
 		super(DeconvolutionDecoder, self).__init__()
 		self.deconvs1 = nn.Sequential(
-				nn.ConvTranspose2d(latent_size, filter_size * 2, (t3, 1), stride=(1,1)),
-				nn.BatchNorm2d(filter_size * 2),
-				nn.SELU()
-			)
-		self.deconvs2 = nn.Sequential(
-				nn.ConvTranspose2d(filter_size * 2, filter_size, (filter_shape, 1), stride=(2,1)),
+				nn.ConvTranspose2d(latent_size, filter_size, (t2, 1), stride=(1,1)),
 				nn.BatchNorm2d(filter_size),
 				nn.SELU()
 			)
-		self.deconvs3 = nn.Sequential(
-				nn.ConvTranspose2d(filter_size, 1, (filter_shape, embedding_dim), stride=(2,1)),
+		self.deconvs2 = nn.Sequential(
+				nn.ConvTranspose2d(filter_size, latent_size, (filter_shape, 1), stride=(2,1)),
 				nn.Tanh()
 			)
 
