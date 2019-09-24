@@ -62,20 +62,19 @@ def load_imgseq_pretrain_data(args, CONFIG):
 		full_data.append(image_data)
 		f.close()
 		del image_data
-	full_data = np.stack(full_data, axis=0)
+	full_data = np.concatenate(full_data, axis=0)
 	train_size = int(args.split_rate * len(full_data))
 	val_size = len(full_data) - train_size
 	train_data, val_data = torch.utils.data.random_split(full_data, [train_size, val_size])
-	train_dataset, val_dataset = Imgseq_pretrain_Dataset(train_data, CONFIG, img_transform), \
-							 Imgseq_pretrain_Dataset(val_data, CONFIG, img_transform)
+	train_dataset, val_dataset = Imgseq_pretrain_Dataset(train_data, CONFIG), \
+							 Imgseq_pretrain_Dataset(val_data, CONFIG)
 	return train_dataset, val_dataset
 
 
 class Imgseq_pretrain_Dataset(Dataset):
-	def __init__(self, data_list, CONFIG, transform):
+	def __init__(self, data_list, CONFIG):
 		self.data = data_list
 		self.CONFIG = CONFIG
-		self.transform = transform
 
 	def __len__(self):
 		return len(self.data)

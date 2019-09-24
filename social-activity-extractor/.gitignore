@@ -27,5 +27,13 @@ embedding/*
 result/*
 !result/.keep
 
+
+evaluation/pretrain/*
+!evaluation/pretrain/.keep
+evaluation/imgseq/*
+!evaluation/imgseq/.keep
+evaluation/multimodal/*
+!evaluation/multimodal/.keep
+
 checkpoint/*
 dependency/*

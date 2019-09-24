@@ -24,6 +24,7 @@ from torch.utils.data import DataLoader
 from torch.autograd import Variable
 from torch.optim.adam import Adam
 from torch.optim.lr_scheduler import StepLR, CyclicLR
+from torchvision.utils import save_image
 from model import util
 from model import imgseq_model
 from model.component import AdamW, cyclical_lr, ResNet50Encoder, ResNet50Decoder, ImgseqComponentAutoEncoder
@@ -79,10 +80,10 @@ def train_reconstruction(args):
 	train_dataset, val_dataset = load_imgseq_pretrain_data(args, CONFIG)
 	print("Loading dataset completed")
 	train_loader, val_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=args.shuffle),\
-								  DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
+								  DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True)
 
 	imgseq_component_encoder = ResNet50Encoder(latent_size=1000)
-	imgseq_component_decoder = ResNet50Decoder(batch_size=args.batch_size, latent_size=1000)
+	imgseq_component_decoder = ResNet50Decoder(latent_size=1000)
 	if args.resume:
 		print("Restart from checkpoint")
 		checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.resume), map_location=lambda storage, loc: storage)

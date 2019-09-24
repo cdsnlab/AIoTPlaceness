@@ -311,15 +311,14 @@ class ResNet50Encoder(nn.Module):
 		return x
 
 class ResNet50Decoder(nn.Module):
-	def __init__(self, batch_size, latent_size):
+	def __init__(self, latent_size):
 		super(ResNet50Decoder,self).__init__()
-		self.batch_size = batch_size
 
 		self.dfc3 = nn.Linear(latent_size, 2048)
 		self.bn3 = nn.BatchNorm1d(2048)
 		self.dfc2 = nn.Linear(2048, 4096)
 		self.bn2 = nn.BatchNorm1d(4096)
-		self.dfc1 = nn.Linear(4096,256 * 6 * 6)
+		self.dfc1 = nn.Linear(4096, 256 * 6 * 6)
 		self.bn1 = nn.BatchNorm1d(256*6*6)
 		self.upsample1=nn.Upsample(scale_factor=2)
 		self.dconv5 = nn.ConvTranspose2d(256, 256, 3, padding = 0)
@@ -339,7 +338,7 @@ class ResNet50Decoder(nn.Module):
 		x = self.relu(self.bn2(x))
 		x = self.dfc1(x)
 		x = self.relu(self.bn1(x))
-		x = x.view(self.batch_size, 256, 6, 6)
+		x = x.view(x.size()[0], 256, 6, 6)
 		x = self.upsample1(x)
 		x = self.dconv5(x)
 		x = self.relu(x)
