@@ -59,10 +59,12 @@ def load_imgseq_pretrain_data(args, CONFIG):
 	for image_path in tqdm(os.listdir(image_dir)):
 		with open(os.path.join(image_dir, image_path), "rb") as f:
 			image_data = cPickle.load(f)
-		full_data = full_data + image_data
+		if len(full_data) == 0:
+			full_data = image_data
+		else: 
+			full_data = np.stack(full_data, image_data, axis=0)
 		f.close()
 		del image_data
-	full_data = np.array(full_data, dtype=np.float32)
 	train_size = int(args.split_rate * len(full_data))
 	val_size = len(full_data) - train_size
 	train_data, val_data = torch.utils.data.random_split(full_data, [train_size, val_size])
