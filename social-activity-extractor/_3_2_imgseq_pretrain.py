@@ -51,6 +51,7 @@ def main():
 	parser.add_argument('-save_interval', type=int, default=1,
 						help='how many epochs to wait before saving')
 	# data
+	parser.add_argument('-target_dataset', type=str, default=None, help='folder name of target dataset')
 	parser.add_argument('-shuffle', default=True, help='shuffle data every epoch')
 	parser.add_argument('-split_rate', type=float, default=0.9, help='split rate between train and validation')
 	# model
@@ -146,7 +147,8 @@ def train_reconstruction(args):
 	
 		print("Finish!!!")
 
-	finally:
+	fina	lly:
+		
 		exp.end()
 
 def eval_reconstruction(autoencoder,criterion, data_iter, device, epoch):

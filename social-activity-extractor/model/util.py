@@ -52,16 +52,17 @@ class TextDataset(Dataset):
 		text_tensor = torch.from_numpy(text_array).type(torch.LongTensor)
 		return text_tensor
 
-def load_imgseq_pretrain_data(args, CONFIG):	
-	img_transform = transforms.Compose([
-					transforms.Resize(224),
-					transforms.CenterCrop(224),
-					transforms.ToTensor()
-					])	
+def load_imgseq_pretrain_data(args, CONFIG):
 	full_data = []
-	image_dir = os.path.join(CONFIG.TARGET_PATH, 'original')
+	dataset_path = os.path.join(CONFIG.DATA_PATH, 'dataset', args.target_dataset)
+	image_dir = os.path.join(dataset_path, 'resize224')
 	for image_path in tqdm(os.listdir(image_dir)):
-		full_data.append(os.path.join(image_dir, image_path))
+		with open(os.path.join(image_dir, image_path), "rb") as f:
+			image_data = cPickle.load(f)
+		full_data = full_data + image_data
+		f.close()
+		del image_data
+	full_data = np.array(full_data, dtype=np.float32)
 	train_size = int(args.split_rate * len(full_data))
 	val_size = len(full_data) - train_size
 	train_data, val_data = torch.utils.data.random_split(full_data, [train_size, val_size])
@@ -80,9 +81,8 @@ class Imgseq_pretrain_Dataset(Dataset):
 		return len(self.data)
 
 	def __getitem__(self, idx):
-
-		imgseq_tensor = (self.transform(pil_loader(self.data[idx])))
-		return imgseq_tensor
+		image_tensor = torch.from_numpy(self.data[idx]).type(torch.FloatTensor)
+		return image_tensor
 
 
 def load_imgseq_data(args, CONFIG):

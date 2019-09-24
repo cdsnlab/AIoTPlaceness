@@ -349,7 +349,25 @@ def process_resize_images(target_dataset):
 			f.close()
 			del image_data
 	pbar.close()
-	
+
+def drop_non_korean_images(target_dataset):	
+	dataset_path = os.path.join(CONFIG.DATASET_PATH, target_dataset)
+	df_data = pd.read_csv(os.path.join(dataset_path, 'posts.csv'), header=None, encoding='utf-8')
+
+	short_codes = []
+	pbar = tqdm(total=df_data.shape[0])
+	for index, row in df_data.iterrows():
+		short_codes.append(row[0])
+		pbar.update(1)
+	pbar.close()
+	image_nas_path = os.path.join(CONFIG.DATA_PATH, 'dataset', target_dataset)
+	image_dir = os.path.join(image_nas_path, 'resize224')
+	for image_path in tqdm(os.listdir(image_dir)):
+		short_code = image_path.replace('.p', '')
+		if short_code not in short_codes:
+			os.remove(os.path.join(image_dir, image_path))
+
+
 def run(option): 
 	if option == 0:
 		copy_selected_post(target_folder=sys.argv[2])
@@ -367,6 +385,8 @@ def run(option):
 		make_toy_dataset(target_dataset=sys.argv[2])
 	elif option == 7:
 		process_resize_images(target_dataset=sys.argv[2])
+	elif option == 8:
+		drop_non_korean_images(target_dataset=sys.argv[2])
 	else:
 		print("This option does not exist!\n")
 
