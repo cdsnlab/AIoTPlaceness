@@ -1,7 +1,9 @@
 import math
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torchvision.models as models
+from torch.autograd import Function, Variable
 from torch.optim.optimizer import Optimizer
 from torch.optim.lr_scheduler import LambdaLR
 
@@ -310,6 +312,18 @@ class ResNet50Encoder(nn.Module):
 		h = self.embedding_model(x)
 		return h
 
+class Binary(Function):
+
+    @staticmethod
+    def forward(ctx, input):
+        return F.relu(Variable(input.sign())).data
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return grad_output
+
+binary = Binary()
+
 class ResNet50Decoder(nn.Module):
 	def __init__(self, latent_size):
 		super(ResNet50Decoder,self).__init__()
@@ -369,5 +383,6 @@ class ImgseqComponentAutoEncoder(nn.Module):
 
 	def forward(self, x):
 		h = self.encoder(x)
+		h = binary.apply(h)
 		x_hat = self.decoder(h)
 		return x_hat
