@@ -307,51 +307,59 @@ class ResNet50Encoder(nn.Module):
 
 	def forward(self,x):
 			
-		x = self.embedding_model(x)
-		return x
+		h = self.embedding_model(x)
+		return h
 
 class ResNet50Decoder(nn.Module):
 	def __init__(self, latent_size):
 		super(ResNet50Decoder,self).__init__()
 
-		self.dfc3 = nn.Linear(latent_size, 2048)
-		self.bn3 = nn.BatchNorm1d(2048)
-		self.dfc2 = nn.Linear(2048, 4096)
-		self.bn2 = nn.BatchNorm1d(4096)
-		self.dfc1 = nn.Linear(4096, 256 * 6 * 6)
-		self.bn1 = nn.BatchNorm1d(256*6*6)
-		self.upsample1=nn.Upsample(scale_factor=2)
-		self.dconv5 = nn.ConvTranspose2d(256, 256, 3, padding = 0)
-		self.dconv4 = nn.ConvTranspose2d(256, 384, 3, padding = 1)
-		self.dconv3 = nn.ConvTranspose2d(384, 192, 3, padding = 1)
-		self.dconv2 = nn.ConvTranspose2d(192, 64, 5, padding = 2)
-		self.dconv1 = nn.ConvTranspose2d(64, 3, 12, stride = 4, padding = 4)
+		self.dfc = nn.Sequential(
+				nn.Linear(latent_size, 2048),
+				nn.ReLU(True),
+				nn.Linear(2048, 4096),
+				nn.ReLU(True),
+				nn.Linear(4096, 256 * 6 * 6),
+				nn.ReLU(True))
+		self.upsample = nn.Upsample(scale_factor=2)
+		self.dconv5 = nn.Sequential(
+				nn.ConvTranspose2d(256, 256, 3, padding = 0),
+				nn.BatchNorm2d(256),
+				nn.ReLU(True))
+		self.dconv4 = nn.Sequential(
+				nn.ConvTranspose2d(256, 384, 3, padding = 1),
+				nn.BatchNorm2d(384),
+				nn.ReLU(True))
+		self.dconv3 = nn.Sequential(
+				nn.ConvTranspose2d(384, 192, 3, padding = 1),
+				nn.BatchNorm2d(192),
+				nn.ReLU(True))
+		self.dconv2 = nn.Sequential(
+				nn.ConvTranspose2d(192, 64, 5, padding = 2),
+				nn.BatchNorm2d(64),
+				nn.ReLU(True))
+		self.dconv1 = nn.Sequential(
+				nn.ConvTranspose2d(64, 3, 12, stride = 4, padding = 4),
+				nn.Sigmoid())
 
-		self.relu = nn.ReLU()
-		self.sigmoid = nn.Sigmoid()
 
 	def forward(self,x):
 		
-		x = self.dfc3(x)
-		x = self.relu(self.bn3(x))
-		x = self.dfc2(x)
-		x = self.relu(self.bn2(x))
-		x = self.dfc1(x)
-		x = self.relu(self.bn1(x))
+		x = self.dfc(x)
 		x = x.view(x.size()[0], 256, 6, 6)
-		x = self.upsample1(x)
-		x = self.dconv5(x)
-		x = self.relu(x)
-		x = self.relu(self.dconv4(x))
-		x = self.relu(self.dconv3(x))
-		x = self.upsample1(x)
-		x = self.dconv2(x)
-		x = self.relu(x)
-		x = self.upsample1(x)
-		x = self.dconv1(x)
-		x = self.sigmoid(x)
+		x = self.upsample(x)
 
-		return x
+		x = self.dconv5(x)
+		x = self.dconv4(x)
+		x = self.dconv3(x)
+		x = self.upsample(x)
+
+		x = self.dconv2(x)
+		x = self.upsample(x)
+
+		x_hat = self.dconv1(x)
+
+		return x_hat
 
 class ImgseqComponentAutoEncoder(nn.Module):
 	def __init__(self, encoder, decoder):
