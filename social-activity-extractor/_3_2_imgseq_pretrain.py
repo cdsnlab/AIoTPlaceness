@@ -147,8 +147,7 @@ def train_reconstruction(args):
 	
 		print("Finish!!!")
 
-	fina	lly:
-		
+	finally:
 		exp.end()
 
 def eval_reconstruction(autoencoder,criterion, data_iter, device, epoch):
