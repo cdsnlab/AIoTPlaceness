@@ -1,6 +1,7 @@
 import math
 import torch
 import torch.nn as nn
+import torchvision.models as models
 from torch.optim.optimizer import Optimizer
 from torch.optim.lr_scheduler import LambdaLR
 
@@ -192,97 +193,174 @@ class AdamW(Optimizer):
 		return loss
 
 class ConstantLRSchedule(LambdaLR):
-    """ Constant learning rate schedule.
-    """
-    def __init__(self, optimizer, last_epoch=-1):
-        super(ConstantLRSchedule, self).__init__(optimizer, lambda _: 1.0, last_epoch=last_epoch)
+	""" Constant learning rate schedule.
+	"""
+	def __init__(self, optimizer, last_epoch=-1):
+		super(ConstantLRSchedule, self).__init__(optimizer, lambda _: 1.0, last_epoch=last_epoch)
 
 
 class WarmupConstantSchedule(LambdaLR):
-    """ Linear warmup and then constant.
-        Linearly increases learning rate schedule from 0 to 1 over `warmup_steps` training steps.
-        Keeps learning rate schedule equal to 1. after warmup_steps.
-    """
-    def __init__(self, optimizer, warmup_steps, last_epoch=-1):
-        self.warmup_steps = warmup_steps
-        super(WarmupConstantSchedule, self).__init__(optimizer, self.lr_lambda, last_epoch=last_epoch)
+	""" Linear warmup and then constant.
+		Linearly increases learning rate schedule from 0 to 1 over `warmup_steps` training steps.
+		Keeps learning rate schedule equal to 1. after warmup_steps.
+	"""
+	def __init__(self, optimizer, warmup_steps, last_epoch=-1):
+		self.warmup_steps = warmup_steps
+		super(WarmupConstantSchedule, self).__init__(optimizer, self.lr_lambda, last_epoch=last_epoch)
 
-    def lr_lambda(self, step):
-        if step < self.warmup_steps:
-            return float(step) / float(max(1.0, self.warmup_steps))
-        return 1.
+	def lr_lambda(self, step):
+		if step < self.warmup_steps:
+			return float(step) / float(max(1.0, self.warmup_steps))
+		return 1.
 
 
 class WarmupLinearSchedule(LambdaLR):
-    """ Linear warmup and then linear decay.
-        Linearly increases learning rate from 0 to 1 over `warmup_steps` training steps.
-        Linearly decreases learning rate from 1. to 0. over remaining `t_total - warmup_steps` steps.
-    """
-    def __init__(self, optimizer, warmup_steps, t_total, last_epoch=-1):
-        self.warmup_steps = warmup_steps
-        self.t_total = t_total
-        super(WarmupLinearSchedule, self).__init__(optimizer, self.lr_lambda, last_epoch=last_epoch)
+	""" Linear warmup and then linear decay.
+		Linearly increases learning rate from 0 to 1 over `warmup_steps` training steps.
+		Linearly decreases learning rate from 1. to 0. over remaining `t_total - warmup_steps` steps.
+	"""
+	def __init__(self, optimizer, warmup_steps, t_total, last_epoch=-1):
+		self.warmup_steps = warmup_steps
+		self.t_total = t_total
+		super(WarmupLinearSchedule, self).__init__(optimizer, self.lr_lambda, last_epoch=last_epoch)
 
-    def lr_lambda(self, step):
-        if step < self.warmup_steps:
-            return float(step) / float(max(1, self.warmup_steps))
-        return max(0.0, float(self.t_total - step) / float(max(1.0, self.t_total - self.warmup_steps)))
+	def lr_lambda(self, step):
+		if step < self.warmup_steps:
+			return float(step) / float(max(1, self.warmup_steps))
+		return max(0.0, float(self.t_total - step) / float(max(1.0, self.t_total - self.warmup_steps)))
 
 
 class WarmupCosineSchedule(LambdaLR):
-    """ Linear warmup and then cosine decay.
-        Linearly increases learning rate from 0 to 1 over `warmup_steps` training steps.
-        Decreases learning rate from 1. to 0. over remaining `t_total - warmup_steps` steps following a cosine curve.
-        If `cycles` (default=0.5) is different from default, learning rate follows cosine function after warmup.
-    """
-    def __init__(self, optimizer, warmup_steps, t_total, cycles=.5, last_epoch=-1):
-        self.warmup_steps = warmup_steps
-        self.t_total = t_total
-        self.cycles = cycles
-        super(WarmupCosineSchedule, self).__init__(optimizer, self.lr_lambda, last_epoch=last_epoch)
+	""" Linear warmup and then cosine decay.
+		Linearly increases learning rate from 0 to 1 over `warmup_steps` training steps.
+		Decreases learning rate from 1. to 0. over remaining `t_total - warmup_steps` steps following a cosine curve.
+		If `cycles` (default=0.5) is different from default, learning rate follows cosine function after warmup.
+	"""
+	def __init__(self, optimizer, warmup_steps, t_total, cycles=.5, last_epoch=-1):
+		self.warmup_steps = warmup_steps
+		self.t_total = t_total
+		self.cycles = cycles
+		super(WarmupCosineSchedule, self).__init__(optimizer, self.lr_lambda, last_epoch=last_epoch)
 
-    def lr_lambda(self, step):
-        if step < self.warmup_steps:
-            return float(step) / float(max(1.0, self.warmup_steps))
-        # progress after warmup
-        progress = float(step - self.warmup_steps) / float(max(1, self.t_total - self.warmup_steps))
-        return max(0.0, 0.5 * (1. + math.cos(math.pi * float(self.cycles) * 2.0 * progress)))
+	def lr_lambda(self, step):
+		if step < self.warmup_steps:
+			return float(step) / float(max(1.0, self.warmup_steps))
+		# progress after warmup
+		progress = float(step - self.warmup_steps) / float(max(1, self.t_total - self.warmup_steps))
+		return max(0.0, 0.5 * (1. + math.cos(math.pi * float(self.cycles) * 2.0 * progress)))
 
 
 class WarmupCosineWithHardRestartsSchedule(LambdaLR):
-    """ Linear warmup and then cosine cycles with hard restarts.
-        Linearly increases learning rate from 0 to 1 over `warmup_steps` training steps.
-        If `cycles` (default=1.) is different from default, learning rate follows `cycles` times a cosine decaying
-        learning rate (with hard restarts).
-    """
-    def __init__(self, optimizer, warmup_steps, t_total, cycles=1., last_epoch=-1):
-        self.warmup_steps = warmup_steps
-        self.t_total = t_total
-        self.cycles = cycles
-        super(WarmupCosineWithHardRestartsSchedule, self).__init__(optimizer, self.lr_lambda, last_epoch=last_epoch)
+	""" Linear warmup and then cosine cycles with hard restarts.
+		Linearly increases learning rate from 0 to 1 over `warmup_steps` training steps.
+		If `cycles` (default=1.) is different from default, learning rate follows `cycles` times a cosine decaying
+		learning rate (with hard restarts).
+	"""
+	def __init__(self, optimizer, warmup_steps, t_total, cycles=1., last_epoch=-1):
+		self.warmup_steps = warmup_steps
+		self.t_total = t_total
+		self.cycles = cycles
+		super(WarmupCosineWithHardRestartsSchedule, self).__init__(optimizer, self.lr_lambda, last_epoch=last_epoch)
 
-    def lr_lambda(self, step):
-        if step < self.warmup_steps:
-            return float(step) / float(max(1, self.warmup_steps))
-        # progress after warmup
-        progress = float(step - self.warmup_steps) / float(max(1, self.t_total - self.warmup_steps))
-        if progress >= 1.0:
-            return 0.0
-        return max(0.0, 0.5 * (1. + math.cos(math.pi * ((float(self.cycles) * progress) % 1.0))))
+	def lr_lambda(self, step):
+		if step < self.warmup_steps:
+			return float(step) / float(max(1, self.warmup_steps))
+		# progress after warmup
+		progress = float(step - self.warmup_steps) / float(max(1, self.t_total - self.warmup_steps))
+		if progress >= 1.0:
+			return 0.0
+		return max(0.0, 0.5 * (1. + math.cos(math.pi * ((float(self.cycles) * progress) % 1.0))))
 
 
 def cyclical_lr(stepsize, min_lr=3e-4, max_lr=3e-3):
 
-    # Scaler: we can adapt this if we do not want the triangular CLR
-    scaler = lambda x: 1/x
+	# Scaler: we can adapt this if we do not want the triangular CLR
+	scaler = lambda x: 1/x
 
-    # Lambda function to calculate the LR
-    lr_lambda = lambda it: min_lr + (max_lr - min_lr) * relative(it, stepsize)
+	# Lambda function to calculate the LR
+	lr_lambda = lambda it: min_lr + (max_lr - min_lr) * relative(it, stepsize)
 
-    # Additional function to see where on the cycle we are
-    def relative(it, stepsize):
-        cycle = math.floor(1 + it / (2 * stepsize))
-        x = abs(it / stepsize - 2 * cycle + 1)
-        return max(0, (1 - x)) * scaler(cycle)
+	# Additional function to see where on the cycle we are
+	def relative(it, stepsize):
+		cycle = math.floor(1 + it / (2 * stepsize))
+		x = abs(it / stepsize - 2 * cycle + 1)
+		return max(0, (1 - x)) * scaler(cycle)
 
-    return lr_lambda
+	return lr_lambda
+
+class last_layer(nn.Module):
+	def __init__(self, latent_size):
+		super(last_layer, self, in_feature, latent_size).__init__()
+
+		self.fc = nn.Linear(in_feature, latent_size)
+		
+	def forward(self, x):
+		normalized_x = F.normalize(x, p=2, dim=1)
+		return normalized_x
+
+class ResNet50Encoder(nn.Module):
+	def __init__(self, latent_size, pretrained=True, in_feature=2048):
+		super(ResNet50Encoder, self).__init__()
+		
+		self.embedding_model = models.resnet50(pretrained=pretrained)
+		self.embedding_model.fc = nn.Linear(in_feature, latent_size)
+
+	def forward(self,x):
+			
+		x = self.embedding_model(x)
+		return x
+
+class ResNet50Decoder(nn.Module):
+	def __init__(self, batch_size, latent_size):
+		super(ResNet50Decoder,self).__init__()
+		self.batch_size = batch_size
+
+		self.dfc3 = nn.Linear(latent_size, 2048)
+		self.bn3 = nn.BatchNorm1d(2048)
+		self.dfc2 = nn.Linear(2048, 4096)
+		self.bn2 = nn.BatchNorm1d(4096)
+		self.dfc1 = nn.Linear(4096,256 * 6 * 6)
+		self.bn1 = nn.BatchNorm1d(256*6*6)
+		self.upsample1=nn.Upsample(scale_factor=2)
+		self.dconv5 = nn.ConvTranspose2d(256, 256, 3, padding = 0)
+		self.dconv4 = nn.ConvTranspose2d(256, 384, 3, padding = 1)
+		self.dconv3 = nn.ConvTranspose2d(384, 192, 3, padding = 1)
+		self.dconv2 = nn.ConvTranspose2d(192, 64, 5, padding = 2)
+		self.dconv1 = nn.ConvTranspose2d(64, 3, 12, stride = 4, padding = 4)
+
+		self.relu = nn.ReLU()
+		self.sigmoid = nn.Sigmoid()
+
+	def forward(self,x):
+		
+		x = self.dfc3(x)
+		x = self.relu(self.bn3(x))
+		x = self.dfc2(x)
+		x = self.relu(self.bn2(x))
+		x = self.dfc1(x)
+		x = self.relu(self.bn1(x))
+		x = x.view(self.batch_size, 256, 6, 6)
+		x = self.upsample1(x)
+		x = self.dconv5(x)
+		x = self.relu(x)
+		x = self.relu(self.dconv4(x))
+		x = self.relu(self.dconv3(x))
+		x = self.upsample1(x)
+		x = self.dconv2(x)
+		x = self.relu(x)
+		x = self.upsample1(x)
+		x = self.dconv1(x)
+		x = self.sigmoid(x)
+
+		return x
+
+class ImgseqComponentAutoEncoder(nn.Module):
+	def __init__(self, encoder, decoder):
+		super(ImgseqComponentAutoEncoder, self).__init__()
+		self.encoder = encoder
+		self.decoder = decoder
+
+	def forward(self, x):
+		h = self.encoder(x)
+		x_hat = self.decoder(h)
+		return x_hat

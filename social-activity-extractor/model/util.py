@@ -52,6 +52,39 @@ class TextDataset(Dataset):
 		text_tensor = torch.from_numpy(text_array).type(torch.LongTensor)
 		return text_tensor
 
+def load_imgseq_pretrain_data(args, CONFIG):	
+	img_transform = transforms.Compose([
+					transforms.Resize(224),
+					transforms.CenterCrop(224),
+					transforms.ToTensor()
+					])	
+	full_data = []
+	image_dir = os.path.join(CONFIG.TARGET_PATH, 'original')
+	for image_path in tqdm(os.listdir(image_dir)):
+		full_data.append(os.path.join(image_dir, image_path))
+	train_size = int(args.split_rate * len(full_data))
+	val_size = len(full_data) - train_size
+	train_data, val_data = torch.utils.data.random_split(full_data, [train_size, val_size])
+	train_dataset, val_dataset = Imgseq_pretrain_Dataset(train_data, CONFIG, img_transform), \
+							 Imgseq_pretrain_Dataset(val_data, CONFIG, img_transform)
+	return train_dataset, val_dataset
+
+
+class Imgseq_pretrain_Dataset(Dataset):
+	def __init__(self, data_list, CONFIG, transform):
+		self.data = data_list
+		self.CONFIG = CONFIG
+		self.transform = transform
+
+	def __len__(self):
+		return len(self.data)
+
+	def __getitem__(self, idx):
+
+		imgseq_tensor = (self.transform(pil_loader(self.data[idx])))
+		return imgseq_tensor
+
+
 def load_imgseq_data(args, CONFIG):
 	full_data = []
 	print("Using embedding model: ", args.arch)
