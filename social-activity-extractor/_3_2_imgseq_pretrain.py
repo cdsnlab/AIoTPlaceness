@@ -82,7 +82,9 @@ def train_reconstruction(args):
 	train_loader, val_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=args.shuffle),\
 								  DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True)
 
-	imgseq_component_encoder = ResNet50Encoder(latent_size=1000)
+	#imgseq_component_encoder = ResNet50Encoder(latent_size=1000)
+	imgseq_component_encoder = models.resnet50(pretrained=True)
+	imgseq_component_encoder.fc = nn.Linear(2048, args.latent_size)
 	imgseq_component_decoder = ResNet50Decoder(latent_size=1000)
 	if args.resume:
 		print("Restart from checkpoint")
