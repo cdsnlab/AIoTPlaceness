@@ -300,43 +300,95 @@ class last_layer(nn.Module):
 		normalized_x = F.normalize(x, p=2, dim=1)
 		return normalized_x
 
-class ResNet50Encoder(nn.Module):
-	def __init__(self, latent_size, pretrained=True, in_feature=2048):
-		super(ResNet50Encoder, self).__init__()
+# class ImageEncoder(nn.Module):
+# 	def __init__(self, latent_size, pretrained=True):
+# 		super(ImageEncoder, self).__init__()
 		
-		self.embedding_model = models.resnet50(pretrained=pretrained)
-		self.embedding_model.fc = nn.Linear(in_feature, latent_size)
+# 		self.embedding_model = models.vgg11_bn(pretrained=pretrained)
+# 		self.embedding_model.classifier = nn.Sequential(
+# 				nn.Linear(512 * 7 * 7, 4096),
+# 				nn.BatchNorm1d(4096),
+# 				nn.ReLU(inplace=True),
+# 				nn.Linear(4096, latent_size)
+# 			)
 
-	def forward(self,x):
+# 		#self.embedding_model.fc = nn.Linear(in_feature, latent_size)
+
+# 	def forward(self,x):
 			
-		h = self.embedding_model(x)
-		return h
+# 		h = self.embedding_model(x)
+# 		return h
+
+class ImageEncoder(nn.Module):
+
+	def __init__(self, latent_size):
+		super(ImageEncoder, self).__init__()
+		self.features = nn.Sequential(
+			nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=2),
+			nn.BatchNorm2d(64),
+			nn.ReLU(inplace=True),
+			nn.MaxPool2d(kernel_size=3, stride=2),
+			nn.Conv2d(64, 192, kernel_size=5, padding=2),
+			nn.BatchNorm2d(192),
+			nn.ReLU(inplace=True),
+			nn.MaxPool2d(kernel_size=3, stride=2),
+			nn.Conv2d(192, 384, kernel_size=3, padding=1),
+			nn.BatchNorm2d(384),
+			nn.ReLU(inplace=True),
+			nn.Conv2d(384, 256, kernel_size=3, padding=1),
+			nn.BatchNorm2d(256),
+			nn.ReLU(inplace=True),
+			nn.Conv2d(256, 256, kernel_size=3, padding=1),
+			nn.BatchNorm2d(256),
+			nn.ReLU(inplace=True),
+			nn.MaxPool2d(kernel_size=3, stride=2),
+		)
+		self.avgpool = nn.AdaptiveAvgPool2d((6, 6))
+		self.classifier = nn.Sequential(
+			nn.Linear(256 * 6 * 6, 4096),
+			nn.BatchNorm1d(4096),
+			nn.ReLU(inplace=True),
+			nn.Linear(4096, 2048),
+			nn.BatchNorm1d(2048),
+			nn.ReLU(inplace=True),
+			nn.Linear(2048, latent_size)
+		)
+
+	def forward(self, x):
+		x = self.features(x)
+		x = self.avgpool(x)
+		x = torch.flatten(x, 1)
+		x = self.classifier(x)
+		return x
 
 class Binary(Function):
 
-    @staticmethod
-    def forward(ctx, input):
-        return F.relu(Variable(input.sign())).data
+	@staticmethod
+	def forward(ctx, input):
+		return F.relu(Variable(input.sign())).data
 
-    @staticmethod
-    def backward(ctx, grad_output):
-        return grad_output
+	@staticmethod
+	def backward(ctx, grad_output):
+		return grad_output
 
 binary = Binary()
 
-class ResNet50Decoder(nn.Module):
+class ImageDecoder(nn.Module):
 	def __init__(self, latent_size):
-		super(ResNet50Decoder,self).__init__()
+		super(ImageDecoder,self).__init__()
 
 		self.dfc = nn.Sequential(
 				nn.Linear(latent_size, 2048),
+				nn.BatchNorm1d(2048),
 				nn.ReLU(),
 				nn.Linear(2048, 4096),
+				nn.BatchNorm1d(4096),
 				nn.ReLU(),
 				nn.Linear(4096, 256 * 6 * 6),
+				nn.BatchNorm1d(256 * 6 * 6),
 				nn.ReLU())
-		self.upsample = nn.Upsample(scale_factor=2)
 		self.dconv5 = nn.Sequential(
+				nn.Upsample(scale_factor=2),
 				nn.ConvTranspose2d(256, 256, 3, padding = 0),
 				nn.BatchNorm2d(256),
 				nn.ReLU())
@@ -349,13 +401,16 @@ class ResNet50Decoder(nn.Module):
 				nn.BatchNorm2d(192),
 				nn.ReLU())
 		self.dconv2 = nn.Sequential(
+				nn.Upsample(scale_factor=2),
 				nn.ConvTranspose2d(192, 64, 5, padding = 2),
 				nn.BatchNorm2d(64),
 				nn.ReLU())
 		self.dconv1 = nn.Sequential(
-				nn.ConvTranspose2d(64, 3, 12, stride = 4, padding = 4),
-				nn.Sigmoid())
+				nn.Upsample(scale_factor=2),
+		 		nn.ConvTranspose2d(64, 3, 12, stride = 4, padding = 4),
+		 		nn.Sigmoid())
 		# self.dconv1 = nn.Sequential(
+		# 		nn.Upsample(scale_factor=2),
 		# 		nn.ConvTranspose2d(64, 3, 12, stride = 4, padding = 4))
 
 
@@ -363,23 +418,19 @@ class ResNet50Decoder(nn.Module):
 		
 		dh = self.dfc(h)
 		dh = dh.view(dh.size()[0], 256, 6, 6)
-		u_dh = self.upsample(dh)
 
-		h4 = self.dconv5(u_dh)
+		h4 = self.dconv5(dh)
 		h3 = self.dconv4(h4)
 		h2 = self.dconv3(h3)
-		u_h2 = self.upsample(h2)
 
-		h1 = self.dconv2(u_h2)
-		u_h1 = self.upsample(h1)
-
-		x_hat = self.dconv1(u_h1)
+		h1 = self.dconv2(h2)
+		x_hat = self.dconv1(h1)
 
 		return x_hat
 
-class ImgseqComponentAutoEncoder(nn.Module):
+class ImageAutoEncoder(nn.Module):
 	def __init__(self, encoder, decoder):
-		super(ImgseqComponentAutoEncoder, self).__init__()
+		super(ImageAutoEncoder, self).__init__()
 		self.encoder = encoder
 		self.decoder = decoder
 

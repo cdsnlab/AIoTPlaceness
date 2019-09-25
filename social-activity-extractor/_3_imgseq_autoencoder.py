@@ -114,7 +114,7 @@ def train_reconstruction(args):
 		scheduler.load_state_dict(checkpoint['scheduler'])
 
 
-	exp = Experiment("Image-sequence autoencoder2 " + str(args.latent_size), capture_io=False)
+	exp = Experiment("Image-sequence autoencoder " + str(args.latent_size), capture_io=False)
 
 	for arg, value in vars(args).items():
 		exp.param(arg, value) 
@@ -151,7 +151,7 @@ def train_reconstruction(args):
 				'avg_loss': _avg_loss,
 				'optimizer' : optimizer.state_dict(),
 				'scheduler' : scheduler.state_dict()
-			}, CONFIG.CHECKPOINT_PATH, "imgseq_autoencoder2_" + str(args.latent_size))
+			}, CONFIG.CHECKPOINT_PATH, "imgseq_autoencoder_" + str(args.latent_size))
 	
 		print("Finish!!!")
 

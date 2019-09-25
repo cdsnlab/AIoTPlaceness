@@ -52,7 +52,7 @@ class TextDataset(Dataset):
 		text_tensor = torch.from_numpy(text_array).type(torch.LongTensor)
 		return text_tensor
 
-def load_imgseq_pretrain_data(args, CONFIG):
+def load_image_pretrain_data(args, CONFIG):
 	full_data = []
 	dataset_path = os.path.join(CONFIG.DATA_PATH, 'dataset', args.target_dataset)
 	image_dir = os.path.join(dataset_path, 'resize224')
@@ -66,12 +66,12 @@ def load_imgseq_pretrain_data(args, CONFIG):
 	train_size = int(args.split_rate * len(full_data))
 	val_size = len(full_data) - train_size
 	train_data, val_data = torch.utils.data.random_split(full_data, [train_size, val_size])
-	train_dataset, val_dataset = Imgseq_pretrain_Dataset(train_data, CONFIG), \
-							 Imgseq_pretrain_Dataset(val_data, CONFIG)
+	train_dataset, val_dataset = Image_pretrain_Dataset(train_data, CONFIG), \
+							 Image_pretrain_Dataset(val_data, CONFIG)
 	return train_dataset, val_dataset
 
 
-class Imgseq_pretrain_Dataset(Dataset):
+class Image_pretrain_Dataset(Dataset):
 	def __init__(self, data_list, CONFIG):
 		self.data = data_list
 		self.CONFIG = CONFIG

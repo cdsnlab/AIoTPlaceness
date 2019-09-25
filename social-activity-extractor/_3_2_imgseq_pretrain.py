@@ -27,8 +27,8 @@ from torch.optim.lr_scheduler import StepLR, CyclicLR
 from torchvision.utils import save_image
 from model import util
 from model import imgseq_model
-from model.component import AdamW, cyclical_lr, ResNet50Encoder, ResNet50Decoder, ImgseqComponentAutoEncoder
-from model.util import load_imgseq_pretrain_data, transform_inverse_normalize
+from model.component import AdamW, cyclical_lr, ImageEncoder, ImageDecoder, ImageAutoEncoder
+from model.util import load_image_pretrain_data, transform_inverse_normalize
 
 
 CONFIG = config.Config
@@ -77,30 +77,28 @@ def main():
 def train_reconstruction(args):
 	device = torch.device(args.gpu)
 	print("Loading dataset...")
-	train_dataset, val_dataset = load_imgseq_pretrain_data(args, CONFIG)
+	train_dataset, val_dataset = load_image_pretrain_data(args, CONFIG)
 	print("Loading dataset completed")
 	train_loader, val_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=args.shuffle),\
 								  DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True)
 
-	#imgseq_component_encoder = ResNet50Encoder(latent_size=1000)
-	imgseq_component_encoder = models.resnet50(pretrained=True)
-	imgseq_component_encoder.fc = nn.Linear(2048, args.latent_size)
-	imgseq_component_decoder = ResNet50Decoder(latent_size=args.latent_size)
+	image_encoder = ImageEncoder(latent_size=args.latent_size)
+	image_decoder = ImageDecoder(latent_size=args.latent_size)
 	if args.resume:
 		print("Restart from checkpoint")
 		checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.resume), map_location=lambda storage, loc: storage)
 		start_epoch = checkpoint['epoch']
-		imgseq_component_encoder.load_state_dict(checkpoint['imgseq_component_encoder'])
-		imgseq_component_decoder.load_state_dict(checkpoint['imgseq_component_decoder'])
+		image_encoder.load_state_dict(checkpoint['image_encoder'])
+		image_decoder.load_state_dict(checkpoint['image_decoder'])
 	else:		
 		print("Start from initial")
 		start_epoch = 0
 	
-	imgseq_component_autoencoder = ImgseqComponentAutoEncoder(imgseq_component_encoder, imgseq_component_decoder)
+	image_autoencoder = ImageAutoEncoder(image_encoder, image_decoder)
 	criterion = nn.MSELoss().to(device)
-	imgseq_component_autoencoder.to(device)
+	image_autoencoder.to(device)
 
-	optimizer = AdamW(imgseq_component_autoencoder.parameters(), lr=1., weight_decay=args.weight_decay, amsgrad=True)
+	optimizer = AdamW(image_autoencoder.parameters(), lr=1., weight_decay=args.weight_decay, amsgrad=True)
 	step_size = args.half_cycle_interval*len(train_loader)
 	clr = cyclical_lr(step_size, min_lr=args.lr, max_lr=args.lr*args.lr_factor)
 	scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, [clr])
@@ -115,7 +113,7 @@ def train_reconstruction(args):
 	for arg, value in vars(args).items():
 		exp.param(arg, value) 
 	try:
-		imgseq_component_autoencoder.train() 
+		image_autoencoder.train() 
 
 		for epoch in range(start_epoch, args.epochs):
 			print("Epoch: {}".format(epoch))
@@ -123,7 +121,7 @@ def train_reconstruction(args):
 				torch.cuda.empty_cache()
 				feature = Variable(batch).to(device)
 				optimizer.zero_grad()
-				feature_hat = imgseq_component_autoencoder(feature)
+				feature_hat = image_autoencoder(feature)
 				loss = criterion(feature_hat, feature)
 				loss.backward()
 				optimizer.step()
@@ -136,17 +134,17 @@ def train_reconstruction(args):
 				del feature, feature_hat, loss
 			
 			exp.log("\nEpoch: {} at {} lr: {}".format(epoch, str(datetime.datetime.now()), str(scheduler.get_lr())))
-			_avg_loss = eval_reconstruction(imgseq_component_autoencoder, criterion, val_loader, device, epoch)
+			_avg_loss = eval_reconstruction(image_autoencoder, criterion, val_loader, device, epoch)
 			exp.log("\nEvaluation - loss: {}".format(_avg_loss))
 
 			util.save_models({
 				'epoch': epoch + 1,
-				'imgseq_component_encoder': imgseq_component_encoder.state_dict(),
-				'imgseq_component_decoder': imgseq_component_decoder.state_dict(),
+				'image_encoder': image_encoder.state_dict(),
+				'image_decoder': image_decoder.state_dict(),
 				'avg_loss': _avg_loss,
 				'optimizer' : optimizer.state_dict(),
 				'scheduler' : scheduler.state_dict()
-			}, CONFIG.CHECKPOINT_PATH, "imgseq_component_pretrain" + str(args.latent_size))
+			}, CONFIG.CHECKPOINT_PATH, "image_pretrain" + str(args.latent_size))
 	
 		print("Finish!!!")
 
@@ -170,8 +168,8 @@ def eval_reconstruction(autoencoder,criterion, data_iter, device, epoch):
 		if step == 0:
 			input_data = feature[0]
 			output_data = feature_hat[0]
-			# input_data = transform_inverse_normalize(feature[0])
-			# output_data = transform_inverse_normalize(feature_hat[0])
+			#input_data = transform_inverse_normalize(feature[0])
+			#output_data = transform_inverse_normalize(feature_hat[0])
 			save_image(input_data, './evaluation/pretrain/input_' + str(epoch) +'.png')
 			save_image(output_data, './evaluation/pretrain/output_' + str(epoch) +'.png')
 			del input_data, output_data
