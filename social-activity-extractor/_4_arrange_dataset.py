@@ -297,6 +297,7 @@ def test(target_dataset):
 	with open(os.path.join(dataset_path, 'resize224', 'BsFudrehNdL.p'), 'rb') as f:
 		image_data = cPickle.load(f)
 	f.close()
+	print(image_data)
 	imgseq_tensor = torch.from_numpy(image_data).type(torch.FloatTensor)
 	save_image(imgseq_tensor, './result/temp.png', nrow=5, padding=0)
 	
@@ -361,7 +362,7 @@ def drop_non_korean_images(target_dataset):
 		pbar.update(1)
 	pbar.close()
 	image_nas_path = os.path.join(CONFIG.DATA_PATH, 'dataset', target_dataset)
-	image_dir = os.path.join(image_nas_path, 'resize224')
+	image_dir = os.path.join(image_nas_path, 'original')
 	for image_path in tqdm(os.listdir(image_dir)):
 		short_code = image_path.replace('.p', '')
 		if short_code not in short_codes:

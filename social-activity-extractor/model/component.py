@@ -330,48 +330,50 @@ class ResNet50Decoder(nn.Module):
 
 		self.dfc = nn.Sequential(
 				nn.Linear(latent_size, 2048),
-				nn.ReLU(True),
+				nn.ReLU(),
 				nn.Linear(2048, 4096),
-				nn.ReLU(True),
+				nn.ReLU(),
 				nn.Linear(4096, 256 * 6 * 6),
-				nn.ReLU(True))
+				nn.ReLU())
 		self.upsample = nn.Upsample(scale_factor=2)
 		self.dconv5 = nn.Sequential(
 				nn.ConvTranspose2d(256, 256, 3, padding = 0),
 				nn.BatchNorm2d(256),
-				nn.ReLU(True))
+				nn.ReLU())
 		self.dconv4 = nn.Sequential(
 				nn.ConvTranspose2d(256, 384, 3, padding = 1),
 				nn.BatchNorm2d(384),
-				nn.ReLU(True))
+				nn.ReLU())
 		self.dconv3 = nn.Sequential(
 				nn.ConvTranspose2d(384, 192, 3, padding = 1),
 				nn.BatchNorm2d(192),
-				nn.ReLU(True))
+				nn.ReLU())
 		self.dconv2 = nn.Sequential(
 				nn.ConvTranspose2d(192, 64, 5, padding = 2),
 				nn.BatchNorm2d(64),
-				nn.ReLU(True))
+				nn.ReLU())
 		self.dconv1 = nn.Sequential(
 				nn.ConvTranspose2d(64, 3, 12, stride = 4, padding = 4),
 				nn.Sigmoid())
+		# self.dconv1 = nn.Sequential(
+		# 		nn.ConvTranspose2d(64, 3, 12, stride = 4, padding = 4))
 
 
-	def forward(self,x):
+	def forward(self,h):
 		
-		x = self.dfc(x)
-		x = x.view(x.size()[0], 256, 6, 6)
-		x = self.upsample(x)
+		dh = self.dfc(h)
+		dh = dh.view(dh.size()[0], 256, 6, 6)
+		u_dh = self.upsample(dh)
 
-		x = self.dconv5(x)
-		x = self.dconv4(x)
-		x = self.dconv3(x)
-		x = self.upsample(x)
+		h4 = self.dconv5(u_dh)
+		h3 = self.dconv4(h4)
+		h2 = self.dconv3(h3)
+		u_h2 = self.upsample(h2)
 
-		x = self.dconv2(x)
-		x = self.upsample(x)
+		h1 = self.dconv2(u_h2)
+		u_h1 = self.upsample(h1)
 
-		x_hat = self.dconv1(x)
+		x_hat = self.dconv1(u_h1)
 
 		return x_hat
 
@@ -383,6 +385,6 @@ class ImgseqComponentAutoEncoder(nn.Module):
 
 	def forward(self, x):
 		h = self.encoder(x)
-		h = binary.apply(h)
+		#h = binary.apply(h)
 		x_hat = self.decoder(h)
 		return x_hat

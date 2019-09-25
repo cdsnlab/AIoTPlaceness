@@ -55,7 +55,8 @@ class TextDataset(Dataset):
 def load_imgseq_pretrain_data(args, CONFIG):
 	full_data = []
 	dataset_path = os.path.join(CONFIG.DATA_PATH, 'dataset', args.target_dataset)
-	image_dir = os.path.join(dataset_path, 'resize224')
+	image_dir = os.path.join(dataset_path, 'original')
+	count = 0
 	for image_path in tqdm(os.listdir(image_dir)):
 		with open(os.path.join(image_dir, image_path), "rb") as f:
 			image_data = cPickle.load(f)
@@ -63,6 +64,9 @@ def load_imgseq_pretrain_data(args, CONFIG):
 			full_data.append(image)
 		f.close()
 		del image_data
+		if count > 500:
+			break
+		count = count + 1
 	train_size = int(args.split_rate * len(full_data))
 	val_size = len(full_data) - train_size
 	train_data, val_data = torch.utils.data.random_split(full_data, [train_size, val_size])
@@ -217,6 +221,12 @@ class FullMultimodalDataset(Dataset):
 def transform_idx2word(index, idx2word):
 	return " ".join([idx2word[str(idx)] for idx in index])
 
+def transform_inverse_normalize(image_tensor):
+	inv_normalize = transforms.Normalize(
+	mean=[-0.485/0.229, -0.456/0.224, -0.406/0.225],
+	std=[1/0.229, 1/0.224, 1/0.255])
+	inv_tensor = inv_normalize(image_tensor)
+	return inv_tensor
 
 def save_models(checkpoint, path, prefix):
 	if not os.path.isdir(path):

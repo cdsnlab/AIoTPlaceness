@@ -28,7 +28,7 @@ from torchvision.utils import save_image
 from model import util
 from model import imgseq_model
 from model.component import AdamW, cyclical_lr, ResNet50Encoder, ResNet50Decoder, ImgseqComponentAutoEncoder
-from model.util import load_imgseq_pretrain_data
+from model.util import load_imgseq_pretrain_data, transform_inverse_normalize
 
 
 CONFIG = config.Config
@@ -85,7 +85,7 @@ def train_reconstruction(args):
 	#imgseq_component_encoder = ResNet50Encoder(latent_size=1000)
 	imgseq_component_encoder = models.resnet50(pretrained=True)
 	imgseq_component_encoder.fc = nn.Linear(2048, args.latent_size)
-	imgseq_component_decoder = ResNet50Decoder(latent_size=1000)
+	imgseq_component_decoder = ResNet50Decoder(latent_size=args.latent_size)
 	if args.resume:
 		print("Restart from checkpoint")
 		checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.resume), map_location=lambda storage, loc: storage)
@@ -170,6 +170,8 @@ def eval_reconstruction(autoencoder,criterion, data_iter, device, epoch):
 		if step == 0:
 			input_data = feature[0]
 			output_data = feature_hat[0]
+			# input_data = transform_inverse_normalize(feature[0])
+			# output_data = transform_inverse_normalize(feature_hat[0])
 			save_image(input_data, './evaluation/pretrain/input_' + str(epoch) +'.png')
 			save_image(output_data, './evaluation/pretrain/output_' + str(epoch) +'.png')
 			del input_data, output_data
