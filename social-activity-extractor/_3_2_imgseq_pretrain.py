@@ -166,12 +166,9 @@ def eval_reconstruction(autoencoder,criterion, data_iter, device, epoch):
 		loss = criterion(feature_hat, feature)	
 		avg_loss += loss.detach().item()
 		if step == 0:
-			input_data = feature[0]
-			output_data = feature_hat[0]
-			#input_data = transform_inverse_normalize(feature[0])
-			#output_data = transform_inverse_normalize(feature_hat[0])
-			save_image(input_data, './evaluation/pretrain/input_' + str(epoch) +'.png')
-			save_image(output_data, './evaluation/pretrain/output_' + str(epoch) +'.png')
+			input_data = transform_inverse_normalize(feature[0])
+			output_data = transform_inverse_normalize(feature_hat[0])
+			save_image([input_data, output_data], './evaluation/pretrain/' + str(epoch) +'.png', nrow=1)
 			del input_data, output_data
 		step = step + 1
 		del feature, feature_hat, loss
