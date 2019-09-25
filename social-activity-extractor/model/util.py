@@ -55,7 +55,7 @@ class TextDataset(Dataset):
 def load_image_pretrain_data(args, CONFIG):
 	full_data = []
 	dataset_path = os.path.join(CONFIG.DATA_PATH, 'dataset', args.target_dataset)
-	image_dir = os.path.join(dataset_path, 'resize224')
+	image_dir = os.path.join(dataset_path, 'original')
 	for image_path in tqdm(os.listdir(image_dir)):
 		with open(os.path.join(image_dir, image_path), "rb") as f:
 			image_data = cPickle.load(f)

@@ -405,13 +405,13 @@ class ImageDecoder(nn.Module):
 				nn.ConvTranspose2d(192, 64, 5, padding = 2),
 				nn.BatchNorm2d(64),
 				nn.ReLU())
-		self.dconv1 = nn.Sequential(
-				nn.Upsample(scale_factor=2),
-		 		nn.ConvTranspose2d(64, 3, 12, stride = 4, padding = 4),
-		 		nn.Sigmoid())
 		# self.dconv1 = nn.Sequential(
 		# 		nn.Upsample(scale_factor=2),
-		# 		nn.ConvTranspose2d(64, 3, 12, stride = 4, padding = 4))
+		#  		nn.ConvTranspose2d(64, 3, 12, stride = 4, padding = 4),
+		#  		nn.Sigmoid())
+		self.dconv1 = nn.Sequential(
+				nn.Upsample(scale_factor=2),
+				nn.ConvTranspose2d(64, 3, 12, stride = 4, padding = 4))
 
 
 	def forward(self,h):
