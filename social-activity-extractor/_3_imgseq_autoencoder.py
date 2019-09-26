@@ -53,7 +53,7 @@ def main():
 	# data
 	parser.add_argument('-target_dataset', type=str, default=None, help='folder name of target dataset')
 	parser.add_argument('-shuffle', default=True, help='shuffle data every epoch')
-	parser.add_argument('-split_rate', type=float, default=0.9, help='split rate between train and validation')
+	parser.add_argument('-split_rate', type=float, default=0.8, help='split rate between train and validation')
 	# model
 	parser.add_argument('-arch', type=str, default='resnext101_32x8d', help='image embedding model')
 	parser.add_argument('-embedding_dim', type=int, default=2048, help='embedding dimension of the model')

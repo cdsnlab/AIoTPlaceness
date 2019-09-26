@@ -52,10 +52,12 @@ class TextDataset(Dataset):
 		text_tensor = torch.from_numpy(text_array).type(torch.LongTensor)
 		return text_tensor
 
+
 def load_image_pretrain_data(args, CONFIG):
 	full_data = []
 	dataset_path = os.path.join(CONFIG.DATA_PATH, 'dataset', args.target_dataset)
 	image_dir = os.path.join(dataset_path, 'original')
+	count = 0
 	for image_path in tqdm(os.listdir(image_dir)):
 		with open(os.path.join(image_dir, image_path), "rb") as f:
 			image_data = cPickle.load(f)
@@ -63,6 +65,9 @@ def load_image_pretrain_data(args, CONFIG):
 			full_data.append(image)
 		f.close()
 		del image_data
+		if count > 50:
+			break
+		count = count + 1
 	train_size = int(args.split_rate * len(full_data))
 	val_size = len(full_data) - train_size
 	train_data, val_data = torch.utils.data.random_split(full_data, [train_size, val_size])

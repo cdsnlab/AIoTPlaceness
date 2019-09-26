@@ -17,6 +17,7 @@ from tqdm import tqdm
 
 
 import torch
+import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
@@ -55,7 +56,7 @@ def main():
 	# data
 	parser.add_argument('-target_dataset', type=str, default=None, help='folder name of target dataset')
 	parser.add_argument('-shuffle', default=True, help='shuffle data every epoch')
-	parser.add_argument('-split_rate', type=float, default=0.9, help='split rate between train and validation')
+	parser.add_argument('-split_rate', type=float, default=0.8, help='split rate between train and validation')
 	# model
 	parser.add_argument('-embedding_dim', type=int, default=2048, help='embedding dimension of the model')
 	parser.add_argument('-latent_size', type=int, default=1000, help='size of latent variable')
