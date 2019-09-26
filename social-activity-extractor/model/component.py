@@ -304,15 +304,18 @@ class ImageEncoder(nn.Module):
 	def __init__(self, latent_size, pretrained=True):
 		super(ImageEncoder, self).__init__()
 		
-		# self.embedding_model = models.vgg11_bn(pretrained=pretrained)
-		# self.embedding_model.classifier = nn.Sequential(
-		# 		nn.Linear(512 * 7 * 7, 4096),
-		# 		nn.BatchNorm1d(4096),
-		# 		nn.ReLU(inplace=True),
-		# 		nn.Linear(4096, latent_size)
-		# 	)
-		self.embedding_model = models.resnet34(pretrained=pretrained)
-		self.embedding_model.fc = nn.Linear(self.embedding_model.fc.in_features, latent_size)
+		self.embedding_model = models.alexnet(pretrained=pretrained)
+		self.embedding_model.classifier = nn.Sequential(
+				nn.Linear(256 * 6 * 6, 4096),
+				nn.BatchNorm1d(4096),
+				nn.ReLU(inplace=True),
+				nn.Linear(4096, 2048),
+				nn.BatchNorm1d(2048),
+				nn.ReLU(inplace=True),
+				nn.Linear(2048, latent_size)
+			)
+		# self.embedding_model = models.resnet34(pretrained=pretrained)
+		# self.embedding_model.fc = nn.Linear(self.embedding_model.fc.in_features, latent_size)
 
 	def forward(self,x):
 			
