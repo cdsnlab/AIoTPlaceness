@@ -1,4 +1,5 @@
 import math
+import queue
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -6,7 +7,6 @@ import torchvision.models as models
 from torch.autograd import Function, Variable
 from torch.optim.optimizer import Optimizer
 from torch.optim.lr_scheduler import LambdaLR
-
 
 # simply define a silu function
 def silu(input):
@@ -300,69 +300,86 @@ class last_layer(nn.Module):
 		normalized_x = F.normalize(x, p=2, dim=1)
 		return normalized_x
 
-class ImageEncoder(nn.Module):
-	def __init__(self, latent_size, pretrained=True):
-		super(ImageEncoder, self).__init__()
-		
-		self.embedding_model = models.alexnet(pretrained=pretrained)
-		self.embedding_model.classifier = nn.Sequential(
-				nn.Linear(256 * 6 * 6, 4096),
-				nn.BatchNorm1d(4096),
-				nn.ReLU(inplace=True),
-				nn.Linear(4096, 2048),
-				nn.BatchNorm1d(2048),
-				nn.ReLU(inplace=True),
-				nn.Linear(2048, latent_size)
-			)
-		# self.embedding_model = models.resnet34(pretrained=pretrained)
-		# self.embedding_model.fc = nn.Linear(self.embedding_model.fc.in_features, latent_size)
-
-	def forward(self,x):
-			
-		h = self.embedding_model(x)
-		return h
-
 # class ImageEncoder(nn.Module):
-
-# 	def __init__(self, latent_size):
+# 	def __init__(self, latent_size, pretrained=True):
 # 		super(ImageEncoder, self).__init__()
-# 		self.features = nn.Sequential(
-# 			nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=2),
-# 			nn.BatchNorm2d(64),
-# 			nn.ReLU(inplace=True),
-# 			nn.MaxPool2d(kernel_size=3, stride=2),
-# 			nn.Conv2d(64, 192, kernel_size=5, padding=2),
-# 			nn.BatchNorm2d(192),
-# 			nn.ReLU(inplace=True),
-# 			nn.MaxPool2d(kernel_size=3, stride=2),
-# 			nn.Conv2d(192, 384, kernel_size=3, padding=1),
-# 			nn.BatchNorm2d(384),
-# 			nn.ReLU(inplace=True),
-# 			nn.Conv2d(384, 256, kernel_size=3, padding=1),
-# 			nn.BatchNorm2d(256),
-# 			nn.ReLU(inplace=True),
-# 			nn.Conv2d(256, 256, kernel_size=3, padding=1),
-# 			nn.BatchNorm2d(256),
-# 			nn.ReLU(inplace=True),
-# 			nn.MaxPool2d(kernel_size=3, stride=2),
-# 		)
-# 		self.avgpool = nn.AdaptiveAvgPool2d((6, 6))
-# 		self.classifier = nn.Sequential(
-# 			nn.Linear(256 * 6 * 6, 4096),
-# 			nn.BatchNorm1d(4096),
-# 			nn.ReLU(inplace=True),
-# 			nn.Linear(4096, 2048),
-# 			nn.BatchNorm1d(2048),
-# 			nn.ReLU(inplace=True),
-# 			nn.Linear(2048, latent_size)
-# 		)
+		
+# 		self.embedding_model = models.alexnet(pretrained=pretrained)
+# 		self.embedding_model.classifier = nn.Sequential(
+# 				nn.Linear(256 * 6 * 6, 4096),
+# 				nn.BatchNorm1d(4096),
+# 				nn.ReLU(inplace=True),
+# 				nn.Linear(4096, 2048),
+# 				nn.BatchNorm1d(2048),
+# 				nn.ReLU(inplace=True),
+# 				nn.Linear(2048, latent_size)
+# 			)
+# 		# self.embedding_model = models.resnet34(pretrained=pretrained)
+# 		# self.embedding_model.fc = nn.Linear(self.embedding_model.fc.in_features, latent_size)
 
-# 	def forward(self, x):
-# 		x = self.features(x)
-# 		x = self.avgpool(x)
-# 		x = torch.flatten(x, 1)
-# 		x = self.classifier(x)
-# 		return x
+# 	def forward(self,x):
+			
+# 		h = self.embedding_model(x)
+# 		return h
+
+class ImageEncoder(nn.Module):
+
+	def __init__(self, latent_size):
+		super(ImageEncoder, self).__init__()
+		self.features = nn.Sequential(
+			nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=2),
+			nn.BatchNorm2d(64),
+			nn.ReLU(inplace=True),
+			nn.MaxPool2d(kernel_size=3, stride=2),
+			nn.Conv2d(64, 192, kernel_size=5, padding=2),
+			nn.BatchNorm2d(192),
+			nn.ReLU(inplace=True),
+			nn.MaxPool2d(kernel_size=3, stride=2),
+			nn.Conv2d(192, 384, kernel_size=3, padding=1),
+			nn.BatchNorm2d(384),
+			nn.ReLU(inplace=True),
+			nn.Conv2d(384, 256, kernel_size=3, padding=1),
+			nn.BatchNorm2d(256),
+			nn.ReLU(inplace=True),
+			nn.Conv2d(256, 256, kernel_size=3, padding=1),
+			nn.BatchNorm2d(256),
+			nn.ReLU(inplace=True),
+			nn.MaxPool2d(kernel_size=3, stride=2),
+		)
+		self.avgpool = nn.AdaptiveAvgPool2d((6, 6))
+		self.classifier = nn.Sequential(
+			nn.Linear(256 * 6 * 6, 4096),
+			nn.BatchNorm1d(4096),
+			nn.ReLU(inplace=True),
+			nn.Linear(4096, 2048),
+			nn.BatchNorm1d(2048),
+			nn.ReLU(inplace=True),
+			nn.Linear(2048, latent_size)
+		)
+
+	def forward(self, x):
+		x = self.features(x)
+		x = self.avgpool(x)
+		x = torch.flatten(x, 1)
+		x = self.classifier(x)
+		return x
+
+	def init_weights(self, pretrained_weights):		
+		# weight initialize for conv layer
+		weight_name = queue.Queue()
+		for weight in pretrained_weights:
+			if "feature" in weight:
+				weight_name.put(weight)
+		for m in self.modules():
+			if isinstance(m, nn.Sequential):
+				for layer in m:
+					if isinstance(layer, nn.Conv2d):
+						weight_data = pretrained_weights[weight_name.get()]
+						bias_data = pretrained_weights[weight_name.get()]
+						assert layer.weight.size() == weight_data.size()
+						assert layer.bias.size() == bias_data.size()
+						layer.weight.data = weight_data
+						layer.bias.data = bias_data
 
 class Binary(Function):
 
@@ -438,6 +455,7 @@ class ImageAutoEncoder(nn.Module):
 		self.decoder = decoder
 
 	def forward(self, x):
+		print(x.size())
 		h = self.encoder(x)
 		#h = binary.apply(h)
 		x_hat = self.decoder(h)

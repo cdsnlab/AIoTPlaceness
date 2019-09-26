@@ -27,6 +27,7 @@ from torch.optim.lr_scheduler import StepLR, CyclicLR
 from torchvision.utils import save_image
 from model import util
 from model import imgseq_model
+from model.resnet_autoencoder import ResNet50Encoder, ResNet50Decoder, ResNet_autoencoder
 from model.component import AdamW, cyclical_lr, ImageEncoder, ImageDecoder, ImageAutoEncoder
 from model.util import load_image_pretrain_data, transform_inverse_normalize
 
@@ -82,8 +83,11 @@ def train_reconstruction(args):
 	train_loader, val_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=args.shuffle),\
 								  DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True)
 
-	image_encoder = ImageEncoder(latent_size=args.latent_size)
-	image_decoder = ImageDecoder(latent_size=args.latent_size)
+	# image_encoder = ImageEncoder(latent_size=args.latent_size)
+	# image_decoder = ImageDecoder(latent_size=args.latent_size)
+	image_encoder = ResNet50Encoder()
+	image_encoder.init_weights()
+	image_decoder = ResNet50Decoder()
 	if args.resume:
 		print("Restart from checkpoint")
 		checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.resume), map_location=lambda storage, loc: storage)
@@ -94,7 +98,7 @@ def train_reconstruction(args):
 		print("Start from initial")
 		start_epoch = 0
 	
-	image_autoencoder = ImageAutoEncoder(image_encoder, image_decoder)
+	image_autoencoder = ResNet_autoencoder(image_encoder, image_decoder)
 	criterion = nn.MSELoss().to(device)
 	image_autoencoder.to(device)
 

@@ -24,7 +24,10 @@ svg/*
 embedding/*
 !embedding/.keep
 
+download/*
+!download/.keep
 result/*
+
 !result/.keep
 
 
