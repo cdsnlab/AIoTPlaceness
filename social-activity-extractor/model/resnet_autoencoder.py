@@ -116,13 +116,13 @@ class ResNet_encoder(nn.Module):
 										   stride=2)
 		self.layer4 = self._make_downlayer(downblock, 512, num_layers[3],
 										   stride=2)
-		self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-		# self.out = nn.Sequential(
-		# 	nn.Linear(2048 * 7 * 7, 8192),
-		# 	nn.BatchNorm1d(8192),
-		# 	nn.ReLU(inplace=True),
-		# 	nn.Linear(8192, 4096)
-		# )
+		self.avgpool = nn.AdaptiveAvgPool2d((3, 3))
+		self.out = nn.Sequential(
+			nn.Linear(2048 * 3 * 3, 8192),
+			nn.BatchNorm1d(8192),
+			nn.ReLU(inplace=True),
+			nn.Linear(8192, 4096)
+		)
 
 
 	def _make_downlayer(self, block, init_channels, num_layer, stride=1):
@@ -153,9 +153,9 @@ class ResNet_encoder(nn.Module):
 		x = self.layer2(x)
 		x = self.layer3(x)
 		x = self.layer4(x)
-		# x = self.out(x)
 		x = self.avgpool(x)
 		x = torch.flatten(x, 1)
+		x = self.out(x)
 		return x
 
 	def init_weights(self):
@@ -179,22 +179,22 @@ class ResNet_decoder(nn.Module):
 		# 	nn.ReLU(True)
 		# )
 
-		# self.dout = nn.Sequential(
-		# 		nn.Linear(4096, 8192),
-		# 		nn.BatchNorm1d(8192),
-		# 		nn.ReLU(),
-		# 		nn.Linear(8192, 2048 * 7 * 7),
-		# 		nn.BatchNorm1d(2048 * 7 * 7),
-		# 		nn.ReLU())
+		self.dout = nn.Sequential(
+				nn.Linear(4096, 8192),
+				nn.BatchNorm1d(8192),
+				nn.ReLU(),
+				nn.Linear(8192, 2048 * 3 * 3),
+				nn.BatchNorm1d(2048 * 3 * 3),
+				nn.ReLU())
 
-		self.unavgpool = nn.Upsample(scale_factor=7)
+		# self.unavgpool = nn.Upsample(scale_factor=2)
 
-		# self.unavgpool = nn.Sequential(
-		# 	nn.Conv2d(self.in_channels, self.in_channels,
-		# 			  kernel_size=1, stride=1, padding=3, bias=False),
-		# 	nn.BatchNorm2d(self.in_channels),
-		# 	nn.ReLU(True)
-		# )
+		self.unavgpool = nn.Sequential(
+			nn.Conv2d(self.in_channels, self.in_channels,
+					  kernel_size=1, stride=1, padding=2, bias=False),
+			nn.BatchNorm2d(self.in_channels),
+			nn.ReLU(True)
+		)
 
 
 		self.uplayer1 = self._make_up_block(
@@ -240,9 +240,9 @@ class ResNet_decoder(nn.Module):
 
 	def forward(self, x):
 		# x = self.dfc(x)
-		x = x.view(x.size()[0], 2048, 1, 1)
+		x = self.dout(x)
+		x = x.view(x.size()[0], 2048, 3, 3)
 		x = self.unavgpool(x)
-		# x = self.dout(x)
 		# x = x.view(x.size()[0], 2048, 7, 7)
 		x = self.uplayer1(x)
 		x = self.uplayer2(x)
