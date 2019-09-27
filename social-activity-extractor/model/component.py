@@ -324,7 +324,7 @@ class last_layer(nn.Module):
 
 class ImageEncoder(nn.Module):
 
-	def __init__(self, latent_size):
+	def __init__(self):
 		super(ImageEncoder, self).__init__()
 		self.features = nn.Sequential(
 			nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=2),
@@ -347,35 +347,33 @@ class ImageEncoder(nn.Module):
 			nn.MaxPool2d(kernel_size=3, stride=2),
 		)
 		self.avgpool = nn.AdaptiveAvgPool2d((6, 6))
-		self.classifier = nn.Sequential(
+		self.fc = nn.Sequential(
 			nn.Linear(256 * 6 * 6, 4096),
 			nn.BatchNorm1d(4096),
 			nn.ReLU(inplace=True),
-			nn.Linear(4096, 2048),
-			nn.BatchNorm1d(2048),
-			nn.ReLU(inplace=True),
-			nn.Linear(2048, latent_size)
+			nn.Linear(4096, 2048)
 		)
 
 	def forward(self, x):
 		x = self.features(x)
 		x = self.avgpool(x)
 		x = torch.flatten(x, 1)
-		x = self.classifier(x)
+		x = self.fc(x)
 		return x
 
-	def init_weights(self, pretrained_weights):		
+	def init_weights(self):		
+		pretrained_dict = torch.load("./download/alexnet-owt-4df8aa71.pth")
 		# weight initialize for conv layer
 		weight_name = queue.Queue()
-		for weight in pretrained_weights:
+		for weight in pretrained_dict:
 			if "feature" in weight:
 				weight_name.put(weight)
 		for m in self.modules():
 			if isinstance(m, nn.Sequential):
 				for layer in m:
 					if isinstance(layer, nn.Conv2d):
-						weight_data = pretrained_weights[weight_name.get()]
-						bias_data = pretrained_weights[weight_name.get()]
+						weight_data = pretrained_dict[weight_name.get()]
+						bias_data = pretrained_dict[weight_name.get()]
 						assert layer.weight.size() == weight_data.size()
 						assert layer.bias.size() == bias_data.size()
 						layer.weight.data = weight_data
@@ -394,13 +392,10 @@ class Binary(Function):
 binary = Binary()
 
 class ImageDecoder(nn.Module):
-	def __init__(self, latent_size):
+	def __init__(self):
 		super(ImageDecoder,self).__init__()
 
 		self.dfc = nn.Sequential(
-				nn.Linear(latent_size, 2048),
-				nn.BatchNorm1d(2048),
-				nn.ReLU(),
 				nn.Linear(2048, 4096),
 				nn.BatchNorm1d(4096),
 				nn.ReLU(),

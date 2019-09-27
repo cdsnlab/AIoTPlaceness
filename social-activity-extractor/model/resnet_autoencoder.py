@@ -116,13 +116,13 @@ class ResNet_encoder(nn.Module):
 										   stride=2)
 		self.layer4 = self._make_downlayer(downblock, 512, num_layers[3],
 										   stride=2)
-		# self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-		self.out = nn.Sequential(
-			nn.Linear(2048 * 7 * 7, 8192),
-			nn.BatchNorm1d(8192),
-			nn.ReLU(inplace=True),
-			nn.Linear(8192, 4096)
-		)
+		self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+		# self.out = nn.Sequential(
+		# 	nn.Linear(2048 * 7 * 7, 8192),
+		# 	nn.BatchNorm1d(8192),
+		# 	nn.ReLU(inplace=True),
+		# 	nn.Linear(8192, 4096)
+		# )
 
 
 	def _make_downlayer(self, block, init_channels, num_layer, stride=1):
@@ -153,9 +153,9 @@ class ResNet_encoder(nn.Module):
 		x = self.layer2(x)
 		x = self.layer3(x)
 		x = self.layer4(x)
-		x = self.out(x)
-		# x = self.avgpool(x)
-		# x = torch.flatten(x, 1)
+		# x = self.out(x)
+		x = self.avgpool(x)
+		x = torch.flatten(x, 1)
 		return x
 
 	def init_weights(self):
@@ -179,13 +179,13 @@ class ResNet_decoder(nn.Module):
 		# 	nn.ReLU(True)
 		# )
 
-		self.dout = nn.Sequential(
-				nn.Linear(4096, 8192),
-				nn.BatchNorm1d(8192),
-				nn.ReLU(),
-				nn.Linear(8192, 2048 * 7 * 7),
-				nn.BatchNorm1d(2048 * 7 * 7),
-				nn.ReLU())
+		# self.dout = nn.Sequential(
+		# 		nn.Linear(4096, 8192),
+		# 		nn.BatchNorm1d(8192),
+		# 		nn.ReLU(),
+		# 		nn.Linear(8192, 2048 * 7 * 7),
+		# 		nn.BatchNorm1d(2048 * 7 * 7),
+		# 		nn.ReLU())
 
 		self.unavgpool = nn.Upsample(scale_factor=7)
 
@@ -240,10 +240,10 @@ class ResNet_decoder(nn.Module):
 
 	def forward(self, x):
 		# x = self.dfc(x)
-		# x = x.view(x.size()[0], 2048, 1, 1)
-		# x = self.unavgpool(x)
-		x = self.dout(x)
-		x = x.view(x.size()[0], 2048, 7, 7)
+		x = x.view(x.size()[0], 2048, 1, 1)
+		x = self.unavgpool(x)
+		# x = self.dout(x)
+		# x = x.view(x.size()[0], 2048, 7, 7)
 		x = self.uplayer1(x)
 		x = self.uplayer2(x)
 		x = self.uplayer3(x)

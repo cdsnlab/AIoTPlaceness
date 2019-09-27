@@ -65,7 +65,7 @@ def load_image_pretrain_data(args, CONFIG):
 			full_data.append(image)
 		f.close()
 		del image_data
-		if count > 50:
+		if count > 5000:
 			break
 		count = count + 1
 	train_size = int(args.split_rate * len(full_data))

@@ -84,8 +84,9 @@ def train_reconstruction(args):
 	train_loader, val_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=args.shuffle),\
 								  DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True)
 
-	# image_encoder = ImageEncoder(latent_size=args.latent_size)
-	# image_decoder = ImageDecoder(latent_size=args.latent_size)
+	# image_encoder = ImageEncoder()
+	# image_encoder.init_weights()
+	# image_decoder = ImageDecoder()
 	image_encoder = ResNet50Encoder()
 	image_encoder.init_weights()
 	image_decoder = ResNet50Decoder()
