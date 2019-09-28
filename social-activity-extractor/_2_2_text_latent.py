@@ -27,7 +27,7 @@ from torch.optim.adam import Adam
 from torch.optim.lr_scheduler import StepLR, CyclicLR
 from model import util
 from model import text_model, imgseq_model, text_model
-from model.util import load_fulltext_data
+from model.util import load_text_data_with_latent
 
 
 CONFIG = config.Config
