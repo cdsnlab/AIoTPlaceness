@@ -27,7 +27,7 @@ from torch.optim.adam import Adam
 from torch.optim.lr_scheduler import StepLR, CyclicLR
 from model import util
 from model import text_model, imgseq_model, text_model
-from model.util import load_text_data_with_latent
+from model.util import load_text_data_with_short_code
 
 
 CONFIG = config.Config
@@ -77,7 +77,7 @@ def get_latent(args):
 		word_idx = json.load(f)
 	print("Loading embedding model completed")
 	print("Loading dataset...")
-	full_dataset = load_text_data_with_latent(args, CONFIG, word2idx=word_idx[1])
+	full_dataset = load_text_data_with_short_code(args, CONFIG, word2idx=word_idx[1])
 	print("Loading dataset completed")
 	full_loader = DataLoader(full_dataset, batch_size=args.batch_size, shuffle=False)
 	
