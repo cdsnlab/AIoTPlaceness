@@ -52,6 +52,44 @@ class TextDataset(Dataset):
 		text_tensor = torch.from_numpy(text_array).type(torch.LongTensor)
 		return text_tensor
 
+def load_text_data_with_short_code(args, CONFIG, word2idx):	
+	full_data = []
+	df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'posts.csv'), header=None, encoding='utf-8-sig')
+	pbar = tqdm(total=df_data.shape[0])
+	for index, row in df_data.iterrows():
+		pbar.update(1)
+		short_code = row.iloc[0]
+		text_data = row.iloc[1]
+		full_data.append([text_data, short_code])
+		del text_data
+	pbar.close()
+	full_dataset = TextDataset_with_short_code(full_data, CONFIG, word2idx)
+	return full_dataset
+
+class TextDataset_with_short_code(Dataset):
+	def __init__(self, data_list, CONFIG, word2idx):
+		self.data = data_list
+		self.word2idx = word2idx
+		self.CONFIG = CONFIG
+
+	def __len__(self):
+		return len(self.data)
+
+	def __getitem__(self, idx):
+		word_list = self.data[idx][0].split()
+		index_list = []
+		if len(word_list) > self.CONFIG.MAX_SENTENCE_LEN:
+			# truncate sentence if sentence length is longer than `max_sentence_len`
+			word_list = word_list[:self.CONFIG.MAX_SENTENCE_LEN]
+			word_list[-1] = '<EOS>'
+		else:
+			word_list = word_list + ['<PAD>'] * (self.CONFIG.MAX_SENTENCE_LEN - len(word_list))
+		for word in word_list:
+			index_list.append(self.word2idx[word])
+		text_array = np.array(index_list)
+		text_tensor = torch.from_numpy(text_array).type(torch.LongTensor)
+		return text_tensor, self.data[idx][1]
+
 
 def load_image_pretrain_data(args, CONFIG):
 	full_data = []
