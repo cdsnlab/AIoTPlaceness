@@ -88,7 +88,7 @@ def get_latent(args):
 	args.t3 = t3
 
 	text_embedding = nn.Embedding.from_pretrained(torch.FloatTensor(text_embedding_model))
-	text_encoder = text_model.ConvolutionEncoder(text_embedding, t3, args.filter_size, args.filter_shape, args.encode_latent)
+	text_encoder = text_model.ConvolutionEncoder(text_embedding, t3, args.filter_size, args.filter_shape, args.latent_size)
 	checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, args.checkpoint), map_location=lambda storage, loc: storage)
 	text_encoder.load_state_dict(checkpoint['text_encoder'])
 	text_encoder.to(device)
