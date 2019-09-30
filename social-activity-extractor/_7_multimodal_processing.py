@@ -192,6 +192,24 @@ def scatterplot_pointlabels(df_twocols, markersize=None):
     fig = plt.figure()
     plt.plot(df_twocols.iloc[:, 0], df_twocols.iloc[:, 1], marker='.', linestyle='None', markersize=markersize)
 
+def test(target_dataset, target_clustering):
+
+	result_path = os.path.join(CONFIG.RESULT_PATH, target_dataset)
+	result_path = os.path.join(result_path, target_clustering)
+	cluster_len = {i:[] for i in range(12)}
+	for clustered_directory in os.listdir(result_path):
+		clustered_path = os.path.join(result_path, clustered_directory)
+		for short_code in os.listdir(clustered_path):
+			short_code_path = os.path.join(clustered_path, short_code)
+			for content in os.listdir(short_code_path):
+				if content.endswith('.txt'):
+					with open(os.path.join(short_code_path, content), 'r', encoding='utf-8') as f:
+						data = f.read()
+					cluster_len[int(clustered_directory)].append(len(data.split()))
+	print(cluster_len)
+	for cluster in cluster_len:
+		print(np.mean(cluster_len[cluster]))
+
 def run(option): 
 	if option == 0:
 		do_clustering(target_csv=sys.argv[2], cluster_method=int(sys.argv[3]))
@@ -201,6 +219,8 @@ def run(option):
 		sample_from_cluster(target_csv=sys.argv[2], target_dataset=sys.argv[3], target_clustering=sys.argv[4])
 	elif option == 3:
 		apply_tsne(target_csv=sys.argv[2])
+	elif option == 4:
+		test(target_dataset=sys.argv[2], target_clustering=sys.argv[3])
 	else:
 		print("This option does not exist!\n")
 

@@ -19,11 +19,12 @@ from nltk import word_tokenize
 #from konlpy.tag import Okt
 #import nagisa
 #import jieba
-
+from gensim.test.utils import common_texts
 from gensim.models import word2vec, Word2Vec, FastText 
 from gensim.models.fasttext import load_facebook_model
 from gensim.models.keyedvectors import Word2VecKeyedVectors, FastTextKeyedVectors
 from gensim.test.utils import datapath
+from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 #from polyglot.detect import Detector
 
 
@@ -246,7 +247,9 @@ def make_word2vec(target_corpus):
 	print("embedding completed")
 
 def test():
-
+	model_name = 'DOC2VEC_instagram0830.model'
+	model = Doc2Vec.load(os.path.join(CONFIG.EMBEDDING_PATH, model_name))
+	print(model.infer_vector(["셀스타그램", "운동스타그램"]))
 	# checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, 'backup', 'imgseq_autoencoder_epoch_71.pt'), map_location=lambda storage, loc: storage)
 	# best_loss = checkpoint['best_loss']
 	# print(best_loss)
@@ -266,27 +269,27 @@ def test():
 	# print("mean: ", np.mean(length_array))
 	# print("max: ", np.max(length_array))
 
-	def cyclical_lr(stepsize, min_lr=1e-4, max_lr=1e-3):
+	# def cyclical_lr(stepsize, min_lr=1e-4, max_lr=1e-3):
 
-		# Scaler: we can adapt this if we do not want the triangular CLR
-		scaler = lambda x: 1/x
+	# 	# Scaler: we can adapt this if we do not want the triangular CLR
+	# 	scaler = lambda x: 1/x
 
-		# Lambda function to calculate the LR
-		lr_lambda = lambda it: min_lr + (max_lr - min_lr) * relative(it, stepsize)
+	# 	# Lambda function to calculate the LR
+	# 	lr_lambda = lambda it: min_lr + (max_lr - min_lr) * relative(it, stepsize)
 
-		# Additional function to see where on the cycle we are
-		def relative(it, stepsize):
-			cycle = math.floor(1 + it / (2 * stepsize))
-			x = abs(it / stepsize - 2 * cycle + 1)
-			return max(0, (1 - x)) * scaler(cycle)
+	# 	# Additional function to see where on the cycle we are
+	# 	def relative(it, stepsize):
+	# 		cycle = math.floor(1 + it / (2 * stepsize))
+	# 		x = abs(it / stepsize - 2 * cycle + 1)
+	# 		return max(0, (1 - x)) * scaler(cycle)
 
-		return lr_lambda
-	func = cyclical_lr(5574*20, 1e-4, 1)
-	lr_list = []
-	for i in range(0, 5574*40, 5574):
-		lr_list.append(func(i))
-	plt.plot(lr_list)
-	plt.show()
+	# 	return lr_lambda
+	# func = cyclical_lr(5574*20, 1e-4, 1)
+	# lr_list = []
+	# for i in range(0, 5574*40, 5574):
+	# 	lr_list.append(func(i))
+	# plt.plot(lr_list)
+	# plt.show()
 	# full_data = []
 	# full_data_norm = []
 	# df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "hongdae.csv"), header=None, encoding='utf-8')
@@ -308,21 +311,16 @@ def test():
 	# print("min: ", np.min(full_data, axis=1))
 	# print("norm: ", full_data_norm)
 
-def make_fasttext_pretrained(target_corpus, pretrined_model):
 
-	target_corpus_name = target_corpus + '.txt'
-	corpus_path = os.path.join(CONFIG.DATA_PATH, "corpus", target_corpus_name)
-	fb_path = os.path.join(CONFIG.EMBEDDING_PATH, "facebook", pretrined_model)
-	sentences = word2vec.LineSentence(corpus_path) 
-	embedding_model = load_facebook_model(fb_path) # load pretrained model
-	print("embedding started")	
-	embedding_model.build_vocab(sentences=sentences, update=True)
-	print(embedding_model.epochs)
-	print("train started")	
-	embedding_model.train(sentences=sentences, total_examples=embedding_model.corpus_count, epochs=10)
-	print("train completed")	
-	model_name = "FASTTEXT_"+ target_corpus + "_pretrained.model"
-	embedding_model.wv.save(os.path.join(CONFIG.EMBEDDING_PATH, model_name))
+def make_doc2vec(target_posts):
+	df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, target_posts, 'posts.csv'), index_col=0, header=None, encoding='utf-8-sig')
+	print("making documents...")
+	documents = [TaggedDocument(value[1].split(), [index]) for index, value in df_data.iterrows()]
+	embedding_size = 300
+	print("embedding started")
+	embedding_model = Doc2Vec(documents, vector_size=embedding_size, window=5, min_count=5)
+	model_name = "DOC2VEC_"+ target_posts + ".model"
+	embedding_model.save(os.path.join(CONFIG.EMBEDDING_PATH, model_name))
 	print("embedding completed")
 
 def run(option):
@@ -342,6 +340,8 @@ def run(option):
 		test()
 	elif option == 7:
 		make_fasttext_pretrained(target_corpus=sys.argv[2], pretrined_model=sys.argv[3])
+	elif option == 8:
+		make_doc2vec(target_posts=sys.argv[2])
 	else:
 		print("This option does not exist!\n")
 

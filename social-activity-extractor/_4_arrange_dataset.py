@@ -212,7 +212,7 @@ def process_dataset_text(target_dataset):
 	dataset_path = os.path.join(CONFIG.DATASET_PATH, target_dataset)
 	if not os.path.exists(dataset_path):
 		os.mkdir(dataset_path)
-	df_data = pd.read_csv(os.path.join(CONFIG.TARGET_PATH, 'posts.csv'), encoding='utf-8-sig')
+	df_data = pd.read_csv(os.path.join(CONFIG.TARGET_PATH, 'SEOUL_SUBWAY_DATA.csv'), encoding='utf-8-sig')
 	print("tokenizing sentences...")
 	pbar = tqdm(total=df_data.shape[0])
 	shortcode_list = []
@@ -235,6 +235,11 @@ def process_dataset_text(target_dataset):
 			count = frequency.get(word, 0)
 			frequency[word] = count + 1
 	pbar.close()
+	count = 0
+	for word in frequency:
+		if frequency[word] >= CONFIG.MIN_WORD_COUNT:
+			count = count + 1
+	print("words more then min_count: " + str(count))
 	print("convert too few words to UNK token...")
 	pbar = tqdm(total=len(word_list_list))
 	processed_word_list_list = []
