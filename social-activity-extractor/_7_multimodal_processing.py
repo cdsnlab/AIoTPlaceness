@@ -32,7 +32,7 @@ def do_clustering(target_csv, cluster_method):
 		clustering.fit(df_data)
 		csv_name = 'clustered_dbscan_' + target_csv + '.csv'
 	elif cluster_method == 1:
-		clustering = OPTICS(min_samples=1000)
+		clustering = OPTICS(min_samples=1000, metric='cosine')
 		clustering.fit(df_data)
 		csv_name = 'clustered_optics_' + target_csv + '.csv'
 	elif cluster_method == 2:
