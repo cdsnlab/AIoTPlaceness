@@ -212,19 +212,23 @@ def process_dataset_text(target_dataset):
 	dataset_path = os.path.join(CONFIG.DATASET_PATH, target_dataset)
 	if not os.path.exists(dataset_path):
 		os.mkdir(dataset_path)
-	df_data = pd.read_csv(os.path.join(CONFIG.TARGET_PATH, 'SEOUL_SUBWAY_DATA.csv'), encoding='utf-8-sig')
+	df_data = pd.read_csv(os.path.join(CONFIG.TARGET_PATH, 'SEOUL_SUBWAY_DATA-3.csv'), index_col=1, encoding='utf-8-sig')
+	df_data.index.name = "short_code"
+	df_data.sort_index(inplace=True)
 	print("tokenizing sentences...")
 	pbar = tqdm(total=df_data.shape[0])
 	shortcode_list = []
 	word_list_list = []
+	image_list = []
 	for index, in_row in df_data.iterrows():
 		pbar.update(1)
-		if pd.isna(in_row.iloc[2]):
+		if pd.isna(in_row.iloc[1]):
 			continue
-		word_list = process_text(in_row.iloc[2])
+		word_list = process_text(in_row.iloc[1])
 		if len(word_list) > 0:
-			shortcode_list.append(in_row.iloc[1])
+			shortcode_list.append(index)
 			word_list_list.append(word_list)
+			image_list.append(in_row.iloc[6])
 	pbar.close()
 	print("counting frequencies...")
 	frequency = {}
@@ -265,6 +269,7 @@ def process_dataset_text(target_dataset):
 			out_row = []
 			out_row.append(shortcode_list[index])
 			out_row.append(sentence + ' <EOS>')
+			out_row.append(image_list[index])
 			wr.writerow(out_row)
 			f_corpus.write(sentence + ' <EOS>\n')
 	pbar.close()

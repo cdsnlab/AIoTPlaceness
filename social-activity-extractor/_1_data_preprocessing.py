@@ -318,7 +318,7 @@ def make_doc2vec(target_posts):
 	documents = [TaggedDocument(value[1].split(), [index]) for index, value in df_data.iterrows()]
 	embedding_size = 300
 	print("embedding started")
-	embedding_model = Doc2Vec(documents, vector_size=embedding_size, window=5, min_count=5)
+	embedding_model = Doc2Vec(documents, vector_size=embedding_size, dm=0, window=10, min_count=5, sample=1e-5, epochs=20)
 	model_name = "DOC2VEC_"+ target_posts + ".model"
 	embedding_model.save(os.path.join(CONFIG.EMBEDDING_PATH, model_name))
 	print("embedding completed")
