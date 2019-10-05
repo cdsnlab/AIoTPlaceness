@@ -328,7 +328,7 @@ def make_toy_dataset(target_dataset):
 		short_code = row.iloc[0] + '.p'
 		shutil.copy2(os.path.join(dataset_path, 'resnet152', short_code), os.path.join(toy_path, 'resnet152', short_code))
 
-def process_resize_images(target_dataset):
+def process_resize_imgseq(target_dataset):
 
 	img_transform = transforms.Compose([
 					transforms.Resize(224),
@@ -378,6 +378,43 @@ def drop_non_korean_images(target_dataset):
 		if short_code not in short_codes:
 			os.remove(os.path.join(image_dir, image_path))
 
+def process_dataset_image(target_dataset):
+
+	img_transform = transforms.Compose([
+					transforms.Resize(256),
+					transforms.CenterCrop(224),
+					transforms.ToTensor(),
+					transforms.Normalize(mean=[0.485, 0.456, 0.406],
+									 std=[0.229, 0.224, 0.225])
+				])	
+	dataset_path = os.path.join(CONFIG.DATASET_PATH, target_dataset)
+	df_data = pd.read_csv(os.path.join(dataset_path, 'posts.csv'), header=None, encoding='utf-8')
+	print(df_data[:5])
+
+	# if not os.path.exists(dataset_path):
+	# 	os.mkdir(dataset_path)
+	# if not os.path.exists(os.path.join(dataset_path, 'original')):
+	# 	os.mkdir(os.path.join(dataset_path, 'original'))
+	# df_data = pd.read_csv(os.path.join(CONFIG.TARGET_PATH, 'posts.csv'), encoding='utf-8')
+	# pbar = tqdm(total=df_data.shape[0])
+	# for index, in_row in df_data.iterrows():
+	# 	pbar.update(1)
+	# 	images = []
+	# 	for image in in_row.iloc[7:]:
+	# 		if not pd.isna(image):
+	# 			image_path = os.path.join(CONFIG.TARGET_PATH, 'original', image)
+	# 			try:
+	# 				images.append(img_transform(pil_loader(image_path)))
+	# 			except OSError as e:
+	# 				print(e)
+	# 				print(image_path)
+	# 	if len(images) > 0:
+	# 		image_data = torch.stack(images).detach().numpy()
+	# 		with open(os.path.join(dataset_path, 'original', in_row.iloc[1]+'.p'), 'wb') as f:
+	# 			cPickle.dump(image_data, f)
+	# 		f.close()
+	# 		del image_data
+	# pbar.close()
 
 def run(option): 
 	if option == 0:
@@ -387,7 +424,7 @@ def run(option):
 	elif option == 2:
 		embedding_text(target_dataset=sys.argv[2])
 	elif option == 3:
-		process_dataset_images(target_dataset=sys.argv[2])
+		process_dataset_imgseq(target_dataset=sys.argv[2])
 	elif option == 4:
 		process_dataset_text(target_dataset=sys.argv[2])
 	elif option == 5:
@@ -398,6 +435,8 @@ def run(option):
 		process_resize_images(target_dataset=sys.argv[2])
 	elif option == 8:
 		drop_non_korean_images(target_dataset=sys.argv[2])
+	elif option == 9:
+		process_dataset_image(target_dataset=sys.argv[2])
 	else:
 		print("This option does not exist!\n")
 

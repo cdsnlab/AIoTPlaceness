@@ -90,6 +90,39 @@ class TextDataset_with_short_code(Dataset):
 		text_tensor = torch.from_numpy(text_array).type(torch.LongTensor)
 		return text_tensor, self.data[idx][1]
 
+def load_image_data_with_short_code(args, CONFIG):
+
+	img_transform = transforms.Compose([
+					transforms.Resize(256),
+					transforms.CenterCrop(224),
+					transforms.ToTensor(),
+					transforms.Normalize(mean=[0.485, 0.456, 0.406],
+									 std=[0.229, 0.224, 0.225])
+				])		
+	full_data = []
+	df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'posts.csv'), header=None, encoding='utf-8-sig')
+	pbar = tqdm(total=df_data.shape[0])
+	for index, row in df_data.iterrows():
+		pbar.update(1)
+		short_code = row.iloc[0]
+		image_path = row.iloc[2]
+		full_data.append([short_code, image_path])
+	pbar.close()
+	full_dataset = ImageDataset_with_short_code(full_data, CONFIG, img_transform)
+	return full_dataset
+
+class ImageDataset_with_short_code(Dataset):
+	def __init__(self, data_list, CONFIG, transform):
+		self.data = data_list
+		self.CONFIG = CONFIG
+		self.transform = transform
+
+	def __len__(self):
+		return len(self.data)
+
+	def __getitem__(self, idx):
+		image_tensor = self.transform(pil_loader(self.data[idx][1]))
+		return self.data[idx][0], image_tensor
 
 def load_image_pretrain_data(args, CONFIG):
 	full_data = []
