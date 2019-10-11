@@ -446,7 +446,7 @@ def process_dataset_image(target_dataset):
 
 def normalized_and_pca(target_csv):
 
-	df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), encoding='utf-8')
+	df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, encoding='utf-8')
 	print(df_data[:5])
 	df_normalized = df_data.div((np.sqrt(np.sum(np.square(df_data), axis=1))), axis=0)
 	pca_normalized = PCA(n_components=300, random_state=42)
