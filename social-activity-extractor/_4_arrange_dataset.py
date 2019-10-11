@@ -21,6 +21,7 @@ from torchvision.utils import save_image
 from torchvision.datasets.folder import pil_loader
 from gensim.models.keyedvectors import FastTextKeyedVectors
 from gensim.similarities.index import AnnoyIndexer
+from sklearn.decomposition import PCA
 
 from util import process_text
 
