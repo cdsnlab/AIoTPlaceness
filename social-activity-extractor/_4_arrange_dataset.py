@@ -303,13 +303,41 @@ def test(target_dataset):
 	# print("max: ", np.mean(np.max(full_data, axis=2), axis=1))
 	# print("min: ", np.mean(np.min(full_data, axis=2), axis=1))
 	# print("norm: ", full_data_norm)
-	dataset_path = os.path.join(CONFIG.DATA_PATH, 'dataset', target_dataset)
-	with open(os.path.join(dataset_path, 'resize224', 'BsFudrehNdL.p'), 'rb') as f:
-		image_data = cPickle.load(f)
-	f.close()
-	print(image_data)
-	imgseq_tensor = torch.from_numpy(image_data).type(torch.FloatTensor)
-	save_image(imgseq_tensor, './result/temp.png', nrow=5, padding=0)
+
+
+	df_data = pd.read_csv(os.path.join(CONFIG.TARGET_PATH, 'SEOUL_SUBWAY_DATA-3.csv'), index_col=1, encoding='utf-8-sig')
+	df_data.index.name = "short_code"
+	df_data.sort_index(inplace=True)
+	index_list = []
+	before_list = []
+	for index, in_row in df_data.iloc[:11].iterrows():
+		if not pd.isna(in_row.iloc[1]):
+			index_list.append(index)
+			before_list.append(in_row.iloc[1])
+
+	dataset_path = os.path.join(CONFIG.DATASET_PATH, target_dataset)
+	toy_path = os.path.join(CONFIG.DATASET_PATH, 'toy')
+	df_data = pd.read_csv(os.path.join(dataset_path, 'posts.csv'), index_col=0, header=None, encoding='utf-8')
+	after_list = []
+	for index, in_row in df_data.loc[index_list].iterrows():
+		after_list.append(in_row.iloc[0])
+	index_array = np.array(index_list)
+	before_array = np.array(before_list)
+	after_array = np.array(after_list)
+	data_array = np.stack([before_list, after_list], axis=1)
+	result_df = pd.DataFrame(data=data_array, index=index_array, columns=["before", "after"])
+	result_df.index.name = "short_code"
+	result_df.sort_index(inplace=True)
+	result_df.to_csv('temp.csv', encoding='utf-8-sig')
+
+
+	# dataset_path = os.path.join(CONFIG.DATA_PATH, 'dataset', target_dataset)
+	# with open(os.path.join(dataset_path, 'resize224', 'BsFudrehNdL.p'), 'rb') as f:
+	# 	image_data = cPickle.load(f)
+	# f.close()
+	# print(image_data)
+	# imgseq_tensor = torch.from_numpy(image_data).type(torch.FloatTensor)
+	# save_image(imgseq_tensor, './result/temp.png', nrow=5, padding=0)
 	
 
 def make_toy_dataset(target_dataset):
@@ -416,7 +444,20 @@ def process_dataset_image(target_dataset):
 	# 		del image_data
 	# pbar.close()
 
-def run(option): 
+def normalized_and_pca(target_csv):
+
+	df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, target_csv), encoding='utf-8')
+	print(df_data[:5])
+	df_normalized = df_data.div((np.sqrt(np.sum(np.square(df_data), axis=1))), axis=0)
+	pca_normalized = PCA(n_components=300, random_state=42)
+	df_pca_normalized = pd.DataFrame(pca_normalized.fit_transform(df_normalized))
+	df_pca_normalized.columns = ['PC' + str(i) for i in range(df_pca_normalized.shape[1])]
+	df_pca_normalized.index = df_normalized.index
+	print(df_pca_normalized[:5])
+	df_pca_normalized.to_csv(os.path.join(CONFIG.CSV_PATH, 'pca_normalized_' + target_csv + '.csv'), encoding='utf-8-sig')
+
+
+def run(option):
 	if option == 0:
 		copy_selected_post(target_folder=sys.argv[2])
 	elif option == 1:

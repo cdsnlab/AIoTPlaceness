@@ -8,11 +8,14 @@ import sys
 import csv
 import time
 import random
+import math
 from tqdm import tqdm
+from wordcloud import WordCloud
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
+from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 from sklearn.manifold import TSNE
 from sklearn.metrics import calinski_harabasz_score, davies_bouldin_score, silhouette_score
 from sklearn.cluster import Birch, SpectralClustering, AffinityPropagation, AgglomerativeClustering, KMeans, DBSCAN, OPTICS
@@ -110,9 +113,9 @@ def do_spectral_clustering(target_csv):
 	print("time elapsed for scoring: " + str(time.time()-start_time))
 	result_df.to_csv(os.path.join(CONFIG.CSV_PATH, 'clustered_spectral_' + target_csv + '.csv'), encoding='utf-8-sig')
 
-sample_length = 10
 def sample_from_cluster(target_csv, target_dataset, target_clustering):
 
+	sample_length = 10
 	df_clustered = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv + '.csv'), index_col=0, header=0, encoding='utf-8-sig')
 	df_clustered.index.name = 'short_code'
 	print(df_clustered.iloc[:100])
@@ -186,15 +189,15 @@ def apply_tsne(target_csv=sys.argv[2]):
 			tsne_pca.to_csv(os.path.join(CONFIG.CSV_PATH, 'tsne_pca_' + target_csv + '_' + str(lr) + '_' + str(perp) + '.csv'), encoding='utf-8-sig')
 
 def do_tsne(tsne_object, data_to_pass):
-    data_tsne = pd.DataFrame(tsne_object.fit_transform(data_to_pass))
-    data_tsne.index = data_to_pass.index
-    data_tsne.columns = [['tsne1', 'tsne2']]
-    return data_tsne
+	data_tsne = pd.DataFrame(tsne_object.fit_transform(data_to_pass))
+	data_tsne.index = data_to_pass.index
+	data_tsne.columns = [['tsne1', 'tsne2']]
+	return data_tsne
 
 def scatterplot_pointlabels(df_twocols, markersize=None):
-    # basic scatterplot
-    fig = plt.figure()
-    plt.plot(df_twocols.iloc[:, 0], df_twocols.iloc[:, 1], marker='.', linestyle='None', markersize=markersize)
+	# basic scatterplot
+	fig = plt.figure()
+	plt.plot(df_twocols.iloc[:, 0], df_twocols.iloc[:, 1], marker='.', linestyle='None', markersize=markersize)
 
 def test(target_dataset, target_clustering):
 
@@ -214,6 +217,143 @@ def test(target_dataset, target_clustering):
 	for cluster in cluster_len:
 		print(np.mean(cluster_len[cluster]))
 
+def sample_from_cluster_text_only(target_csv, target_dataset, target_clustering):
+
+	sample_length = 50
+	df_clustered = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, header=0, encoding='utf-8-sig')
+	df_clustered.index.name = 'short_code'
+	print(df_clustered.iloc[:100])
+	print(df_clustered.shape)
+	num_cluster = np.max(df_clustered, axis=0)[0] + 1
+
+	result_path = os.path.join(CONFIG.RESULT_PATH, 'text_only')
+	if not os.path.exists(result_path):
+		os.mkdir(result_path)
+	result_path = os.path.join(result_path, target_dataset)
+	if not os.path.exists(result_path):
+		os.mkdir(result_path)
+	result_path = os.path.join(result_path, target_clustering)
+	if not os.path.exists(result_path):
+		os.mkdir(result_path)
+	for cluster_id in range(num_cluster):
+		cluster_path = os.path.join(result_path, str(cluster_id))
+		if not os.path.exists(cluster_path):
+			os.mkdir(cluster_path)
+
+	print("making cluster dict...")
+	cluster_dict = {i: [] for i in range(num_cluster)}
+	pbar = tqdm(total=df_clustered.shape[0])
+	for index, row in df_clustered.iterrows():
+		cluster_dict[row[0]].append(index)
+		pbar.update(1)
+	pbar.close()
+
+	print("making sampled short_code dict...")
+	short_code_dict = {}
+	pbar = tqdm(total=len(cluster_dict))
+	for key, value in cluster_dict.items():
+		if len(value) > sample_length:
+			sampled = random.sample(value, sample_length)
+		else:
+			sampled = value
+		for short_code in sampled:
+			short_code_dict[short_code] = key
+		pbar.update(1)
+	pbar.close()
+
+	print("copying sampled posts...")
+	df_original = pd.read_csv(os.path.join(CONFIG.TARGET_PATH, 'SEOUL_SUBWAY_DATA-3.csv'), encoding='utf-8-sig')
+	pbar = tqdm(total=df_original.shape[0])
+	for index, row in df_original.iterrows():
+		if row[1] in short_code_dict:
+			cluster_id = short_code_dict[row[1]]
+			caption_path = os.path.join(result_path, str(cluster_id), 'caption.txt')
+			if not os.path.exists(caption_path):
+				f_wr = open(caption_path, 'w', encoding='utf-8')
+			else:
+				f_wr = open(caption_path, 'a', encoding='utf-8')
+			f_wr.write(row[2] + '\n')
+			f_wr.close()
+		pbar.update(1)
+	pbar.close()
+
+def make_word_cloud(target_csv, target_dataset, target_clustering):
+
+
+	df_clustered = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, header=0, encoding='utf-8-sig')
+	df_clustered.index.name = 'short_code'
+	cluster_dict = df_clustered['cluster'].to_dict()
+	num_cluster = np.max(df_clustered, axis=0)[0] + 1
+
+
+	model_name = 'DOC2VEC_' + target_dataset + '.model'
+	model = Doc2Vec.load(os.path.join(CONFIG.EMBEDDING_PATH, model_name))
+	stop_vocab = ['UNK', '<EOS>']
+	vocab2index = {}
+	index2vocab = {}
+	index = 0
+	for vocab in model.wv.vocab:
+		if vocab not in stop_vocab:
+			vocab2index[vocab] = index
+			index2vocab[index] = vocab
+			index = index + 1
+
+	vocab_array = np.zeros((len(vocab2index), num_cluster))
+
+	result_path = os.path.join(CONFIG.RESULT_PATH, 'text_only')
+	if not os.path.exists(result_path):
+		os.mkdir(result_path)
+	result_path = os.path.join(result_path, target_dataset)
+	if not os.path.exists(result_path):
+		os.mkdir(result_path)
+	result_path = os.path.join(result_path, target_clustering)
+	if not os.path.exists(result_path):
+		os.mkdir(result_path)
+	for cluster_id in range(num_cluster):
+		cluster_path = os.path.join(result_path, str(cluster_id))
+		if not os.path.exists(cluster_path):
+			os.mkdir(cluster_path)
+
+
+	df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, target_dataset, 'posts.csv'), index_col=0, header=None, encoding='utf-8-sig')
+	pbar = tqdm(total=df_data.shape[0])
+	for index, row in df_data.iterrows():
+		word_list = row[1].split()
+		cluster_label = cluster_dict[index]
+		for word in word_list:
+			if word not in stop_vocab:
+				vocab_index = vocab2index[word]
+				vocab_array[vocab_index][cluster_label] = vocab_array[vocab_index][cluster_label] + 1
+		pbar.update(1)	
+	pbar.close()
+	salient_array = np.nan_to_num(vocab_array / np.sum(vocab_array, axis=1, keepdims=True))
+
+	font_path = './fonts/NanumBarunGothic.ttf'
+	for cluster_id in tqdm(range(num_cluster)):
+		vocab_max = vocab_array[:,cluster_id].argsort()
+		vocab_max = vocab_max[-100:]
+		keywords = {}
+		for vocab_index in vocab_max:
+			salient_value = salient_array[vocab_index][cluster_id]
+			vocab = index2vocab[vocab_index]
+			if salient_value != 0:
+				keywords[vocab] = salient_value
+
+		wordcloud = WordCloud(
+			font_path = font_path,
+			width = 600,
+			height = 600,
+			background_color="white"
+		)
+		wordcloud = wordcloud.generate_from_frequencies(keywords)
+		array = wordcloud.to_array()
+		plt.figure(figsize=(7, 7))
+		plt.imshow(array, interpolation="bilinear")
+		plt.axis("off")
+		plt.title("Word cloud of cluster " + str(cluster_id))
+		plt.savefig(os.path.join(result_path, str(cluster_id), 'wordcloud_' + str(cluster_id) + '.png'))
+		plt.close()
+
 def run(option): 
 	if option == 0:
 		do_clustering(target_csv=sys.argv[2], cluster_method=int(sys.argv[3]))
@@ -225,6 +365,10 @@ def run(option):
 		apply_tsne(target_csv=sys.argv[2])
 	elif option == 4:
 		test(target_dataset=sys.argv[2], target_clustering=sys.argv[3])
+	elif option == 5:
+		sample_from_cluster_text_only(target_csv=sys.argv[2], target_dataset=sys.argv[3], target_clustering=sys.argv[4])
+	elif option == 6:
+		make_word_cloud(target_csv=sys.argv[2], target_dataset=sys.argv[3], target_clustering=sys.argv[4])
 	else:
 		print("This option does not exist!\n")
 

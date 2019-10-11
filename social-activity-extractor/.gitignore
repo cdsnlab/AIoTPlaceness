@@ -30,6 +30,9 @@ result/*
 
 !result/.keep
 
+fonts/*
+
+.idea/
 
 evaluation/pretrain/*
 !evaluation/pretrain/.keep
