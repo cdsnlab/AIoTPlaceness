@@ -454,7 +454,7 @@ def normalized_and_pca(target_csv):
 	df_pca_normalized.columns = ['PC' + str(i) for i in range(df_pca_normalized.shape[1])]
 	df_pca_normalized.index = df_normalized.index
 	print(df_pca_normalized[:5])
-	df_pca_normalized.to_csv(os.path.join(CONFIG.CSV_PATH, 'pca_normalized_' + target_csv + '.csv'), encoding='utf-8-sig')
+	df_pca_normalized.to_csv(os.path.join(CONFIG.CSV_PATH, 'pca_normalized_' + target_csv), encoding='utf-8-sig')
 
 
 def run(option):
@@ -478,6 +478,8 @@ def run(option):
 		drop_non_korean_images(target_dataset=sys.argv[2])
 	elif option == 9:
 		process_dataset_image(target_dataset=sys.argv[2])
+	elif option == 10:
+		normalized_and_pca(target_csv=sys.argv[2])
 	else:
 		print("This option does not exist!\n")
 
