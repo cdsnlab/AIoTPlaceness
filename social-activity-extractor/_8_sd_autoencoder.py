@@ -25,9 +25,9 @@ def main():
     parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
     # learning
     parser.add_argument('-lr', type=float, default=1e-01, help='initial learning rate')
-    parser.add_argument('-pretrain_epochs', type=int, default=50, help='number of epochs for train')
+    parser.add_argument('-pretrain_epochs', type=int, default=100, help='number of epochs for train')
     parser.add_argument('-epochs', type=int, default=200, help='number of epochs for train')
-    parser.add_argument('-batch_size', type=int, default=16, help='batch size for training')
+    parser.add_argument('-batch_size', type=int, default=64, help='batch size for training')
     # data
     parser.add_argument('-target_csv', type=str, default=None, help='file name of target csv')
     parser.add_argument('-target_modal', type=str, default=None, help='file name of target csv')
@@ -72,7 +72,7 @@ def train_reconstruction(args):
         sdae.pretrain(train_loader, val_loader, lr=args.lr, batch_size=args.batch_size,
                       num_epochs=args.pretrain_epochs, corrupt=0.2, loss_type="mse")
         sdae.fit(train_loader, val_loader, lr=args.lr, num_epochs=args.epochs, corrupt=0.2, loss_type="mse")
-        sdae.save_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.target_modal + "_sdae_" + str(args.latent_size)))
+        sdae.save_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.target_modal + "_sdae_" + str(args.latent_dim)) + ".pt")
         print("Finish!!!")
 
     finally:

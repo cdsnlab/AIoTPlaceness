@@ -141,8 +141,8 @@ class StackedDAE(nn.Module):
             self.encoder[l * every].bias.data.copy_(daeLayers[l].bias.data)
 
             # copy decoder weight
-            self.decoder[-(l - 1) * every - 2].weight.data.copy_(daeLayers[l].deweight.data)
-            self.decoder[-(l - 1) * every - 2].bias.data.copy_(daeLayers[l].vbias.data)
+            self.decoder[-(l - 1) * every - every].weight.data.copy_(daeLayers[l].deweight.data)
+            self.decoder[-(l - 1) * every - every].bias.data.copy_(daeLayers[l].vbias.data)
 
         # z layer
         self._enc_mu.weight.data.copy_(daeLayers[-1].weight.data)
