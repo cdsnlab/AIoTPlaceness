@@ -66,10 +66,10 @@ def train_multidec(args):
 
     image_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=args.n_clusters,
                                  encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
-    image_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "image_SDAE_" + str(args.latent_dim)) + ".pt")
+    image_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "image_sdae_" + str(args.latent_dim)) + ".pt")
     text_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=args.n_clusters,
                                 encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
-    text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "text_SDAE_" + str(args.latent_dim)) + ".pt")
+    text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "text_sdae_" + str(args.latent_dim)) + ".pt")
     mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder, n_clusters=args.n_clusters)
     exp = Experiment("MDEC " + str(args.latent_dim), capture_io=True)
     print(mdec)
@@ -94,10 +94,10 @@ def eval_multidec(args):
 
     image_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=args.n_cluster,
                                  encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
-    image_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "image_SDAE_" + str(args.latent_dim)) + ".pt")
+    image_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "image_sdae_" + str(args.latent_dim)) + ".pt")
     text_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=args.n_cluster,
                                 encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
-    text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "text_SDAE_" + str(args.latent_dim)) + ".pt")
+    text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "text_sdae_" + str(args.latent_dim)) + ".pt")
     mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder)
     mdec.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.resume))
     short_codes, y_pred = mdec.fit_predict(full_loader, args.batch_size)
