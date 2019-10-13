@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from model import util
-from model.util import load_zip_csv_data
+from model.util import load_multi_csv_data
 from model.multidec import MDEC_encoder, MultiDEC
 
 CONFIG = config.Config
@@ -37,19 +37,19 @@ def main():
     # model
     parser.add_argument('-input_dim', type=int, default=300, help='size of input dimension')
     parser.add_argument('-latent_dim', type=int, default=10, help='size of latent variable')
-    parser.add_argument('-n_cluster', type=int, default=10, help='desired num of cluster')
+    parser.add_argument('-n_clusters', type=int, default=10, help='desired num of cluster')
     # train
     parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
     parser.add_argument('-gpu', type=str, default='cuda', help='gpu number')
     # option
     parser.add_argument('-resume', type=str, default=None, help='filename of checkpoint to resume ')
-    parser.add_argument('-eval', action='store_true', default=False, help='whether using gpu server')
+    parser.add_argument('-eval', action='store_true', default=False, help='whether evaluate or train it')
 
     args = parser.parse_args()
 
     if args.noti:
         slacknoti("underkoo start using")
-    if eval:
+    if args.eval:
         eval_multidec(args)
     else:
         train_multidec(args)
@@ -60,24 +60,24 @@ def main():
 def train_multidec(args):
     device = torch.device(args.gpu)
     print("Loading dataset...")
-    full_dataset = load_zip_csv_data(args, CONFIG)
+    full_dataset = load_multi_csv_data(args, CONFIG)
     print("Loading dataset completed")
-    full_loader = DataLoader(full_dataset, batch_size=args.batch_size, shuffle=False)
+    # full_loader = DataLoader(full_dataset, batch_size=args.batch_size, shuffle=False)
 
-    image_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=args.n_cluster,
+    image_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=args.n_clusters,
                                  encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
-    image_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "image_" + str(args.latent_dim)) + ".pt")
-    text_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=args.n_cluster,
+    image_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "image_SDAE_" + str(args.latent_dim)) + ".pt")
+    text_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=args.n_clusters,
                                 encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
-    text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "text_" + str(args.latent_dim)) + ".pt")
-    mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder)
+    text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "text_SDAE_" + str(args.latent_dim)) + ".pt")
+    mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder, n_clusters=args.n_clusters)
     exp = Experiment("MDEC " + str(args.latent_dim), capture_io=True)
     print(mdec)
 
     for arg, value in vars(args).items():
         exp.param(arg, value)
     try:
-        mdec.fit(full_loader, lr=args.lr, num_epochs=args.epochs)
+        mdec.fit(full_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs)
         mdec.save_model(os.path.join(CONFIG.CHECKPOINT_PATH, "mdec_" + str(args.latent_dim)) + ".pt")
         print("Finish!!!")
 
@@ -88,16 +88,16 @@ def train_multidec(args):
 def eval_multidec(args):
     device = torch.device(args.gpu)
     print("Loading dataset...")
-    full_dataset = load_zip_csv_data(args, CONFIG)
+    full_dataset = load_multi_csv_data(args, CONFIG)
     print("Loading dataset completed")
     full_loader = DataLoader(full_dataset, batch_size=args.batch_size, shuffle=False)
 
     image_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=args.n_cluster,
                                  encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
-    image_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "image_" + str(args.latent_dim)) + ".pt")
+    image_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "image_SDAE_" + str(args.latent_dim)) + ".pt")
     text_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=args.n_cluster,
                                 encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
-    text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "text_" + str(args.latent_dim)) + ".pt")
+    text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "text_SDAE_" + str(args.latent_dim)) + ".pt")
     mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder)
     mdec.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.resume))
     short_codes, y_pred = mdec.fit_predict(full_loader, args.batch_size)

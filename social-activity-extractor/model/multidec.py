@@ -57,11 +57,12 @@ class MDEC_encoder(nn.Module):
 
 
 class MultiDEC(nn.Module):
-    def __init__(self, device, image_encoder, text_encoder, alpha=1.):
+    def __init__(self, device, image_encoder, text_encoder, n_clusters=10, alpha=1.):
         super(self.__class__, self).__init__()
         self.device = device
         self.text_encoder = text_encoder
         self.image_encoder = image_encoder
+        self.n_clusters = n_clusters
         self.alpha = alpha
 
     def save_model(self, path):
@@ -92,7 +93,6 @@ class MultiDEC(nn.Module):
     def loss_function(self, p, q, r):
         def kld(target, pred):
             return torch.mean(torch.sum(target * torch.log(target / (pred + 1e-6)), dim=1))
-
         image_loss = kld(p, q)
         text_loss = kld(p, r)
         loss = image_loss + text_loss
@@ -107,8 +107,8 @@ class MultiDEC(nn.Module):
         return p
 
     def fit(self, X, lr=0.001, batch_size=256, num_epochs=10):
-        num = X.shape[0]
-        num_batch = int(math.ceil(1.0 * X.shape[0] / batch_size))
+        num = len(X)
+        num_batch = int(math.ceil(1.0 * len(X) / batch_size))
         '''X: tensor data'''
         self.to(self.device)
         print("=====Training DEC=======")
@@ -123,10 +123,10 @@ class MultiDEC(nn.Module):
             text_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, num)][2]
             image_inputs = Variable(image_batch).to(self.device)
             text_inputs = Variable(text_batch).to(self.device)
-            image_z, text_z = self.forward(image_inputs, text_inputs)
-            image_z.append(image_z.data.cpu())
-            text_z.append(text_z.data.cpu())
-            del image_batch, text_batch, image_inputs, text_inputs, image_z, text_z
+            _image_z, _text_z = self.forward(image_inputs, text_inputs)
+            image_z.append(_image_z.data.cpu())
+            text_z.append(_text_z.data.cpu())
+            del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
             torch.cuda.empty_cache()
         image_z = torch.cat(image_z, dim=0)
         text_z = torch.cat(text_z, dim=0)
@@ -146,7 +146,6 @@ class MultiDEC(nn.Module):
         for i in range(self.n_clusters):
             image_cluster_centers[i] = image_kmeans.cluster_centers_[image_ind[i]]
             text_cluster_centers[i] = text_kmeans.cluster_centers_[text_ind[i]]
-
         self.image_encoder.mu.data.copy_(torch.Tensor(image_cluster_centers))
         self.image_encoder.mu.data = self.image_encoder.mu.cpu()
         self.text_encoder.mu.data.copy_(torch.Tensor(text_cluster_centers))
@@ -163,10 +162,10 @@ class MultiDEC(nn.Module):
                 text_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, num)][2]
                 image_inputs = Variable(image_batch).to(self.device)
                 text_inputs = Variable(text_batch).to(self.device)
-                image_z, text_z = self.forward(image_inputs, text_inputs)
-                image_z.append(image_z.data.cpu())
-                text_z.append(text_z.data.cpu())
-                del image_batch, text_batch, image_inputs, text_inputs, image_z, text_z
+                _image_z, _text_z = self.forward(image_inputs, text_inputs)
+                image_z.append(_image_z.data.cpu())
+                text_z.append(_text_z.data.cpu())
+                del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
                 torch.cuda.empty_cache()
             image_z = torch.cat(image_z, dim=0)
             text_z = torch.cat(text_z, dim=0)
@@ -184,7 +183,7 @@ class MultiDEC(nn.Module):
                 optimizer.zero_grad()
                 image_inputs = Variable(image_batch).to(self.device)
                 text_inputs = Variable(text_batch).to(self.device)
-                target = Variable(pbatch).to(self.device)
+                target = Variable(pbatch)
 
                 image_z, text_z = self.forward(image_inputs, text_inputs)
                 qbatch, rbatch = self.soft_assignemt(image_z.cpu(), text_z.cpu())

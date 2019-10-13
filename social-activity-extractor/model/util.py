@@ -13,37 +13,39 @@ from tqdm import tqdm
 torch.manual_seed(42)
 
 
-def load_zip_csv_data(args, CONFIG):
-    full_data = []
+def load_multi_csv_data(args, CONFIG):
+    short_codes = []
+    image_data = []
+    text_data = []
     df_image_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.image_csv), index_col=0,
                           encoding='utf-8-sig')
     df_text_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.text_csv), index_col=0,
                           encoding='utf-8-sig')
     pbar = tqdm(total=df_image_data.shape[0])
     for index, row in df_image_data.iterrows():
-        full_data.append([index, np.array(row), np.array(df_text_data[index])])
+        short_codes.append(index)
+        image_data.append(np.array(row))
+        text_data.append(np.array(df_text_data.loc[index]))
         pbar.update(1)
     pbar.close()
-    train_size = int(args.split_rate * len(full_data))
-    val_size = len(full_data) - train_size
-    train_data, val_data = torch.utils.data.random_split(full_data, [train_size, val_size])
-    train_dataset, val_dataset = ZIPCSVDataset(train_data, CONFIG), \
-                                 ZIPCSVDataset(val_data, CONFIG)
-    return train_dataset, val_dataset
+    full_dataset = MultiCSVDataset(short_codes, np.array(image_data), np.array(text_data), CONFIG)
+    return full_dataset
 
 
-class ZIPCSVDataset(Dataset):
-    def __init__(self, data_list, CONFIG):
-        self.data = data_list
+class MultiCSVDataset(Dataset):
+    def __init__(self, short_codes, image_data, text_data, CONFIG):
+        self.short_codes = short_codes
+        self.image_data = image_data
+        self.text_data = text_data
         self.CONFIG = CONFIG
 
     def __len__(self):
-        return len(self.data)
+        return len(self.short_codes)
 
     def __getitem__(self, idx):
-        image_tensor = torch.from_numpy(self.data[idx][1]).type(torch.FloatTensor)
-        text_tensor = torch.from_numpy(self.data[idx][2]).type(torch.FloatTensor)
-        return self.data[idx][0], image_tensor, text_tensor
+        image_tensor = torch.from_numpy(self.image_data[idx]).type(torch.FloatTensor)
+        text_tensor = torch.from_numpy(self.text_data[idx]).type(torch.FloatTensor)
+        return self.short_codes[idx], image_tensor, text_tensor
 
 
 def load_csv_data(args, CONFIG):
