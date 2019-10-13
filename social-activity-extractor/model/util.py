@@ -13,6 +13,39 @@ from tqdm import tqdm
 torch.manual_seed(42)
 
 
+def load_zip_csv_data(args, CONFIG):
+    full_data = []
+    df_image_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.image_csv), index_col=0,
+                          encoding='utf-8-sig')
+    df_text_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.text_csv), index_col=0,
+                          encoding='utf-8-sig')
+    pbar = tqdm(total=df_image_data.shape[0])
+    for index, row in df_image_data.iterrows():
+        full_data.append([index, np.array(row), np.array(df_text_data[index])])
+        pbar.update(1)
+    pbar.close()
+    train_size = int(args.split_rate * len(full_data))
+    val_size = len(full_data) - train_size
+    train_data, val_data = torch.utils.data.random_split(full_data, [train_size, val_size])
+    train_dataset, val_dataset = ZIPCSVDataset(train_data, CONFIG), \
+                                 ZIPCSVDataset(val_data, CONFIG)
+    return train_dataset, val_dataset
+
+
+class ZIPCSVDataset(Dataset):
+    def __init__(self, data_list, CONFIG):
+        self.data = data_list
+        self.CONFIG = CONFIG
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        image_tensor = torch.from_numpy(self.data[idx][1]).type(torch.FloatTensor)
+        text_tensor = torch.from_numpy(self.data[idx][2]).type(torch.FloatTensor)
+        return self.data[idx][0], image_tensor, text_tensor
+
+
 def load_csv_data(args, CONFIG):
     full_data = []
     df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.target_csv), index_col=0,
@@ -40,7 +73,7 @@ class CSVDataset(Dataset):
 
     def __getitem__(self, idx):
         input_tensor = torch.from_numpy(self.data[idx][1]).type(torch.FloatTensor)
-        return input_tensor, self.data[idx][0]
+        return self.data[idx][0], input_tensor
 
 
 def load_text_data(args, CONFIG, word2idx):
@@ -395,23 +428,12 @@ def masking_noise(data, frac):
     return data_noise
 
 
-def acc(y_true, y_pred):
-    """
-    Calculate clustering accuracy. Require scikit-learn installed
-
-    # Arguments
-        y: true labels, numpy.array with shape `(n_samples,)`
-        y_pred: predicted labels, numpy.array with shape `(n_samples,)`
-
-    # Return
-        accuracy, in [0,1]
-    """
-    y_true = y_true.astype(np.int64)
-    assert y_pred.size == y_true.size
-    D = max(y_pred.max(), y_true.max()) + 1
+def align_cluster(image_cluster, text_cluster):
+    assert image_cluster.size == text_cluster.size
+    D = max(image_cluster.max(), text_cluster.max()) + 1
     w = np.zeros((D, D), dtype=np.int64)
-    for i in range(y_pred.size):
-        w[y_pred[i], y_true[i]] += 1
-    from sklearn.utils.linear_assignment_ import linear_assignment
-    ind = linear_assignment(w.max() - w)
-    return sum([w[i, j] for i, j in ind]) * 1.0 / y_pred.size
+    for i in range(image_cluster.size):
+        w[image_cluster[i], text_cluster[i]] += 1
+    from scipy.optimize import linear_sum_assignment
+    image_ind, text_ind = linear_sum_assignment(w.max() - w)
+    return image_ind, text_ind
