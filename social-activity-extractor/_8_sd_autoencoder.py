@@ -36,12 +36,12 @@ def main():
     # model
     parser.add_argument('-input_dim', type=int, default=300, help='size of input dimension')
     parser.add_argument('-latent_dim', type=int, default=10, help='size of latent variable')
-    parser.add_argument('-dropout', type=float, default=0.2, help='dropout rate')
+    parser.add_argument('-dropout', type=float, default=0, help='dropout rate')
     # train
     parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
     parser.add_argument('-gpu', type=str, default='cuda', help='gpu number')
     # option
-    parser.add_argument('-resume', type=str, default=None, help='filename of checkpoint to resume ')
+    parser.add_argument('-resume', action='store_true', default=False, help='whether using gpu server')
 
     args = parser.parse_args()
 
@@ -66,11 +66,16 @@ def train_reconstruction(args):
     exp = Experiment(args.target_modal + " SDAE " + str(args.latent_dim), capture_io=True)
     print(sdae)
 
+    if args.resume:
+        print("resume from checkpoint")
+        sdae.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.target_modal + "_sdae_" + str(args.latent_dim)) + ".pt")
+
     for arg, value in vars(args).items():
         exp.param(arg, value)
     try:
-        sdae.pretrain(train_loader, val_loader, lr=args.lr, batch_size=args.batch_size,
-                      num_epochs=args.pretrain_epochs, corrupt=0.2, loss_type="mse")
+        if not args.resume:
+            sdae.pretrain(train_loader, val_loader, lr=args.lr, batch_size=args.batch_size,
+                          num_epochs=args.pretrain_epochs, corrupt=0.2, loss_type="mse")
         sdae.fit(train_loader, val_loader, lr=args.lr, num_epochs=args.epochs, corrupt=0.2, loss_type="mse")
         sdae.save_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.target_modal + "_sdae_" + str(args.latent_dim)) + ".pt")
         print("Finish!!!")

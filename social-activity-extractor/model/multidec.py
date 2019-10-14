@@ -9,7 +9,7 @@ from torch.autograd import Variable
 
 import numpy as np
 import math
-from model.util import align_cluster
+from model.util import align_cluster, count_percentage
 from sklearn.cluster import KMeans
 
 
@@ -150,7 +150,6 @@ class MultiDEC(nn.Module):
         self.image_encoder.mu.data = self.image_encoder.mu.cpu()
         self.text_encoder.mu.data.copy_(torch.Tensor(text_cluster_centers))
         self.text_encoder.mu.data = self.text_encoder.mu.cpu()
-
         self.train()
         for epoch in range(num_epochs):
             # update the target distribution p
@@ -172,7 +171,8 @@ class MultiDEC(nn.Module):
 
             q, r = self.soft_assignemt(image_z, text_z)
             p = self.target_distribution(q, r).data
-
+            y_pred = torch.argmax(p, dim=1).numpy()
+            count_percentage(y_pred)
             # train 1 epoch
             train_loss = 0.0
             for batch_idx in range(num_batch):
@@ -199,9 +199,11 @@ class MultiDEC(nn.Module):
                 epoch + 1, train_loss / num))
 
     def fit_predict(self, X, batch_size=256):
-        num = X.shape[0]
-        num_batch = int(math.ceil(1.0 * X.shape[0] / batch_size))
+        num = len(X)
+        num_batch = int(math.ceil(1.0 * len(X) / batch_size))
         self.to(self.device)
+        self.image_encoder.mu.data = self.image_encoder.mu.cpu()
+        self.text_encoder.mu.data = self.text_encoder.mu.cpu()
 
         self.eval()
         image_z = []
@@ -213,15 +215,17 @@ class MultiDEC(nn.Module):
             text_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, num)][2]
             image_inputs = Variable(image_batch).to(self.device)
             text_inputs = Variable(text_batch).to(self.device)
-            image_z, text_z = self.forward(image_inputs, text_inputs)
-            image_z.append(image_z.data.cpu())
-            text_z.append(text_z.data.cpu())
-            del image_batch, text_batch, image_inputs, text_inputs, image_z, text_z
+            _image_z, _text_z = self.forward(image_inputs, text_inputs)
+            image_z.append(_image_z.data.cpu())
+            text_z.append(_text_z.data.cpu())
+            del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
             torch.cuda.empty_cache()
+        short_codes = np.concatenate(short_codes, axis=0)
         image_z = torch.cat(image_z, dim=0)
         text_z = torch.cat(text_z, dim=0)
 
         q, r = self.soft_assignemt(image_z, text_z)
         p = self.target_distribution(q, r).data
         y_pred = torch.argmax(p, dim=1).numpy()
+        count_percentage(y_pred)
         return short_codes, y_pred

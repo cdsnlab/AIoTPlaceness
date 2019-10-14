@@ -1,6 +1,12 @@
+import collections
+
 import torch
 import torchvision.transforms as transforms
 from torchvision.datasets.folder import pil_loader
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.model_selection import train_test_split
+
+import torch.nn.functional as F
 from torch.utils.data import Dataset, random_split
 import math
 import os
@@ -14,18 +20,23 @@ torch.manual_seed(42)
 
 
 def load_multi_csv_data(args, CONFIG):
+    df_image_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.image_csv), index_col=0,
+                                encoding='utf-8-sig')
+    scaled_image_data = MinMaxScaler((0, 5)).fit_transform(np.array(df_image_data.values))
+    df_scaled_image_data = pd.DataFrame(data=scaled_image_data, index=df_image_data.index,
+                                        columns=df_image_data.columns)
+    df_text_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.text_csv), index_col=0,
+                               encoding='utf-8-sig')
+    scaled_text_data = MinMaxScaler((0, 5)).fit_transform(np.array(df_text_data.values))
+    df_scaled_text_data = pd.DataFrame(data=scaled_text_data, index=df_text_data.index, columns=df_text_data.columns)
     short_codes = []
     image_data = []
     text_data = []
-    df_image_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.image_csv), index_col=0,
-                          encoding='utf-8-sig')
-    df_text_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.text_csv), index_col=0,
-                          encoding='utf-8-sig')
-    pbar = tqdm(total=df_image_data.shape[0])
-    for index, row in df_image_data.iterrows():
+    pbar = tqdm(total=df_scaled_image_data.shape[0])
+    for index, row in df_scaled_image_data.iterrows():
         short_codes.append(index)
         image_data.append(np.array(row))
-        text_data.append(np.array(df_text_data.loc[index]))
+        text_data.append(np.array(df_scaled_text_data.loc[index]))
         pbar.update(1)
     pbar.close()
     full_dataset = MultiCSVDataset(short_codes, np.array(image_data), np.array(text_data), CONFIG)
@@ -49,33 +60,45 @@ class MultiCSVDataset(Dataset):
 
 
 def load_csv_data(args, CONFIG):
-    full_data = []
     df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.target_csv), index_col=0,
                           encoding='utf-8-sig')
-    pbar = tqdm(total=df_data.shape[0])
-    for index, row in df_data.iterrows():
-        full_data.append([index, np.array(row)])
+    scaled_data = StandardScaler().fit_transform(np.array(df_data.values))
+    df_scaled = pd.DataFrame(data=scaled_data, index=df_data.index, columns=df_data.columns)
+    df_train, df_val = train_test_split(df_scaled, test_size=args.split_rate)
+    train_short_codes = []
+    train_data = []
+    pbar = tqdm(total=df_train.shape[0])
+    for index, row in df_train.iterrows():
+        train_short_codes.append(index)
+        train_data.append(np.array(row))
         pbar.update(1)
     pbar.close()
-    train_size = int(args.split_rate * len(full_data))
-    val_size = len(full_data) - train_size
-    train_data, val_data = torch.utils.data.random_split(full_data, [train_size, val_size])
-    train_dataset, val_dataset = CSVDataset(train_data, CONFIG), \
-                                 CSVDataset(val_data, CONFIG)
+    train_dataset = CSVDataset(train_short_codes, np.array(train_data), CONFIG)
+
+    val_short_codes = []
+    val_data = []
+    pbar = tqdm(total=df_val.shape[0])
+    for index, row in df_val.iterrows():
+        val_short_codes.append(index)
+        val_data.append(np.array(row))
+        pbar.update(1)
+    pbar.close()
+    val_dataset = CSVDataset(val_short_codes, np.array(val_data), CONFIG)
     return train_dataset, val_dataset
 
 
 class CSVDataset(Dataset):
-    def __init__(self, data_list, CONFIG):
-        self.data = data_list
+    def __init__(self, short_codes, data, CONFIG):
+        self.short_codes = short_codes
+        self.data = data
         self.CONFIG = CONFIG
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
-        input_tensor = torch.from_numpy(self.data[idx][1]).type(torch.FloatTensor)
-        return self.data[idx][0], input_tensor
+        input_tensor = torch.from_numpy(self.data[idx]).type(torch.FloatTensor)
+        return self.short_codes[idx], input_tensor
 
 
 def load_text_data(args, CONFIG, word2idx):
@@ -439,3 +462,9 @@ def align_cluster(image_cluster, text_cluster):
     from scipy.optimize import linear_sum_assignment
     image_ind, text_ind = linear_sum_assignment(w.max() - w)
     return image_ind, text_ind
+
+
+def count_percentage(cluster_labels):
+    count = collections.Counter(cluster_labels)
+    for k in count:
+        print("cluster {} : {:.2%}".format(str(k), count[k] / len(cluster_labels)))
