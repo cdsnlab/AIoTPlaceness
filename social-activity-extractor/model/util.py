@@ -465,6 +465,8 @@ def align_cluster(image_cluster, text_cluster):
     print(pd.DataFrame(data=w, index=range(D), columns=range(D)))
     from scipy.optimize import linear_sum_assignment
     image_ind, text_ind = linear_sum_assignment(w.max() - w)
+    print(image_ind)
+    print(text_ind)
     return image_ind, text_ind
 
 

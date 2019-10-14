@@ -1,3 +1,5 @@
+import datetime
+
 import torch
 import torch.nn as nn
 from torch.nn import Parameter
@@ -117,7 +119,7 @@ class MultiDEC(nn.Module):
         # optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=lr)
         optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=lr, momentum=0.9)
 
-        print("Extracting initial features.")
+        print("Extracting initial features at %s" % (str(datetime.datetime.now())))
         image_z = []
         text_z = []
         for batch_idx in range(num_batch):
@@ -133,12 +135,14 @@ class MultiDEC(nn.Module):
         image_z = torch.cat(image_z, dim=0)
         text_z = torch.cat(text_z, dim=0)
 
-        print("Initializing cluster centers with kmeans.")
+        print("Initializing cluster centers with kmeans at %s" % (str(datetime.datetime.now())))
         image_kmeans = KMeans(self.n_clusters, n_init=20)
         image_pred = image_kmeans.fit_predict(image_z.data.cpu().numpy())
+        print("Image kmeans completed at %s" % (str(datetime.datetime.now())))
 
         text_kmeans = KMeans(self.n_clusters, n_init=20)
         text_pred = text_kmeans.fit_predict(text_z.data.cpu().numpy())
+        print("Text kmeans completed at %s" % (str(datetime.datetime.now())))
 
         image_ind, text_ind = align_cluster(image_pred, text_pred)
 
@@ -197,8 +201,8 @@ class MultiDEC(nn.Module):
                 del image_batch, text_batch, image_inputs, text_inputs, image_z, text_z
                 torch.cuda.empty_cache()
 
-            print("#Epoch %3d: Loss: %.4f" % (
-                epoch + 1, train_loss / num))
+            print("#Epoch %3d: Loss: %.4f at %s" % (
+                epoch + 1, train_loss / num, str(datetime.datetime.now())))
 
     def fit_predict(self, X, batch_size=256):
         num = len(X)
