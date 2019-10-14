@@ -2,6 +2,11 @@
 import os
 import collections
 import shutil
+
+from torchvision import transforms
+from torchvision.datasets.folder import pil_loader
+from torchvision.utils import save_image
+
 import config
 import re
 import sys
@@ -232,7 +237,7 @@ def test(target_dataset, target_clustering):
 
 
 def sample_from_cluster_text_only(target_csv, target_dataset, target_clustering):
-    sample_length = 50
+    sample_length = 10
     df_clustered = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, header=0, encoding='utf-8-sig')
     df_clustered.index.name = 'short_code'
     print(df_clustered.iloc[:100])
@@ -291,6 +296,82 @@ def sample_from_cluster_text_only(target_csv, target_dataset, target_clustering)
     pbar.close()
 
 
+def sample_from_cluster_text_and_image(target_csv, target_dataset, target_clustering):
+    sample_length = 10
+    df_clustered = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, header=0, encoding='utf-8-sig')
+    df_clustered.index.name = 'short_code'
+    print(df_clustered.iloc[:100])
+    print(df_clustered.shape)
+    num_cluster = np.max(df_clustered, axis=0)[0] + 1
+
+    result_path = os.path.join(CONFIG.RESULT_PATH, 'text_only')
+    if not os.path.exists(result_path):
+        os.mkdir(result_path)
+    result_path = os.path.join(result_path, target_dataset)
+    if not os.path.exists(result_path):
+        os.mkdir(result_path)
+    result_path = os.path.join(result_path, target_clustering)
+    if not os.path.exists(result_path):
+        os.mkdir(result_path)
+    for cluster_id in range(num_cluster):
+        cluster_path = os.path.join(result_path, str(cluster_id))
+        if not os.path.exists(cluster_path):
+            os.mkdir(cluster_path)
+
+    print("making cluster dict...")
+    cluster_dict = {i: [] for i in range(num_cluster)}
+    pbar = tqdm(total=df_clustered.shape[0])
+    for index, row in df_clustered.iterrows():
+        cluster_dict[row[0]].append(index)
+        pbar.update(1)
+    pbar.close()
+
+    print("making sampled short_code dict...")
+    short_code_dict = {}
+    pbar = tqdm(total=len(cluster_dict))
+    for key, value in cluster_dict.items():
+        if len(value) > sample_length:
+            sampled = random.sample(value, sample_length)
+        else:
+            sampled = value
+        for short_code in sampled:
+            short_code_dict[short_code] = key
+        pbar.update(1)
+    pbar.close()
+
+    img_transform = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor()
+    ])
+    image_dict = {k: [] for k in range(num_cluster)}
+    text_dict = {k: "" for k in range(num_cluster)}
+    print("sampling posts...")
+    df_original = pd.read_csv(os.path.join(CONFIG.TARGET_PATH, 'SEOUL_SUBWAY_DATA-3.csv'), encoding='utf-8-sig')
+    pbar = tqdm(total=df_original.shape[0])
+    for index, row in df_original.iterrows():
+        if row[1] in short_code_dict:
+            cluster_id = short_code_dict[row[1]]
+            image_path = row[7]
+            image_tensor = img_transform(pil_loader(image_path))
+            image_dict[cluster_id].append(image_tensor)
+            text_dict[cluster_id] = text_dict[cluster_id] + row[2] + "\n"
+        pbar.update(1)
+    pbar.close()
+
+    pbar = tqdm(total=num_cluster)
+    print("copying sampled posts...")
+    for cluster_id in range(num_cluster):
+        caption_path = os.path.join(result_path, str(cluster_id), 'caption.txt')
+        image_path = os.path.join(result_path, str(cluster_id), 'images.png')
+        f_wr = open(caption_path, 'w', encoding='utf-8')
+        f_wr.write(text_dict[cluster_id])
+        f_wr.close()
+        save_image(image_dict[cluster_id], image_path, nrow=2)
+        pbar.update(1)
+    pbar.close()
+
+
 def make_word_cloud(target_csv, target_dataset, target_clustering):
     df_clustered = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, header=0, encoding='utf-8-sig')
     df_clustered.index.name = 'short_code'
@@ -331,6 +412,7 @@ def make_word_cloud(target_csv, target_dataset, target_clustering):
     for index, row in df_data.iterrows():
         word_list = row[1].split()
         if index not in cluster_dict:
+            pbar.update(1)
             continue
         cluster_label = cluster_dict[index]
         for word in word_list:
@@ -382,6 +464,9 @@ def run(option):
     elif option == 5:
         sample_from_cluster_text_only(target_csv=sys.argv[2], target_dataset=sys.argv[3], target_clustering=sys.argv[4])
     elif option == 6:
+        sample_from_cluster_text_and_image(target_csv=sys.argv[2], target_dataset=sys.argv[3],
+                                           target_clustering=sys.argv[4])
+    elif option == 7:
         make_word_cloud(target_csv=sys.argv[2], target_dataset=sys.argv[3], target_clustering=sys.argv[4])
     else:
         print("This option does not exist!\n")
