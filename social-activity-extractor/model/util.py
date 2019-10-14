@@ -23,12 +23,14 @@ torch.manual_seed(42)
 def load_multi_csv_data(args, CONFIG):
     df_image_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.image_csv), index_col=0,
                                 encoding='utf-8-sig')
-    scaled_image_data = MinMaxScaler((0, 5)).fit_transform(np.array(df_image_data.values))
+    scaled_image_data = StandardScaler().fit_transform(np.array(df_image_data.values))
+    # scaled_image_data = MinMaxScaler((0, 5)).fit_transform(np.array(df_image_data.values))
     df_scaled_image_data = pd.DataFrame(data=scaled_image_data, index=df_image_data.index,
                                         columns=df_image_data.columns)
     df_text_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.text_csv), index_col=0,
                                encoding='utf-8-sig')
-    scaled_text_data = MinMaxScaler((0, 5)).fit_transform(np.array(df_text_data.values))
+    scaled_text_data = StandardScaler().fit_transform(np.array(df_text_data.values))
+    # scaled_text_data = MinMaxScaler((0, 5)).fit_transform(np.array(df_text_data.values))
     df_scaled_text_data = pd.DataFrame(data=scaled_text_data, index=df_text_data.index, columns=df_text_data.columns)
     short_codes = []
     image_data = []
