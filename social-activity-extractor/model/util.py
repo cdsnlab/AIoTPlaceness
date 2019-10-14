@@ -1,4 +1,5 @@
 import collections
+import operator
 
 import torch
 import torchvision.transforms as transforms
@@ -459,12 +460,14 @@ def align_cluster(image_cluster, text_cluster):
     w = np.zeros((D, D), dtype=np.int64)
     for i in range(image_cluster.size):
         w[image_cluster[i], text_cluster[i]] += 1
+    print(pd.DataFrame(data=w, index=range(D), columns=range(D)))
     from scipy.optimize import linear_sum_assignment
     image_ind, text_ind = linear_sum_assignment(w.max() - w)
     return image_ind, text_ind
 
 
 def count_percentage(cluster_labels):
-    count = collections.Counter(cluster_labels)
-    for k in count:
-        print("cluster {} : {:.2%}".format(str(k), count[k] / len(cluster_labels)))
+    count = dict(collections.Counter(cluster_labels))
+    sorted_count = sorted(count.items(), key=lambda x: x[0], reverse=False)
+    for cluster in sorted_count:
+        print("cluster {} : {:.2%}".format(str(cluster[0]), cluster[1] / len(cluster_labels)))

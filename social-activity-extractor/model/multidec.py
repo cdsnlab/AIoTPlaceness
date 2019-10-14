@@ -93,8 +93,10 @@ class MultiDEC(nn.Module):
     def loss_function(self, p, q, r):
         def kld(target, pred):
             return torch.mean(torch.sum(target * torch.log(target / (pred + 1e-6)), dim=1))
-        image_loss = kld(p, q)
-        text_loss = kld(p, r)
+        h = torch.mean(p, dim=0, keepdim=True)
+        u = torch.full_like(h, fill_value=1/h.size()[1])
+        image_loss = kld(p, q) + kld(h, u)
+        text_loss = kld(p, r) + kld(h, u)
         loss = image_loss + text_loss
         return loss
 
