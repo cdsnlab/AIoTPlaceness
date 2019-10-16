@@ -71,14 +71,14 @@ def train_multidec(args):
                                 encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
     text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "text_sdae_" + str(args.latent_dim)) + ".pt")
     mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder, n_clusters=args.n_clusters)
-    exp = Experiment("MDEC " + str(args.latent_dim), capture_io=True)
+    exp = Experiment("MDEC " + str(args.latent_dim) + '_' + str(args.n_clusters), capture_io=True)
     print(mdec)
 
     for arg, value in vars(args).items():
         exp.param(arg, value)
     try:
         mdec.fit(full_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs)
-        mdec.save_model(os.path.join(CONFIG.CHECKPOINT_PATH, "mdec_" + str(args.latent_dim)) + ".pt")
+        mdec.save_model(os.path.join(CONFIG.CHECKPOINT_PATH, "mdec_" + str(args.latent_dim)) + '_' + str(args.n_clusters) + ".pt")
         print("Finish!!!")
 
     finally:
@@ -100,7 +100,7 @@ def eval_multidec(args):
                                 encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
     text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "text_sdae_" + str(args.latent_dim)) + ".pt")
     mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder)
-    mdec.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "mdec_" + str(args.latent_dim)) + ".pt")
+    mdec.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "mdec_" + str(args.latent_dim)) + '_' + str(args.n_clusters) + ".pt")
     short_codes, y_pred = mdec.fit_predict(full_dataset, args.batch_size)
 
     result_df = pd.DataFrame(data=y_pred, index=short_codes, columns=['cluster'])
