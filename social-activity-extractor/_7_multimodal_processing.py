@@ -304,19 +304,12 @@ def sample_from_cluster_text_and_image(target_csv, target_dataset, target_cluste
     print(df_clustered.shape)
     num_cluster = np.max(df_clustered, axis=0)[0] + 1
 
-    result_path = os.path.join(CONFIG.RESULT_PATH, 'text_only')
-    if not os.path.exists(result_path):
-        os.mkdir(result_path)
-    result_path = os.path.join(result_path, target_dataset)
+    result_path = os.path.join(CONFIG.RESULT_PATH, target_dataset)
     if not os.path.exists(result_path):
         os.mkdir(result_path)
     result_path = os.path.join(result_path, target_clustering)
     if not os.path.exists(result_path):
         os.mkdir(result_path)
-    for cluster_id in range(num_cluster):
-        cluster_path = os.path.join(result_path, str(cluster_id))
-        if not os.path.exists(cluster_path):
-            os.mkdir(cluster_path)
 
     print("making cluster dict...")
     cluster_dict = {i: [] for i in range(num_cluster)}
@@ -359,11 +352,11 @@ def sample_from_cluster_text_and_image(target_csv, target_dataset, target_cluste
         pbar.update(1)
     pbar.close()
 
-    pbar = tqdm(total=num_cluster)
     print("copying sampled posts...")
+    pbar = tqdm(total=num_cluster)
     for cluster_id in range(num_cluster):
-        caption_path = os.path.join(result_path, str(cluster_id), 'caption.txt')
-        image_path = os.path.join(result_path, str(cluster_id), 'images.png')
+        caption_path = os.path.join(result_path, 'caption_' + str(cluster_id) + '.txt')
+        image_path = os.path.join(result_path, 'images_' + str(cluster_id) + '.png')
         f_wr = open(caption_path, 'w', encoding='utf-8')
         f_wr.write(text_dict[cluster_id])
         f_wr.close()
@@ -392,10 +385,7 @@ def make_word_cloud(target_csv, target_dataset, target_clustering):
 
     vocab_array = np.zeros((len(vocab2index), num_cluster))
 
-    result_path = os.path.join(CONFIG.RESULT_PATH, 'text_only')
-    if not os.path.exists(result_path):
-        os.mkdir(result_path)
-    result_path = os.path.join(result_path, target_dataset)
+    result_path = os.path.join(CONFIG.RESULT_PATH, target_dataset)
     if not os.path.exists(result_path):
         os.mkdir(result_path)
     result_path = os.path.join(result_path, target_clustering)
@@ -446,7 +436,7 @@ def make_word_cloud(target_csv, target_dataset, target_clustering):
         plt.imshow(array, interpolation="bilinear")
         plt.axis("off")
         plt.title("Word cloud of cluster " + str(cluster_id))
-        plt.savefig(os.path.join(result_path, str(cluster_id), 'wordcloud_' + str(cluster_id) + '.png'))
+        plt.savefig(os.path.join(result_path, 'wordcloud_' + str(cluster_id) + '.png'))
         plt.close()
 
 
