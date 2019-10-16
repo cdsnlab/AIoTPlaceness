@@ -106,7 +106,7 @@ def eval_multidec(args):
     result_df = pd.DataFrame(data=y_pred, index=short_codes, columns=['cluster'])
     result_df.index.name = "short_code"
     result_df.sort_index(inplace=True)
-    result_df.to_csv(os.path.join(CONFIG.CSV_PATH, 'multidec_result_' + str(args.latent_dim) + '.csv'), encoding='utf-8-sig')
+    result_df.to_csv(os.path.join(CONFIG.CSV_PATH, 'multidec_result_' + str(args.latent_dim) + '_' + str(args.n_clusters) + '.csv'), encoding='utf-8-sig')
 
 
 if __name__ == '__main__':

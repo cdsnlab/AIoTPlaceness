@@ -296,7 +296,8 @@ def sample_from_cluster_text_only(target_csv, target_dataset, target_clustering)
     pbar.close()
 
 
-def sample_from_cluster_text_and_image(target_csv, target_dataset, target_clustering):
+def sample_from_cluster_text_and_image(target_csv, target_dataset):
+    target_clustering = target_csv.reaplce('.csv', '')
     sample_length = 10
     df_clustered = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, header=0, encoding='utf-8-sig')
     df_clustered.index.name = 'short_code'
@@ -365,7 +366,8 @@ def sample_from_cluster_text_and_image(target_csv, target_dataset, target_cluste
     pbar.close()
 
 
-def make_word_cloud(target_csv, target_dataset, target_clustering):
+def make_word_cloud(target_csv, target_dataset):
+    target_clustering = target_csv.reaplce('.csv', '')
     df_clustered = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, header=0, encoding='utf-8-sig')
     df_clustered.index.name = 'short_code'
     cluster_dict = df_clustered['cluster'].to_dict()
@@ -391,10 +393,6 @@ def make_word_cloud(target_csv, target_dataset, target_clustering):
     result_path = os.path.join(result_path, target_clustering)
     if not os.path.exists(result_path):
         os.mkdir(result_path)
-    for cluster_id in range(num_cluster):
-        cluster_path = os.path.join(result_path, str(cluster_id))
-        if not os.path.exists(cluster_path):
-            os.mkdir(cluster_path)
 
     df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, target_dataset, 'posts.csv'), index_col=0, header=None,
                           encoding='utf-8-sig')
@@ -454,10 +452,9 @@ def run(option):
     elif option == 5:
         sample_from_cluster_text_only(target_csv=sys.argv[2], target_dataset=sys.argv[3], target_clustering=sys.argv[4])
     elif option == 6:
-        sample_from_cluster_text_and_image(target_csv=sys.argv[2], target_dataset=sys.argv[3],
-                                           target_clustering=sys.argv[4])
+        sample_from_cluster_text_and_image(target_csv=sys.argv[2], target_dataset=sys.argv[3])
     elif option == 7:
-        make_word_cloud(target_csv=sys.argv[2], target_dataset=sys.argv[3], target_clustering=sys.argv[4])
+        make_word_cloud(target_csv=sys.argv[2], target_dataset=sys.argv[3])
     else:
         print("This option does not exist!\n")
 
