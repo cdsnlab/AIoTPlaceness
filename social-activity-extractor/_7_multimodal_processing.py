@@ -297,7 +297,6 @@ def sample_from_cluster_text_only(target_csv, target_dataset, target_clustering)
 
 
 def sample_from_cluster_text_and_image(target_csv, target_dataset):
-    target_clustering = target_csv.reaplce('.csv', '')
     sample_length = 10
     df_clustered = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, header=0, encoding='utf-8-sig')
     df_clustered.index.name = 'short_code'
@@ -308,6 +307,7 @@ def sample_from_cluster_text_and_image(target_csv, target_dataset):
     result_path = os.path.join(CONFIG.RESULT_PATH, target_dataset)
     if not os.path.exists(result_path):
         os.mkdir(result_path)
+    target_clustering = target_csv.replace('.csv', '')
     result_path = os.path.join(result_path, target_clustering)
     if not os.path.exists(result_path):
         os.mkdir(result_path)
@@ -367,7 +367,6 @@ def sample_from_cluster_text_and_image(target_csv, target_dataset):
 
 
 def make_word_cloud(target_csv, target_dataset):
-    target_clustering = target_csv.reaplce('.csv', '')
     df_clustered = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, header=0, encoding='utf-8-sig')
     df_clustered.index.name = 'short_code'
     cluster_dict = df_clustered['cluster'].to_dict()
@@ -390,6 +389,7 @@ def make_word_cloud(target_csv, target_dataset):
     result_path = os.path.join(CONFIG.RESULT_PATH, target_dataset)
     if not os.path.exists(result_path):
         os.mkdir(result_path)
+    target_clustering = target_csv.replace('.csv', '')
     result_path = os.path.join(result_path, target_clustering)
     if not os.path.exists(result_path):
         os.mkdir(result_path)
