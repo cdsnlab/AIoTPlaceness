@@ -78,8 +78,8 @@ class MultiDEC(nn.Module):
         self.load_state_dict(model_dict)
 
     def forward(self, image_x, text_x):
-        image_z = self.text_encoder(image_x)
-        text_z = self.image_encoder(text_x)
+        image_z = self.image_encoder(image_x)
+        text_z = self.text_encoder(text_x)
         return image_z, text_z
 
     def soft_assignemt(self, image_z, text_z):
