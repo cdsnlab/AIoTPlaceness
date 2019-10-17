@@ -105,8 +105,8 @@ class MultiDEC(nn.Module):
     def loss_function(self, p, q, r):
         h = torch.mean(p, dim=0, keepdim=True)
         u = torch.full_like(h, fill_value=1/h.size()[1])
-        image_loss = F.kl_div(q.log(), p) + F.kl_div(u.log(), h)
-        text_loss = F.kl_div(r.log(), p) + F.kl_div(u.log(), h)
+        image_loss = F.kl_div(q.log(), p, reduction='batchmean') + F.kl_div(u.log(), h, reduction='batchmean')
+        text_loss = F.kl_div(r.log(), p, reduction='batchmean') + F.kl_div(u.log(), h, reduction='batchmean')
         loss = image_loss + text_loss
         return loss
 
