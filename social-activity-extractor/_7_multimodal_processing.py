@@ -316,12 +316,13 @@ def sample_from_cluster_text_and_image(target_csv, target_dataset, confidence):
     print("copying sampled posts...")
     pbar = tqdm(total=num_cluster)
     for cluster_id in range(num_cluster):
-        caption_path = os.path.join(result_path, 'caption_' + str(cluster_id) + '.txt')
-        image_path = os.path.join(result_path, 'images_' + str(cluster_id) + '.png')
-        f_wr = open(caption_path, 'w', encoding='utf-8')
-        f_wr.write(text_dict[cluster_id])
-        f_wr.close()
-        save_image(image_dict[cluster_id], image_path, nrow=2)
+        if len(text_dict[cluster_id]) != 0 and len(image_dict[cluster_id]) != 0:
+            caption_path = os.path.join(result_path, 'caption_' + str(cluster_id) + '.txt')
+            image_path = os.path.join(result_path, 'images_' + str(cluster_id) + '.png')
+            f_wr = open(caption_path, 'w', encoding='utf-8')
+            f_wr.write(text_dict[cluster_id])
+            f_wr.close()
+            save_image(image_dict[cluster_id], image_path, nrow=2)
         pbar.update(1)
     pbar.close()
 
