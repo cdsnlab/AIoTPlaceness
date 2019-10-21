@@ -245,5 +245,4 @@ class MultiDEC(nn.Module):
         y_confidence = y_confidence.numpy()
         y_pred = y_pred.numpy()
         count_percentage(y_pred)
-        y_pred = np.concatenate([np.expand_dims(y_pred, axis=1), np.expand_dims(y_confidence, axis=1)], axis=1)
-        return short_codes, y_pred
+        return short_codes, y_pred, y_confidence

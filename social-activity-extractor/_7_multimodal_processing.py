@@ -28,10 +28,9 @@ from sklearn.cluster import Birch, SpectralClustering, AffinityPropagation, Aggl
 
 CONFIG = config.Config
 
-num_cluster = 24
-
 
 def do_clustering(target_csv, cluster_method):
+    num_cluster = 24
     df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv + '.csv'), index_col=0, header=0,
                           encoding='utf-8-sig')
     df_data.index.name = 'short_code'
@@ -92,6 +91,7 @@ def count_percentage(cluster_labels):
 
 
 def do_spectral_clustering(target_csv):
+    num_cluster = 24
     df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv + '.csv'), index_col=0, header=0,
                           encoding='utf-8-sig')
     df_data.index.name = 'short_code'
@@ -296,18 +296,22 @@ def sample_from_cluster_text_only(target_csv, target_dataset, target_clustering)
     pbar.close()
 
 
-def sample_from_cluster_text_and_image(target_csv, target_dataset):
+def sample_from_cluster_text_and_image(target_csv, target_dataset, confidence):
     sample_length = 10
     df_clustered = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, header=0, encoding='utf-8-sig')
     df_clustered.index.name = 'short_code'
-    print(df_clustered.iloc[:100])
-    print(df_clustered.shape)
-    num_cluster = np.max(df_clustered, axis=0)[0] + 1
+
+    confidence = float(confidence)
+    if confidence != 0.:
+        print("length of full data is " + str(len(df_clustered)))
+        df_clustered = df_clustered[df_clustered['confidence'] > confidence]
+        print("length of data above confidence is " + str(len(df_clustered)))
+    num_cluster = int(np.max(df_clustered, axis=0)[0] + 1)
 
     result_path = os.path.join(CONFIG.RESULT_PATH, target_dataset)
     if not os.path.exists(result_path):
         os.mkdir(result_path)
-    target_clustering = target_csv.replace('.csv', '')
+    target_clustering = target_csv.replace('.csv', '') + '_' + str(confidence)
     result_path = os.path.join(result_path, target_clustering)
     if not os.path.exists(result_path):
         os.mkdir(result_path)
@@ -366,11 +370,18 @@ def sample_from_cluster_text_and_image(target_csv, target_dataset):
     pbar.close()
 
 
-def make_word_cloud(target_csv, target_dataset):
+def make_word_cloud(target_csv, target_dataset, confidence):
     df_clustered = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, header=0, encoding='utf-8-sig')
     df_clustered.index.name = 'short_code'
-    cluster_dict = df_clustered['cluster'].to_dict()
-    num_cluster = np.max(df_clustered, axis=0)[0] + 1
+
+    confidence = float(confidence)
+    if confidence != 0.:
+        print("length of full data is " + str(len(df_clustered)))
+        df_clustered = df_clustered[df_clustered['confidence'] > confidence]
+        print("length of data above confidence is " + str(len(df_clustered)))
+
+    cluster_dict = df_clustered['cluster_id'].to_dict()
+    num_cluster = int(np.max(df_clustered, axis=0)[0] + 1)
 
     model_name = 'DOC2VEC_' + target_dataset + '.model'
     model = Doc2Vec.load(os.path.join(CONFIG.EMBEDDING_PATH, model_name))
@@ -389,7 +400,7 @@ def make_word_cloud(target_csv, target_dataset):
     result_path = os.path.join(CONFIG.RESULT_PATH, target_dataset)
     if not os.path.exists(result_path):
         os.mkdir(result_path)
-    target_clustering = target_csv.replace('.csv', '')
+    target_clustering = target_csv.replace('.csv', '') + '_' + str(confidence)
     result_path = os.path.join(result_path, target_clustering)
     if not os.path.exists(result_path):
         os.mkdir(result_path)
@@ -452,9 +463,9 @@ def run(option):
     elif option == 5:
         sample_from_cluster_text_only(target_csv=sys.argv[2], target_dataset=sys.argv[3], target_clustering=sys.argv[4])
     elif option == 6:
-        sample_from_cluster_text_and_image(target_csv=sys.argv[2], target_dataset=sys.argv[3])
+        sample_from_cluster_text_and_image(target_csv=sys.argv[2], target_dataset=sys.argv[3], confidence=sys.argv[4])
     elif option == 7:
-        make_word_cloud(target_csv=sys.argv[2], target_dataset=sys.argv[3])
+        make_word_cloud(target_csv=sys.argv[2], target_dataset=sys.argv[3], confidence=sys.argv[4])
     else:
         print("This option does not exist!\n")
 
