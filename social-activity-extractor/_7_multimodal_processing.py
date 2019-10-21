@@ -286,9 +286,10 @@ def sample_from_cluster_text_and_image(target_csv, target_dataset, confidence):
             sampled = random.sample(value, sample_length)
         else:
             sampled = value
-        for short_code in sampled:
-            short_code_dict[short_code] = key
         print("number of items in cluster " + str(key) + " is " + str(len(sampled)))
+        if len(sampled) != 0:
+            for short_code in sampled:
+                short_code_dict[short_code] = key
         pbar.update(1)
     pbar.close()
 
