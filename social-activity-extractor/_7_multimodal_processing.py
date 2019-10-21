@@ -236,62 +236,16 @@ def test(target_dataset, target_clustering):
         print(np.mean(cluster_len[cluster]))
 
 
-def sample_from_cluster_text_only(target_csv, target_dataset, target_clustering):
-    sample_length = 10
-    df_clustered = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, header=0, encoding='utf-8-sig')
-    df_clustered.index.name = 'short_code'
-    print(df_clustered.iloc[:100])
-    print(df_clustered.shape)
-    num_cluster = np.max(df_clustered, axis=0)[0] + 1
+def test2(target_dataset):
+    df_data = pd.read_csv(os.path.join(CONFIG.TARGET_PATH, 'SEOUL_SUBWAY_DATA-3.csv'), encoding='utf-8-sig')
 
-    result_path = os.path.join(CONFIG.RESULT_PATH, 'text_only')
-    if not os.path.exists(result_path):
-        os.mkdir(result_path)
-    result_path = os.path.join(result_path, target_dataset)
-    if not os.path.exists(result_path):
-        os.mkdir(result_path)
-    result_path = os.path.join(result_path, target_clustering)
-    if not os.path.exists(result_path):
-        os.mkdir(result_path)
-    for cluster_id in range(num_cluster):
-        cluster_path = os.path.join(result_path, str(cluster_id))
-        if not os.path.exists(cluster_path):
-            os.mkdir(cluster_path)
-
-    print("making cluster dict...")
-    cluster_dict = {i: [] for i in range(num_cluster)}
-    pbar = tqdm(total=df_clustered.shape[0])
-    for index, row in df_clustered.iterrows():
-        cluster_dict[row[0]].append(index)
-        pbar.update(1)
-    pbar.close()
-
-    print("making sampled short_code dict...")
-    short_code_dict = {}
-    pbar = tqdm(total=len(cluster_dict))
-    for key, value in cluster_dict.items():
-        if len(value) > sample_length:
-            sampled = random.sample(value, sample_length)
-        else:
-            sampled = value
-        for short_code in sampled:
-            short_code_dict[short_code] = key
-        pbar.update(1)
-    pbar.close()
-
-    print("copying sampled posts...")
-    df_original = pd.read_csv(os.path.join(CONFIG.TARGET_PATH, 'SEOUL_SUBWAY_DATA-3.csv'), encoding='utf-8-sig')
-    pbar = tqdm(total=df_original.shape[0])
-    for index, row in df_original.iterrows():
-        if row[1] in short_code_dict:
-            cluster_id = short_code_dict[row[1]]
-            caption_path = os.path.join(result_path, str(cluster_id), 'caption.txt')
-            if not os.path.exists(caption_path):
-                f_wr = open(caption_path, 'w', encoding='utf-8')
-            else:
-                f_wr = open(caption_path, 'a', encoding='utf-8')
-            f_wr.write(row[2] + '\n')
-            f_wr.close()
+    pbar = tqdm(total=df_data.shape[0])
+    for index, row in df_data.iterrows():
+        if not pd.isna(row[2]):
+            word_list = row[2].split()
+            if 'asd' in word_list:
+                print(row)
+                print(row[7])
         pbar.update(1)
     pbar.close()
 
@@ -352,8 +306,9 @@ def sample_from_cluster_text_and_image(target_csv, target_dataset, confidence):
             cluster_id = short_code_dict[row[1]]
             image_path = row[7]
             image_tensor = img_transform(pil_loader(image_path))
-            image_dict[cluster_id].append(image_tensor)
-            text_dict[cluster_id] = text_dict[cluster_id] + row[2] + "\n"
+            if image_tensor.nelement() != 0:
+                image_dict[cluster_id].append(image_tensor)
+                text_dict[cluster_id] = text_dict[cluster_id] + row[2] + "\n"
         pbar.update(1)
     pbar.close()
 
@@ -461,7 +416,7 @@ def run(option):
     elif option == 4:
         test(target_dataset=sys.argv[2], target_clustering=sys.argv[3])
     elif option == 5:
-        sample_from_cluster_text_only(target_csv=sys.argv[2], target_dataset=sys.argv[3], target_clustering=sys.argv[4])
+        test2(target_dataset=sys.argv[2])
     elif option == 6:
         sample_from_cluster_text_and_image(target_csv=sys.argv[2], target_dataset=sys.argv[3], confidence=sys.argv[4])
     elif option == 7:
