@@ -240,7 +240,10 @@ class MultiDEC(nn.Module):
 
         q, r = self.soft_assignemt(image_z, text_z)
         p = self.target_distribution(q, r).data
-        y_pred = torch.argmax(p, dim=1).numpy()
+        # y_pred = torch.argmax(p, dim=1).numpy()
+        y_confidence, y_pred = torch.max(p, dim=1)
+        y_confidence = y_confidence.numpy()
+        y_pred = y_pred.numpy()
         count_percentage(y_pred)
-        y_pred = np.concatenate([np.expand_dims(y_pred, axis=1), p.numpy()], axis=1)
+        y_pred = np.concatenate([np.expand_dims(y_pred, axis=1), np.expand_dims(y_confidence, axis=1)], axis=1)
         return short_codes, y_pred

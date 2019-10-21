@@ -103,8 +103,7 @@ def eval_multidec(args):
     mdec.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "mdec_" + str(args.latent_dim)) + '_' + str(args.n_clusters) + ".pt")
     short_codes, y_pred = mdec.fit_predict(full_dataset, args.batch_size)
 
-    cluster_list = [str(i) for i in range(args.n_clusters)]
-    result_df = pd.DataFrame(data=y_pred, index=short_codes, columns=['cluster_id'] + cluster_list)
+    result_df = pd.DataFrame(data=y_pred, index=short_codes, columns=['cluster_id', 'confidence'])
     result_df.index.name = "short_code"
     result_df.sort_index(inplace=True)
     result_df.to_csv(os.path.join(CONFIG.CSV_PATH, 'multidec_result_' + str(args.latent_dim) + '_' + str(args.n_clusters) + '.csv'), encoding='utf-8-sig')
