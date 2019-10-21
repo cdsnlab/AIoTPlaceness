@@ -242,4 +242,5 @@ class MultiDEC(nn.Module):
         p = self.target_distribution(q, r).data
         y_pred = torch.argmax(p, dim=1).numpy()
         count_percentage(y_pred)
+        y_pred = np.concatenate([np.expand_dims(y_pred, axis=1), p.numpy()], axis=1)
         return short_codes, y_pred
