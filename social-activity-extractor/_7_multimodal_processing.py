@@ -288,6 +288,7 @@ def sample_from_cluster_text_and_image(target_csv, target_dataset, confidence):
             sampled = value
         for short_code in sampled:
             short_code_dict[short_code] = key
+        print("number of items in cluster " + str(key) + " is " + str(len(sampled)))
         pbar.update(1)
     pbar.close()
 
@@ -306,9 +307,8 @@ def sample_from_cluster_text_and_image(target_csv, target_dataset, confidence):
             cluster_id = short_code_dict[row[1]]
             image_path = row[7]
             image_tensor = img_transform(pil_loader(image_path))
-            if image_tensor.nelement() != 0:
-                image_dict[cluster_id].append(image_tensor)
-                text_dict[cluster_id] = text_dict[cluster_id] + row[2] + "\n"
+            image_dict[cluster_id].append(image_tensor)
+            text_dict[cluster_id] = text_dict[cluster_id] + row[2] + "\n"
         pbar.update(1)
     pbar.close()
 
