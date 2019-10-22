@@ -27,7 +27,7 @@ def slacknoti(contentstr):
 def main():
     parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
     # learning
-    parser.add_argument('-lr', type=float, default=1e-02, help='initial learning rate')
+    parser.add_argument('-lr', type=float, default=5e-06, help='initial learning rate')
     parser.add_argument('-epochs', type=int, default=50, help='number of epochs for train')
     parser.add_argument('-batch_size', type=int, default=64, help='batch size for training')
     # data
@@ -77,8 +77,7 @@ def train_multidec(args):
     for arg, value in vars(args).items():
         exp.param(arg, value)
     try:
-        mdec.fit(full_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs)
-        mdec.save_model(os.path.join(CONFIG.CHECKPOINT_PATH, "mdec_" + str(args.latent_dim)) + '_' + str(args.n_clusters) + ".pt")
+        mdec.fit(full_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs, save_path=CONFIG.CHECKPOINT_PATH)
         print("Finish!!!")
 
     finally:

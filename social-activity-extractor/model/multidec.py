@@ -1,4 +1,5 @@
 import datetime
+import os
 
 import torch
 import torch.nn as nn
@@ -62,8 +63,8 @@ class MultiDEC(nn.Module):
     def __init__(self, device, image_encoder, text_encoder, n_clusters=10, alpha=1.):
         super(self.__class__, self).__init__()
         self.device = device
-        self.text_encoder = text_encoder
         self.image_encoder = image_encoder
+        self.text_encoder = text_encoder
         self.n_clusters = n_clusters
         self.alpha = alpha
 
@@ -118,7 +119,7 @@ class MultiDEC(nn.Module):
         p = p_image + p_text
         return p
 
-    def fit(self, X, lr=0.001, batch_size=256, num_epochs=10):
+    def fit(self, X, lr=0.001, batch_size=256, num_epochs=10, save_path=None):
         num = len(X)
         num_batch = int(math.ceil(1.0 * len(X) / batch_size))
         '''X: tensor data'''
@@ -165,6 +166,9 @@ class MultiDEC(nn.Module):
         self.text_encoder.mu.data.copy_(torch.Tensor(text_cluster_centers))
         self.text_encoder.mu.data = self.text_encoder.mu.cpu()
         self.train()
+        best_loss = 99999.
+        best_epoch = 0
+
         for epoch in range(num_epochs):
             # update the target distribution p
 
@@ -208,9 +212,18 @@ class MultiDEC(nn.Module):
 
                 del image_batch, text_batch, image_inputs, text_inputs, image_z, text_z
                 torch.cuda.empty_cache()
+            train_loss = train_loss / num
+            if best_loss > train_loss:
+                best_loss = train_loss
+                best_epoch = epoch
+                if save_path:
+                    self.save_model(os.path.join(save_path, "mdec_" + str(self.image_encoder.z_dim)) + '_' + str(
+                    self.n_clusters) + ".pt")
+            print("#Epoch %3d: Loss: %.4f Best Loss: %.4f at %s" % (
+                epoch + 1, train_loss, best_loss, str(datetime.datetime.now())))
 
-            print("#Epoch %3d: Loss: %.4f at %s" % (
-                epoch + 1, train_loss / num, str(datetime.datetime.now())))
+        print("#Best Epoch %3d: Best Loss: %.4f" % (
+            best_epoch, best_loss))
 
     def fit_predict(self, X, batch_size=256):
         num = len(X)

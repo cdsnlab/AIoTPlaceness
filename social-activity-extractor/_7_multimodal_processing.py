@@ -389,21 +389,41 @@ def make_word_cloud(target_csv, target_dataset, confidence):
             vocab = index2vocab[vocab_index]
             if salient_value != 0:
                 keywords[vocab] = salient_value
+        if len(keywords) != 0:
+            wordcloud = WordCloud(
+                font_path=font_path,
+                width=600,
+                height=600,
+                background_color="white"
+            )
+            wordcloud = wordcloud.generate_from_frequencies(keywords)
+            array = wordcloud.to_array()
+            plt.figure(figsize=(7, 7))
+            plt.imshow(array, interpolation="bilinear")
+            plt.axis("off")
+            plt.title("Word cloud of cluster " + str(cluster_id))
+            plt.savefig(os.path.join(result_path, 'wordcloud_' + str(cluster_id) + '.png'))
+            plt.close()
 
-        wordcloud = WordCloud(
-            font_path=font_path,
-            width=600,
-            height=600,
-            background_color="white"
-        )
-        wordcloud = wordcloud.generate_from_frequencies(keywords)
-        array = wordcloud.to_array()
-        plt.figure(figsize=(7, 7))
-        plt.imshow(array, interpolation="bilinear")
-        plt.axis("off")
-        plt.title("Word cloud of cluster " + str(cluster_id))
-        plt.savefig(os.path.join(result_path, 'wordcloud_' + str(cluster_id) + '.png'))
-        plt.close()
+
+def print_mean_confidence(target_csv,  confidence):
+    df_clustered = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, header=0, encoding='utf-8-sig')
+    df_clustered.index.name = 'short_code'
+
+    # confidence = float(confidence)
+    # if confidence != 0.:
+    #     print("length of full data is " + str(len(df_clustered)))
+    #     df_clustered = df_clustered[df_clustered['confidence'] > confidence]
+    #     print("length of data above confidence is " + str(len(df_clustered)))
+
+    print(df_clustered.groupby('cluster_id').mean())
+    df_clustered.groupby('cluster_id').hist()
+    plt.show()
+    # for cluster_id, cluster in enumerate(hist):
+    #     print(cluster)
+    #     plt.figure()
+    #     plt.plot(cluster)
+    #     plt.title("cluster " + str(cluster_id))
 
 
 def run(option):
@@ -423,6 +443,8 @@ def run(option):
         sample_from_cluster_text_and_image(target_csv=sys.argv[2], target_dataset=sys.argv[3], confidence=sys.argv[4])
     elif option == 7:
         make_word_cloud(target_csv=sys.argv[2], target_dataset=sys.argv[3], confidence=sys.argv[4])
+    elif option == 8:
+        print_mean_confidence(target_csv=sys.argv[2], confidence=sys.argv[3])
     else:
         print("This option does not exist!\n")
 
