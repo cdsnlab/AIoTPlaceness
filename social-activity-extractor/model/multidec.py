@@ -257,5 +257,6 @@ class MultiDEC(nn.Module):
         y_confidence, y_pred = torch.max(p, dim=1)
         y_confidence = y_confidence.numpy()
         y_pred = y_pred.numpy()
+        p = p.numpy()
         count_percentage(y_pred)
-        return short_codes, y_pred, y_confidence
+        return short_codes, y_pred, y_confidence, p
