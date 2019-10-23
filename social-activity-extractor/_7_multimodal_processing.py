@@ -309,7 +309,7 @@ def sample_from_cluster_text_and_image(target_csv, target_dataset, confidence):
             image_path = row[7]
             image_tensor = img_transform(pil_loader(image_path))
             image_dict[cluster_id].append(image_tensor)
-            text_dict[cluster_id] = text_dict[cluster_id] + row[2] + "\n"
+            text_dict[cluster_id] = text_dict[cluster_id] + row[1] + ': ' + row[2] + "\n"
         pbar.update(1)
     pbar.close()
 
