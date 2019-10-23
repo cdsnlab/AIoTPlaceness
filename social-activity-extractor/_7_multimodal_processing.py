@@ -292,6 +292,7 @@ def sample_from_cluster_text_and_image(target_csv, target_dataset, confidence):
                 short_code_dict[short_code] = key
         pbar.update(1)
     pbar.close()
+    short_code_list = list(short_code_dict.keys())
 
     img_transform = transforms.Compose([
         transforms.Resize(256),
@@ -301,16 +302,17 @@ def sample_from_cluster_text_and_image(target_csv, target_dataset, confidence):
     image_dict = {k: [] for k in range(num_cluster)}
     text_dict = {k: "" for k in range(num_cluster)}
     print("sampling posts...")
-    df_original = pd.read_csv(os.path.join(CONFIG.TARGET_PATH, 'SEOUL_SUBWAY_DATA-3.csv'), encoding='utf-8-sig')
+    df_original = pd.read_csv(os.path.join(CONFIG.TARGET_PATH, 'SEOUL_SUBWAY_DATA-3.csv'), encoding='utf-8-sig', index_col=1)
+    df_original = df_original.loc[short_code_list]
     pbar = tqdm(total=df_original.shape[0])
     for index, row in df_original.iterrows():
-        if row[1] in short_code_dict:
-            cluster_id = short_code_dict[row[1]]
-            image_path = row[7]
+        if index in short_code_dict:  # to make sure
+            cluster_id = short_code_dict[index]
+            image_path = row[6]
             image_tensor = img_transform(pil_loader(image_path))
             image_dict[cluster_id].append(image_tensor)
-            text_dict[cluster_id] = text_dict[cluster_id] + row[1] + ': ' + row[2] + "\n"
-        pbar.update(1)
+            text_dict[cluster_id] = text_dict[cluster_id] + index + ': ' + row[1] + "\n"
+            pbar.update(1)
     pbar.close()
 
     print("copying sampled posts...")
