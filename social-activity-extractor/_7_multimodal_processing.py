@@ -314,7 +314,7 @@ def sample_from_cluster_text_and_image(target_csv, target_dataset, confidence, o
     for index, row in df_original.iterrows():
         if index in short_code_dict:  # to make sure
             cluster_id = short_code_dict[index][0]
-            conf_val = short_code_dict[index][0][1]
+            conf_val = short_code_dict[index][1]
             image_path = row[6]
             image_tensor = img_transform(pil_loader(image_path))
             image_dict[cluster_id].append(image_tensor)
