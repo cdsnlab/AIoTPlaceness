@@ -250,7 +250,7 @@ def test2(target_dataset):
     pbar.close()
 
 
-def sample_from_cluster_text_and_image(target_csv, target_dataset, confidence):
+def sample_from_cluster_text_and_image(target_csv, target_dataset, confidence, option):
     sample_length = 10
     df_clustered = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, header=0, encoding='utf-8-sig')
     df_clustered.index.name = 'short_code'
@@ -258,14 +258,20 @@ def sample_from_cluster_text_and_image(target_csv, target_dataset, confidence):
     confidence = float(confidence)
     if confidence != 0.:
         print("length of full data is " + str(len(df_clustered)))
-        df_clustered = df_clustered[df_clustered['confidence'] > confidence]
+        if option == "lower":
+            df_clustered = df_clustered[df_clustered['confidence'] < confidence]
+        else:
+            df_clustered = df_clustered[df_clustered['confidence'] > confidence]
         print("length of data above confidence is " + str(len(df_clustered)))
     num_cluster = int(np.max(df_clustered, axis=0)[0] + 1)
 
     result_path = os.path.join(CONFIG.RESULT_PATH, target_dataset)
     if not os.path.exists(result_path):
         os.mkdir(result_path)
-    target_clustering = target_csv.replace('.csv', '') + '_' + str(confidence)
+    if option == 'lower':
+        target_clustering = target_csv.replace('.csv', '') + '_lower_' + str(confidence)
+    else:
+        target_clustering = target_csv.replace('.csv', '') + '_' + str(confidence)
     result_path = os.path.join(result_path, target_clustering)
     if not os.path.exists(result_path):
         os.mkdir(result_path)
@@ -329,14 +335,17 @@ def sample_from_cluster_text_and_image(target_csv, target_dataset, confidence):
     pbar.close()
 
 
-def make_word_cloud(target_csv, target_dataset, confidence):
+def make_word_cloud(target_csv, target_dataset, confidence, option):
     df_clustered = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, header=0, encoding='utf-8-sig')
     df_clustered.index.name = 'short_code'
 
     confidence = float(confidence)
     if confidence != 0.:
         print("length of full data is " + str(len(df_clustered)))
-        df_clustered = df_clustered[df_clustered['confidence'] > confidence]
+        if option == 'lower':
+            df_clustered = df_clustered[df_clustered['confidence'] < confidence]
+        else:
+            df_clustered = df_clustered[df_clustered['confidence'] > confidence]
         print("length of data above confidence is " + str(len(df_clustered)))
 
     cluster_dict = df_clustered['cluster_id'].to_dict()
@@ -359,7 +368,10 @@ def make_word_cloud(target_csv, target_dataset, confidence):
     result_path = os.path.join(CONFIG.RESULT_PATH, target_dataset)
     if not os.path.exists(result_path):
         os.mkdir(result_path)
-    target_clustering = target_csv.replace('.csv', '') + '_' + str(confidence)
+    if option == 'lower':
+        target_clustering = target_csv.replace('.csv', '') + '_lower_' + str(confidence)
+    else:
+        target_clustering = target_csv.replace('.csv', '') + '_' + str(confidence)
     result_path = os.path.join(result_path, target_clustering)
     if not os.path.exists(result_path):
         os.mkdir(result_path)
@@ -442,9 +454,9 @@ def run(option):
     elif option == 5:
         test2(target_dataset=sys.argv[2])
     elif option == 6:
-        sample_from_cluster_text_and_image(target_csv=sys.argv[2], target_dataset=sys.argv[3], confidence=sys.argv[4])
+        sample_from_cluster_text_and_image(target_csv=sys.argv[2], target_dataset=sys.argv[3], confidence=sys.argv[4], option=sys.argv[5])
     elif option == 7:
-        make_word_cloud(target_csv=sys.argv[2], target_dataset=sys.argv[3], confidence=sys.argv[4])
+        make_word_cloud(target_csv=sys.argv[2], target_dataset=sys.argv[3], confidence=sys.argv[4], option=sys.argv[5])
     elif option == 8:
         print_mean_confidence(target_csv=sys.argv[2], confidence=sys.argv[3])
     else:
