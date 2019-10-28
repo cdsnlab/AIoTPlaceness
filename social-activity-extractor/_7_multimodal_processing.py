@@ -295,7 +295,7 @@ def sample_from_cluster_text_and_image(target_csv, target_dataset, confidence, o
         print("number of items in cluster " + str(key) + " is " + str(len(sampled)))
         if len(sampled) != 0:
             for short_code in sampled:
-                short_code_dict[short_code] = key
+                short_code_dict[short_code] = (key, df_clustered.loc[key][1])
         pbar.update(1)
     pbar.close()
     short_code_list = list(short_code_dict.keys())
@@ -313,11 +313,12 @@ def sample_from_cluster_text_and_image(target_csv, target_dataset, confidence, o
     pbar = tqdm(total=df_original.shape[0])
     for index, row in df_original.iterrows():
         if index in short_code_dict:  # to make sure
-            cluster_id = short_code_dict[index]
+            cluster_id = short_code_dict[index][0]
+            conf_val = short_code_dict[index][0][1]
             image_path = row[6]
             image_tensor = img_transform(pil_loader(image_path))
             image_dict[cluster_id].append(image_tensor)
-            text_dict[cluster_id] = text_dict[cluster_id] + index + ': ' + row[1] + "\n"
+            text_dict[cluster_id] = text_dict[cluster_id] + index + '(' + str(round(conf_val, 2)) + '): ' + row[1] + "\n"
             pbar.update(1)
     pbar.close()
 
