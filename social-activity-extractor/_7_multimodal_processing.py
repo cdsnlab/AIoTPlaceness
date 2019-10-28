@@ -295,7 +295,7 @@ def sample_from_cluster_text_and_image(target_csv, target_dataset, confidence, o
         print("number of items in cluster " + str(key) + " is " + str(len(sampled)))
         if len(sampled) != 0:
             for short_code in sampled:
-                short_code_dict[short_code] = (key, df_clustered.loc[key][1])
+                short_code_dict[short_code] = (key, df_clustered[key][1])
         pbar.update(1)
     pbar.close()
     short_code_list = list(short_code_dict.keys())
