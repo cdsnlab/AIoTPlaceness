@@ -20,10 +20,11 @@ from nltk import word_tokenize
 #import nagisa
 #import jieba
 from gensim.test.utils import common_texts
-from gensim.models import word2vec, Word2Vec, FastText 
+from gensim.models import word2vec, Word2Vec, FastText, TfidfModel
 from gensim.models.fasttext import load_facebook_model
 from gensim.models.keyedvectors import Word2VecKeyedVectors, FastTextKeyedVectors
 from gensim.test.utils import datapath
+from gensim.corpora import Dictionary
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 #from polyglot.detect import Detector
 
@@ -323,6 +324,22 @@ def make_doc2vec(target_posts):
 	embedding_model.save(os.path.join(CONFIG.EMBEDDING_PATH, model_name))
 	print("embedding completed")
 
+def make_tfidf(target_posts):
+	df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, target_posts, 'posts.csv'), index_col=0, header=None, encoding='utf-8-sig')
+	print(df_data[:5])
+	with open(os.path.join(CONFIG.DATASET_PATH, target_posts, 'corpus.txt'), 'r', encoding='utf-8') as f:
+		data = f.read()
+		text_data = [data.split()]
+	print("making documents...")
+	dct = Dictionary(text_data)
+	documents = [dct.doc2bow(value[1].split()) for index, value in df_data.iterrows()]
+	print("embedding started")
+	embedding_model = TfidfModel(documents)
+	model_name = "TFIDF_"+ target_posts + ".model"
+	embedding_model.save(os.path.join(CONFIG.EMBEDDING_PATH, model_name))
+	print("embedding completed")
+
+
 def run(option):
 	if option == 0:
 		make_corpus(target_folder=sys.argv[2])
@@ -342,6 +359,8 @@ def run(option):
 		make_fasttext_pretrained(target_corpus=sys.argv[2], pretrined_model=sys.argv[3])
 	elif option == 8:
 		make_doc2vec(target_posts=sys.argv[2])
+	elif option == 9:
+		make_tfidf(target_posts=sys.argv[2])
 	else:
 		print("This option does not exist!\n")
 

@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from tqdm import tqdm
+from collections import Counter
 
 import torch
 import torch.nn as nn
@@ -23,12 +24,11 @@ from gensim.models.keyedvectors import FastTextKeyedVectors
 from gensim.similarities.index import AnnoyIndexer
 from sklearn.decomposition import PCA
 
-from util import process_text
-
 CONFIG = config.Config
 
 
 def copy_selected_post(target_folder):
+    from util import process_text
     path_to_posts = {}
     data_path = os.path.join(CONFIG.DATA_PATH, target_folder)
 
@@ -213,6 +213,7 @@ def process_dataset_images(target_dataset):
 
 
 def process_dataset_text(target_dataset):
+    from util import process_text
     dataset_path = os.path.join(CONFIG.DATASET_PATH, target_dataset)
     if not os.path.exists(dataset_path):
         os.mkdir(dataset_path)
@@ -335,7 +336,6 @@ def test(target_dataset):
     # result_df.index.name = "short_code"
     # result_df.sort_index(inplace=True)
     # result_df.to_csv('temp.csv', encoding='utf-8-sig')
-
 
     dataset_path = os.path.join(CONFIG.DATA_PATH, 'dataset', target_dataset)
     with open(os.path.join(dataset_path, 'resize224', 'BsFudrehNdL.p'), 'rb') as f:
@@ -481,6 +481,55 @@ def make_toy_csv(target_csv):
     df_toy.to_csv(os.path.join(CONFIG.CSV_PATH, 'toy_' + target_csv), encoding='utf-8-sig')
 
 
+def make_label_set(target_csv):
+    categories = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 121, 122, 123, 124, 13, 14, 15, 16, 18, 50, 51, 52]
+    category_to_value = {v: i for i, v in enumerate(categories)}
+    print(category_to_value)
+    weight_to_value = {'image': 1, 'image_text': 0.5, 'text': 0}
+    csv_path = os.path.join(CONFIG.CSV_PATH, target_csv)
+    df_data = pd.read_csv(csv_path, index_col=0, encoding='utf-8')
+    print(df_data[:5])
+    shortcode_dict = {}
+    for shortcode, row in df_data.iterrows():
+        if shortcode not in shortcode_dict:
+            shortcode_dict[shortcode] = {'category': [], 'weight': []}
+        shortcode_dict[shortcode]['category'].append(row[0])
+        shortcode_dict[shortcode]['weight'].append(row[1])
+
+    category_dict = {}
+    weight_dict = {}
+    total_count = len(shortcode_dict)
+    match_count = 0
+    three_count = 0
+    for shortcode, value in shortcode_dict.items():
+        if len(value['category']) == 1:
+            category_value = category_to_value[value['category'][0]]
+            category_dict[shortcode] = category_value
+        else:
+            most_category = Counter(value['category']).most_common(1)[0]
+            if most_category[1] >= 2:
+                category_value = category_to_value[most_category[0]]
+                category_dict[shortcode] = category_value
+            if len(value['category']) == 3:
+                three_count = three_count + 1
+                if most_category[1] == 3:
+                    match_count = match_count + 1
+        weight_value = 0
+        for weight in value['weight']:
+            weight_value = weight_value + weight_to_value[weight]
+        weight_value = weight_value / len(value['weight'])
+        weight_dict[shortcode] = weight_value
+
+    print(total_count)
+    print(len(category_dict))
+    print(three_count)
+    print(match_count)
+    df_category = pd.DataFrame.from_dict(category_dict, orient='index', columns=['category'])
+    df_category.to_csv(os.path.join(CONFIG.CSV_PATH, "category_label.csv"), encoding='utf-8-sig')
+    df_weight = pd.DataFrame.from_dict(weight_dict, orient='index', columns=['weight'])
+    df_weight.to_csv(os.path.join(CONFIG.CSV_PATH, "weight_label.csv"), encoding='utf-8-sig')
+
+
 def run(option):
     if option == 0:
         copy_selected_post(target_folder=sys.argv[2])
@@ -508,6 +557,8 @@ def run(option):
         normalized_and_pca(target_csv=sys.argv[2])
     elif option == 12:
         make_toy_csv(target_csv=sys.argv[2])
+    elif option == 13:
+        make_label_set(target_csv=sys.argv[2])
     else:
         print("This option does not exist!\n")
 
