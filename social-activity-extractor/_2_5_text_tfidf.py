@@ -29,7 +29,7 @@ def main():
 	parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
 	# data
 	parser.add_argument('-target_dataset', type=str, default=None, help='folder name of target dataset')
-	parser.add_argument('-category_csv', type=str, default=None, help='folder name of target dataset')
+	parser.add_argument('-label_csv', type=str, default=None, help='folder name of target dataset')
 	args = parser.parse_args()
 
 	get_latent(args)
@@ -37,7 +37,7 @@ def main():
 def get_latent(args):
 
 	df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'posts.csv'), index_col=0, header=None, encoding='utf-8-sig')
-	df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.category_csv), index_col=0, encoding='utf-8-sig')
+	df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.label_csv), index_col=0, encoding='utf-8-sig')
 	print(df_label[:5])
 	df_data = df_data.loc[df_label.index]
 	print(df_data[:5])

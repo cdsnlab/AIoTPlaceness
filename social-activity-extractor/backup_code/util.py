@@ -20,53 +20,37 @@ from tqdm import tqdm
 torch.manual_seed(42)
 
 
-def load_multi_csv_data(df_image_data, df_text_data, df_train, df_val, CONFIG):
+def load_multi_csv_data(args, CONFIG):
+    df_image_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.image_csv), index_col=0,
+                                encoding='utf-8-sig')
     scaled_image_data = StandardScaler().fit_transform(np.array(df_image_data.values))
+    # scaled_image_data = MinMaxScaler((0, 5)).fit_transform(np.array(df_image_data.values))
     df_scaled_image_data = pd.DataFrame(data=scaled_image_data, index=df_image_data.index,
                                         columns=df_image_data.columns)
+    df_text_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.text_csv), index_col=0,
+                               encoding='utf-8-sig')
     scaled_text_data = StandardScaler().fit_transform(np.array(df_text_data.values))
+    # scaled_text_data = MinMaxScaler((0, 5)).fit_transform(np.array(df_text_data.values))
     df_scaled_text_data = pd.DataFrame(data=scaled_text_data, index=df_text_data.index, columns=df_text_data.columns)
-    train_index = set(df_train.index)
-    val_index = set(df_val.index)
-    train_short_codes = []
-    train_image_data = []
-    train_text_data = []
-    train_label_data = []
-    val_short_codes = []
-    val_image_data = []
-    val_text_data = []
-    val_label_data = []
-
+    short_codes = []
+    image_data = []
+    text_data = []
     pbar = tqdm(total=df_scaled_image_data.shape[0])
     for index, row in df_scaled_image_data.iterrows():
-        if index in train_index:
-            train_short_codes.append(index)
-            train_image_data.append(np.array(row))
-            train_text_data.append(np.array(df_scaled_text_data.loc[index]))
-            train_label_data.append(df_train.loc[index][0])
-        elif index in val_index:
-            val_short_codes.append(index)
-            val_image_data.append(np.array(row))
-            val_text_data.append(np.array(df_scaled_text_data.loc[index]))
-            val_label_data.append(df_val.loc[index][0])
-        else:
-            train_short_codes.append(index)
-            train_image_data.append(np.array(row))
-            train_text_data.append(np.array(df_scaled_text_data.loc[index]))
-            train_label_data.append(-1)
+        short_codes.append(index)
+        image_data.append(np.array(row))
+        text_data.append(np.array(df_scaled_text_data.loc[index]))
         pbar.update(1)
     pbar.close()
-    train_dataset = MultiCSVDataset(train_short_codes, np.array(train_image_data), np.array(train_text_data), train_label_data, CONFIG)
-    val_dataset = MultiCSVDataset(val_short_codes, np.array(val_image_data), np.array(val_text_data), val_label_data, CONFIG)
-    return train_dataset, val_dataset
+    full_dataset = MultiCSVDataset(short_codes, np.array(image_data), np.array(text_data), CONFIG)
+    return full_dataset
 
 
 class MultiCSVDataset(Dataset):
-    def __init__(self, short_codes, image_data, text_data, label_data, CONFIG):
+    def __init__(self, short_codes, image_data, text_data, CONFIG):
         self.short_codes = short_codes
         self.image_data = image_data
         self.text_data = text_data
-        self.label_data = label_data
         self.CONFIG = CONFIG
 
     def __len__(self):
@@ -75,7 +59,7 @@ class MultiCSVDataset(Dataset):
     def __getitem__(self, idx):
         image_tensor = torch.from_numpy(self.image_data[idx]).type(torch.FloatTensor)
         text_tensor = torch.from_numpy(self.text_data[idx]).type(torch.FloatTensor)
-        return self.short_codes[idx], image_tensor, text_tensor, self.label_data[idx]
+        return self.short_codes[idx], image_tensor, text_tensor
 
 
 def load_csv_data(args, CONFIG):
@@ -472,20 +456,18 @@ def masking_noise(data, frac):
     return data_noise
 
 
-def align_cluster(label, cluster_id):
-    label = np.array(label)
-    cluster_id = np.array(cluster_id)
-    assert label.size == cluster_id.size
-    D = max(label.max(), cluster_id.max()) + 1
+def align_cluster(image_cluster, text_cluster):
+    assert image_cluster.size == text_cluster.size
+    D = max(image_cluster.max(), text_cluster.max()) + 1
     w = np.zeros((D, D), dtype=np.int64)
-    for i in range(label.size):
-        w[label[i], cluster_id[i]] += 1
+    for i in range(image_cluster.size):
+        w[image_cluster[i], text_cluster[i]] += 1
     print(pd.DataFrame(data=w, index=range(D), columns=range(D)))
     from scipy.optimize import linear_sum_assignment
-    label_ind, cluster_ind = linear_sum_assignment(w.max() - w)
-    print(label_ind)
-    print(cluster_ind)
-    return label_ind, cluster_ind
+    image_ind, text_ind = linear_sum_assignment(w.max() - w)
+    print(image_ind)
+    print(text_ind)
+    return image_ind, text_ind
 
 
 def count_percentage(cluster_labels):
