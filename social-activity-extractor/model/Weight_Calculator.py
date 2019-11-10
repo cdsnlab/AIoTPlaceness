@@ -22,37 +22,55 @@ class WeightCalculator(nn.Module):
         super(self.__class__, self).__init__()
         self.device = device
         self.input_dim = input_dim
-        self.conv1 = nn.Sequential(
-            nn.Conv1d(1, filter_num, kernel_size=9, stride=2),
-            nn.BatchNorm1d(filter_num),
+        # self.conv1 = nn.Sequential(
+        #     nn.Conv1d(1, filter_num, kernel_size=9, stride=2),
+        #     nn.BatchNorm1d(filter_num),
+        #     nn.ReLU()
+        # )
+        # self.maxpool1 = nn.MaxPool1d(kernel_size=5, stride=2, padding=1)
+        # self.conv2 = nn.Sequential(
+        #     nn.Conv1d(filter_num, filter_num * 2, kernel_size=7, stride=2),
+        #     nn.BatchNorm1d(filter_num * 2),
+        #     nn.ReLU()
+        # )
+        # self.maxpool2 = nn.MaxPool1d(kernel_size=5, stride=2, padding=1)
+        # self.conv3 = nn.Sequential(
+        #     nn.Conv1d(filter_num * 2, filter_num * 4, kernel_size=5, stride=2),
+        #     nn.BatchNorm1d(filter_num * 4),
+        #     nn.ReLU()
+        # )
+        # self.avgpool = nn.AdaptiveAvgPool1d(1)
+        # self.fc = nn.Sequential(
+        #     nn.Linear(filter_num * 4, 2),
+        #     nn.Sigmoid()
+        # )
+        self.layer1 = nn.Sequential(
+            nn.Linear(input_dim, input_dim * 2),
+            nn.BatchNorm1d(input_dim * 2),
             nn.ReLU()
         )
-        self.maxpool1 = nn.MaxPool1d(kernel_size=5, stride=2, padding=1)
-        self.conv2 = nn.Sequential(
-            nn.Conv1d(filter_num, filter_num * 2, kernel_size=7, stride=2),
-            nn.BatchNorm1d(filter_num * 2),
+        self.layer2 = nn.Sequential(
+            nn.Linear(input_dim * 2, input_dim * 3),
+            nn.BatchNorm1d(input_dim * 3),
             nn.ReLU()
         )
-        self.maxpool2 = nn.MaxPool1d(kernel_size=5, stride=2, padding=1)
-        self.conv3 = nn.Sequential(
-            nn.Conv1d(filter_num * 2, filter_num * 4, kernel_size=5, stride=2),
-            nn.BatchNorm1d(filter_num * 4),
-            nn.ReLU()
-        )
-        self.avgpool = nn.AdaptiveAvgPool1d(1)
         self.fc = nn.Sequential(
-            nn.Linear(filter_num * 4, 2),
+            nn.Linear(input_dim * 3, 2),
             nn.Sigmoid()
         )
         self.softmax = nn.Softmax(dim=1)
 
 
     def forward(self, image_x, text_x):
-        x = torch.cat([image_x, text_x], dim=1).unsqueeze(1)
-        out1 = self.maxpool1(self.conv1(x))
-        out2 = self.maxpool2(self.conv2(out1))
-        out3 = self.avgpool(self.conv3(out2))
-        h = self.fc(out3.squeeze())
+        # x = torch.cat([image_x, text_x], dim=1).unsqueeze(1)
+        # out1 = self.maxpool1(self.conv1(x))
+        # out2 = self.maxpool2(self.conv2(out1))
+        # out3 = self.avgpool(self.conv3(out2))
+        # h = self.fc(out3.squeeze())
+        x = torch.cat([image_x, text_x], dim=1)
+        out1 = self.layer1(x)
+        out2 = self.layer2(out1)
+        h = self.fc(out2)
         prob = self.softmax(h)
         return prob
 
