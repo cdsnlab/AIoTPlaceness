@@ -35,8 +35,8 @@ def main():
     parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
     # learning
     parser.add_argument('-lr', type=float, default=1e-04, help='initial learning rate')
-    parser.add_argument('-pretrain_epochs', type=int, default=200, help='number of epochs for train')
-    parser.add_argument('-epochs', type=int, default=100, help='number of epochs for train')
+    parser.add_argument('-pretrain_epochs', type=int, default=100, help='number of epochs for train')
+    parser.add_argument('-epochs', type=int, default=50, help='number of epochs for train')
     parser.add_argument('-batch_size', type=int, default=256, help='batch size for training')
     # data
     parser.add_argument('-image_csv', type=str, default='labeled_scaled_pca_normalized_image_encoded_seoul_subway.csv', help='file name of target csv')
