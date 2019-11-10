@@ -22,7 +22,6 @@ class MultiClassifier(nn.Module):
         super(self.__class__, self).__init__()
         self.device = device
         self.CONFIG = CONFIG
-        self.batch_size = batch_size
         self.image_classifier = image_classifier
         self.text_classifier = text_classifier
         self.weight_calculator = weight_calculator
