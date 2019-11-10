@@ -508,7 +508,8 @@ def make_label_set(target_csv):
         if len(value['category']) == 1:
             category_value = category_to_value[value['category'][0]]
             category_dict[shortcode] = category_value
-            weight_dict[shortcode] = weight_to_value[value['weight'][0]]
+            weight_value = weight_to_value[value['weight'][0]]
+            weight_dict[shortcode] = [weight_value, 1 - weight_value]
         else:
             most_category = Counter(value['category']).most_common(1)[0]
             if most_category[1] >= 2:
@@ -518,7 +519,7 @@ def make_label_set(target_csv):
                 for weight in value['weight']:
                     weight_value = weight_value + weight_to_value[weight]
                 weight_value = weight_value / len(value['weight'])
-                weight_dict[shortcode] = weight_value
+                weight_dict[shortcode] = [weight_value, 1 - weight_value]
             if len(value['category']) == 3:
                 three_count = three_count + 1
                 if most_category[1] == 3:
@@ -531,7 +532,7 @@ def make_label_set(target_csv):
     print(match_count)
     df_category = pd.DataFrame.from_dict(category_dict, orient='index', columns=['category'])
     df_category.to_csv(os.path.join(CONFIG.CSV_PATH, "category_label.csv"), encoding='utf-8-sig')
-    df_weight = pd.DataFrame.from_dict(weight_dict, orient='index', columns=['weight'])
+    df_weight = pd.DataFrame.from_dict(weight_dict, orient='index', columns=['iamge_weight', 'text_weight'])
     df_weight.to_csv(os.path.join(CONFIG.CSV_PATH, "weight_label.csv"), encoding='utf-8-sig')
 
 def cut_label_csv(target_csv, label_csv):
