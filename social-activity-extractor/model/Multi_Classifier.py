@@ -18,10 +18,9 @@ from sklearn.cluster import KMeans
 
 
 class MultiClassifier(nn.Module):
-    def __init__(self, device, CONFIG, image_classifier, text_classifier, weight_calculator=None, fixed_weight=None):
+    def __init__(self, device, image_classifier, text_classifier, weight_calculator=None, fixed_weight=None):
         super(self.__class__, self).__init__()
         self.device = device
-        self.CONFIG = CONFIG
         self.image_classifier = image_classifier
         self.text_classifier = text_classifier
         self.weight_calculator = weight_calculator
@@ -51,7 +50,7 @@ class MultiClassifier(nn.Module):
         log_prob = self.softmax(h)
         return log_prob
 
-    def fit(self, train_dataset, val_dataset, lr=0.001, batch_size=256, num_epochs=10):
+    def fit(self, train_dataset, val_dataset, lr=0.001, batch_size=256, num_epochs=10, save_path=None):
         trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size,
                                                   shuffle=True)
         validloader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size,
@@ -106,6 +105,6 @@ class MultiClassifier(nn.Module):
 
             if best_acc < valid_acc:
                 best_acc = valid_acc
-                self.save_model(os.path.join(self.CONFIG.CHECKPOINT_PATH, "multi_classifier") + ".pt")
+                self.save_model(save_path)
         self.score = best_acc
 

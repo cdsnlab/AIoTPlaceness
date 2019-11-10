@@ -16,10 +16,9 @@ from model.ops import BCELoss
 
 
 class SingleClassifier(nn.Module):
-    def __init__(self, device, CONFIG, input_dim=300, filter_num=64, n_classes=23):
+    def __init__(self, device, input_dim=300, filter_num=64, n_classes=23):
         super(self.__class__, self).__init__()
         self.device = device
-        self.CONFIG = CONFIG
         self.input_dim = input_dim
         self.conv1 = nn.Sequential(
             nn.Conv1d(1, filter_num, kernel_size=7, stride=2),
@@ -66,7 +65,7 @@ class SingleClassifier(nn.Module):
         model_dict.update(pretrained_dict)
         self.load_state_dict(model_dict)
 
-    def fit(self, train_dataset, val_dataset, input_modal, lr=0.001, batch_size=256, num_epochs=10):
+    def fit(self, train_dataset, val_dataset, input_modal, lr=0.001, batch_size=256, num_epochs=10, save_path=None):
         trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size,
                                                   shuffle=True)
         validloader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size,
@@ -118,8 +117,5 @@ class SingleClassifier(nn.Module):
 
             if best_acc < valid_acc:
                 best_acc = valid_acc
-                if input_modal == 1:
-                    self.save_model(os.path.join(self.CONFIG.CHECKPOINT_PATH, "image_classifier") + ".pt")
-                elif input_modal == 2:
-                    self.save_model(os.path.join(self.CONFIG.CHECKPOINT_PATH, "text_classifier") + ".pt")
+                self.save_model(save_path)
         self.score = best_acc
