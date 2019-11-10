@@ -61,7 +61,7 @@ def main():
 
 
 def train_multidec(args):
-    print("Training multi-classifier")
+    print("Training started")
     device = torch.device(args.gpu)
     df_image_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.image_csv), index_col=0,
                                 encoding='utf-8-sig')
@@ -92,17 +92,20 @@ def train_multidec(args):
             label_val = label_array[val_index]
             df_train = pd.DataFrame(data=label_train, index=short_code_train, columns=df_label.columns)
             df_val = pd.DataFrame(data=label_val, index=short_code_val, columns=df_label.columns)
-            print("Loading dataset...")
+            print("\nLoading dataset...")
             train_dataset, val_dataset = load_multi_csv_data(df_image_data, df_text_data, df_weight, df_train, df_val,
                                                              CONFIG)
             print("Loading dataset completed")
+            print("pretraining image classifier...")
             image_classifier = SingleClassifier(device=device, CONFIG=CONFIG, input_dim=args.input_dim, filter_num=64, n_classes=n_classes)
             image_classifier.fit(train_dataset, val_dataset, input_modal=1, lr=args.lr, num_epochs=args.pretrain_epochs)
             image_classifier.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "image_classifier") + ".pt")
+            print("pretraining text classifier...")
             text_classifier = SingleClassifier(device=device, CONFIG=CONFIG, input_dim=args.input_dim, filter_num=64, n_classes=n_classes)
             text_classifier.fit(train_dataset, val_dataset, input_modal=2, lr=args.lr, num_epochs=args.pretrain_epochs)
             text_classifier.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "text_classifier") + ".pt")
             if args.fixed_weight is None:
+                print("pretraining weight classifier...")
                 weight_calculator = WeightCalculator(device=device, CONFIG=CONFIG, input_dim=args.input_dim*2, filter_num=64)
                 weight_calculator.fit(train_dataset, val_dataset, lr=args.lr, num_epochs=args.pretrain_epochs)
                 multi_classifier = MultiClassifier(device=device, CONFIG=CONFIG, image_classifier=image_classifier,
@@ -111,6 +114,7 @@ def train_multidec(args):
                 multi_classifier = MultiClassifier(device=device, CONFIG=CONFIG, image_classifier=image_classifier,
                                                    text_classifier=text_classifier, fixed_weight=args.fixed_weight)
             print(multi_classifier)
+            print("training multi classifier...")
             multi_classifier.fit(train_dataset, val_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs)
             print("Finish!!!")
             print("#current fold best image score: %.6f, text score: %.6f multi score: %.6f" %
