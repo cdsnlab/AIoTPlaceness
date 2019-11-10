@@ -163,7 +163,7 @@ class MultiDEC(nn.Module):
             image_z.append(_image_z.data.cpu())
             text_z.append(_text_z.data.cpu())
             del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
-            torch.cuda.empty_cache()
+        torch.cuda.empty_cache()
         image_z = torch.cat(image_z, dim=0)
         text_z = torch.cat(text_z, dim=0)
 
@@ -213,7 +213,7 @@ class MultiDEC(nn.Module):
                 image_z.append(_image_z.data.cpu())
                 text_z.append(_text_z.data.cpu())
                 del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
-                torch.cuda.empty_cache()
+            torch.cuda.empty_cache()
             image_z = torch.cat(image_z, dim=0)
             text_z = torch.cat(text_z, dim=0)
 
@@ -242,7 +242,7 @@ class MultiDEC(nn.Module):
                 optimizer.step()
 
                 del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
-                torch.cuda.empty_cache()
+            torch.cuda.empty_cache()
             train_loss = train_loss / X_num
 
             self.eval()
@@ -305,7 +305,7 @@ class MultiDEC(nn.Module):
             image_z.append(_image_z.data.cpu())
             text_z.append(_text_z.data.cpu())
             del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
-            torch.cuda.empty_cache()
+        torch.cuda.empty_cache()
         short_codes = np.concatenate(short_codes, axis=0)
         image_z = torch.cat(image_z, dim=0)
         text_z = torch.cat(text_z, dim=0)
