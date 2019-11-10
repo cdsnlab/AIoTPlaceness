@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 import os
 import shutil
+
+from sklearn.preprocessing import StandardScaler
+
 import config
 import re
 import sys
@@ -505,20 +508,22 @@ def make_label_set(target_csv):
         if len(value['category']) == 1:
             category_value = category_to_value[value['category'][0]]
             category_dict[shortcode] = category_value
+            weight_dict[shortcode] = weight_to_value[value['weight'][0]]
         else:
             most_category = Counter(value['category']).most_common(1)[0]
             if most_category[1] >= 2:
                 category_value = category_to_value[most_category[0]]
                 category_dict[shortcode] = category_value
+                weight_value = 0
+                for weight in value['weight']:
+                    weight_value = weight_value + weight_to_value[weight]
+                weight_value = weight_value / len(value['weight'])
+                weight_dict[shortcode] = weight_value
             if len(value['category']) == 3:
                 three_count = three_count + 1
                 if most_category[1] == 3:
                     match_count = match_count + 1
-        weight_value = 0
-        for weight in value['weight']:
-            weight_value = weight_value + weight_to_value[weight]
-        weight_value = weight_value / len(value['weight'])
-        weight_dict[shortcode] = weight_value
+
 
     print(total_count)
     print(len(category_dict))
@@ -528,6 +533,23 @@ def make_label_set(target_csv):
     df_category.to_csv(os.path.join(CONFIG.CSV_PATH, "category_label.csv"), encoding='utf-8-sig')
     df_weight = pd.DataFrame.from_dict(weight_dict, orient='index', columns=['weight'])
     df_weight.to_csv(os.path.join(CONFIG.CSV_PATH, "weight_label.csv"), encoding='utf-8-sig')
+
+def cut_label_csv(target_csv, label_csv):
+    df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, encoding='utf-8')
+    df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, label_csv), index_col=0, encoding='utf-8')
+    df_data = df_data.loc[df_label.index]
+    print(df_data[:5])
+    print(df_label[:5])
+    df_data.to_csv(os.path.join(CONFIG.CSV_PATH, 'labeled_' + target_csv), encoding='utf-8-sig')
+
+def make_scaled_csv(target_csv):
+    df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, encoding='utf-8')
+    scaled_data = StandardScaler().fit_transform(np.array(df_data.values))
+    df_scaled_data = pd.DataFrame(data=scaled_data, index=df_data.index,
+                                        columns=df_data.columns)
+    print(df_data[:5])
+    print(df_scaled_data[:5])
+    df_scaled_data.to_csv(os.path.join(CONFIG.CSV_PATH, 'scaled_' + target_csv), encoding='utf-8-sig')
 
 
 def run(option):
@@ -559,6 +581,10 @@ def run(option):
         make_toy_csv(target_csv=sys.argv[2])
     elif option == 13:
         make_label_set(target_csv=sys.argv[2])
+    elif option == 14:
+        cut_label_csv(target_csv=sys.argv[2], label_csv=sys.argv[3])
+    elif option == 15:
+        make_scaled_csv(target_csv=sys.argv[2])
     else:
         print("This option does not exist!\n")
 

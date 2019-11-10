@@ -60,14 +60,13 @@ class MDEC_encoder(nn.Module):
 
 
 class MultiDEC(nn.Module):
-    def __init__(self, device, image_encoder, text_encoder, n_clusters=10, alpha=1, trade_off=1e-6):
+    def __init__(self, device, image_encoder, text_encoder, n_clusters=10, alpha=1.):
         super(self.__class__, self).__init__()
         self.device = device
         self.image_encoder = image_encoder
         self.text_encoder = text_encoder
         self.n_clusters = n_clusters
         self.alpha = alpha
-        self.trade_off = trade_off
 
     def save_model(self, path):
         torch.save(self.state_dict(), path)
@@ -112,24 +111,6 @@ class MultiDEC(nn.Module):
         loss = image_loss + text_loss
         return loss
 
-    def semi_loss_function(self, image_z, text_z, label):
-        a = []
-        for i in range(0, len(label) - 1):
-            for j in range(i + 1, len(label)):
-                if label[i] == -1 or label[j] == -1:
-                    a.append(0.)
-                elif label[i] == label[j]:
-                    a.append(1.)
-                else:
-                    a.append(-1.)
-        a = torch.from_numpy(np.array(a, dtype=np.float32))
-        image_dist = torch.pdist(image_z)
-        image_loss = self.trade_off * torch.sum(a * image_dist) / len(label)
-        text_dist = torch.pdist(text_z)
-        text_loss = self.trade_off * torch.sum(a * text_dist) / len(label)
-        semi_loss = image_loss + text_loss
-        return semi_loss
-
     def target_distribution(self, q, r):
         p_image = q ** 2 / torch.sum(q, dim=0)
         p_image = p_image / (2 * torch.sum(p_image, dim=1, keepdim=True))
@@ -139,8 +120,8 @@ class MultiDEC(nn.Module):
         return p
 
     def fit(self, X, lr=0.001, batch_size=256, num_epochs=10, save_path=None):
-        X_num = len(X)
-        X_num_batch = int(math.ceil(1.0 * len(X) / batch_size))
+        num = len(X)
+        num_batch = int(math.ceil(1.0 * len(X) / batch_size))
         '''X: tensor data'''
         self.to(self.device)
         print("=====Training DEC=======")
@@ -150,18 +131,16 @@ class MultiDEC(nn.Module):
         print("Extracting initial features at %s" % (str(datetime.datetime.now())))
         image_z = []
         text_z = []
-        labels = []
-        for batch_idx in range(X_num_batch):
-            image_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)][1]
-            text_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)][2]
-            labels.extend(X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)][3])
+        for batch_idx in range(num_batch):
+            image_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, num)][1]
+            text_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, num)][2]
             image_inputs = Variable(image_batch).to(self.device)
             text_inputs = Variable(text_batch).to(self.device)
             _image_z, _text_z = self.forward(image_inputs, text_inputs)
             image_z.append(_image_z.data.cpu())
             text_z.append(_text_z.data.cpu())
             del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
-        # torch.cuda.empty_cache()
+            torch.cuda.empty_cache()
         image_z = torch.cat(image_z, dim=0)
         text_z = torch.cat(text_z, dim=0)
 
@@ -174,19 +153,11 @@ class MultiDEC(nn.Module):
         text_pred = text_kmeans.fit_predict(text_z.data.cpu().numpy())
         print("Text kmeans completed at %s" % (str(datetime.datetime.now())))
 
-        train_image = []
-        train_text = []
-        train_label = []
-        for _image, _text, _label in zip(image_pred, text_pred, labels):
-            if _label != -1:
-                train_image.append(_image)
-                train_text.append(_text)
-                train_label.append(_label)
-        _, image_ind = align_cluster(train_label, train_image)
-        _, text_ind = align_cluster(train_label, train_text)
+        image_ind, text_ind = align_cluster(image_pred, text_pred)
 
         image_cluster_centers = np.zeros_like(image_kmeans.cluster_centers_)
         text_cluster_centers = np.zeros_like(text_kmeans.cluster_centers_)
+
         for i in range(self.n_clusters):
             image_cluster_centers[i] = image_kmeans.cluster_centers_[image_ind[i]]
             text_cluster_centers[i] = text_kmeans.cluster_centers_[text_ind[i]]
@@ -194,67 +165,54 @@ class MultiDEC(nn.Module):
         self.image_encoder.mu.data = self.image_encoder.mu.cpu()
         self.text_encoder.mu.data.copy_(torch.Tensor(text_cluster_centers))
         self.text_encoder.mu.data = self.text_encoder.mu.cpu()
+        self.train()
         best_loss = 99999.
         best_epoch = 0
 
         for epoch in range(num_epochs):
             # update the target distribution p
-            self.train()
+
             image_z = []
             text_z = []
-            for batch_idx in range(X_num_batch):
-                image_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)][1]
-                text_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)][2]
+            for batch_idx in range(num_batch):
+                image_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, num)][1]
+                text_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, num)][2]
                 image_inputs = Variable(image_batch).to(self.device)
                 text_inputs = Variable(text_batch).to(self.device)
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
                 image_z.append(_image_z.data.cpu())
                 text_z.append(_text_z.data.cpu())
                 del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
-            # torch.cuda.empty_cache()
+                torch.cuda.empty_cache()
             image_z = torch.cat(image_z, dim=0)
             text_z = torch.cat(text_z, dim=0)
 
             q, r = self.soft_assignemt(image_z, text_z)
             p = self.target_distribution(q, r).data
             y_pred = torch.argmax(p, dim=1).numpy()
-            # count_percentage(y_pred)
+            count_percentage(y_pred)
             # train 1 epoch
             train_loss = 0.0
-            for batch_idx in range(X_num_batch):
-                image_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)][1]
-                text_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)][2]
-                label_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)][3]
-                pbatch = p[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)]
+            for batch_idx in range(num_batch):
+                image_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, num)][1]
+                text_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, num)][2]
+                pbatch = p[batch_idx * batch_size: min((batch_idx + 1) * batch_size, num)]
 
                 optimizer.zero_grad()
                 image_inputs = Variable(image_batch).to(self.device)
                 text_inputs = Variable(text_batch).to(self.device)
                 target = Variable(pbatch)
 
-                _image_z, _text_z = self.forward(image_inputs, text_inputs)
-                qbatch, rbatch = self.soft_assignemt(_image_z.cpu(), _text_z.cpu())
-                loss = self.loss_function(target, qbatch, rbatch) + self.semi_loss_function(_image_z.cpu(), _text_z.cpu(), label_batch)
+                image_z, text_z = self.forward(image_inputs, text_inputs)
+                qbatch, rbatch = self.soft_assignemt(image_z.cpu(), text_z.cpu())
+                loss = self.loss_function(target, qbatch, rbatch)
                 train_loss += loss.data * len(target)
                 loss.backward()
                 optimizer.step()
 
-                del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
-            # torch.cuda.empty_cache()
-            train_loss = train_loss / X_num
-
-            self.eval()
-            y_preds = torch.argmax(p, dim=1).numpy()
-            val_labels = X[:][4]
-            acc = 0
-            val_label_count = 0
-            for y_pred, val_label in zip(y_preds, val_labels):
-                if val_label != -1:
-                    val_label_count = val_label_count + 1
-                    if y_pred == val_label:
-                        acc = acc + 1
-            print("acc = %4f where  %d / %d" % (acc/val_label_count, acc, val_label_count))
-
+                del image_batch, text_batch, image_inputs, text_inputs, image_z, text_z
+                torch.cuda.empty_cache()
+            train_loss = train_loss / num
             if best_loss > train_loss:
                 best_loss = train_loss
                 best_epoch = epoch
@@ -288,7 +246,7 @@ class MultiDEC(nn.Module):
             image_z.append(_image_z.data.cpu())
             text_z.append(_text_z.data.cpu())
             del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
-        # torch.cuda.empty_cache()
+            torch.cuda.empty_cache()
         short_codes = np.concatenate(short_codes, axis=0)
         image_z = torch.cat(image_z, dim=0)
         text_z = torch.cat(text_z, dim=0)
