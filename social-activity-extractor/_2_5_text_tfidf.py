@@ -28,8 +28,8 @@ CONFIG = config.Config
 def main():
 	parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
 	# data
-	parser.add_argument('-target_dataset', type=str, default=None, help='folder name of target dataset')
-	parser.add_argument('-label_csv', type=str, default=None, help='folder name of target dataset')
+	parser.add_argument('-target_dataset', type=str, default='seoul_subway', help='folder name of target dataset')
+	parser.add_argument('-label_csv', type=str, default='category_label.csv', help='folder name of target dataset')
 	args = parser.parse_args()
 
 	get_latent(args)

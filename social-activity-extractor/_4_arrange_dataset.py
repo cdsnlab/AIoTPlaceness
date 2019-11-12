@@ -487,6 +487,7 @@ def make_toy_csv(target_csv):
 def make_label_set(target_csv):
     #categories = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 121, 122, 123, 124, 13, 14, 15, 16, 18, 50, 51, 52]
     categories = [11, 124, 121, 18, 1, 13, 123, 7, 122, 5, 8, 6]
+    #categories = [11, 124, 13]
     category_to_value = {v: i for i, v in enumerate(categories)}
     print(category_to_value)
     weight_to_value = {'image': 1, 'image_text': 0.5, 'text': 0}
@@ -527,7 +528,7 @@ def make_label_set(target_csv):
         #             match_count = match_count + 1
         if len(value['category']) == 3:
             most_category = Counter(value['category']).most_common(1)[0]
-            if most_category[1] >= 2:
+            if most_category[1] >= 3:
                 if most_category[0] in categories:
                     category_value = category_to_value[most_category[0]]
                     category_dict[shortcode] = category_value
@@ -546,10 +547,10 @@ def make_label_set(target_csv):
     print(three_count)
     print(match_count)
     df_category = pd.DataFrame.from_dict(category_dict, orient='index', columns=['category'])
-    df_category = df_category.sample(n=100)
+    #df_category = df_category.sample(n=100)
     df_category.to_csv(os.path.join(CONFIG.CSV_PATH, "category_label.csv"), encoding='utf-8-sig')
     df_weight = pd.DataFrame.from_dict(weight_dict, orient='index', columns=['iamge_weight', 'text_weight'])
-    df_weight = df_weight.loc[df_category.index]
+    #df_weight = df_weight.loc[df_category.index]
     df_weight.to_csv(os.path.join(CONFIG.CSV_PATH, "weight_label.csv"), encoding='utf-8-sig')
 
 def cut_label_csv(target_csv, label_csv):

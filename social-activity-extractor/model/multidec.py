@@ -12,7 +12,7 @@ from torch.autograd import Variable
 
 import numpy as np
 import math
-from model.util import align_cluster, count_percentage, batch_pairwise_squared_distances
+from model.util import align_cluster, count_percentage, pdist
 from sklearn.cluster import KMeans
 
 
@@ -112,40 +112,58 @@ class MultiDEC(nn.Module):
         loss = image_loss + text_loss
         return loss
 
-    def semi_loss_function(self, image_z_batch, text_z_batch, image_z, text_z, label_batch, train_labels):
-        a = torch.zeros(len(label_batch), len(train_labels))
-        for i in range(len(label_batch)):
-            for j in range(len(train_labels)):
-                if label_batch[i] != -1 and train_labels[j] != -1:
-                    if label_batch[i] == train_labels[j]:
-                        a[i][j] = torch.dist(image_z_batch[i], image_z[j]) + torch.dist(text_z_batch[i], text_z[j])
-                    elif label_batch[i] != train_labels[j]:
-                        a[i][j] = -1 * (torch.dist(image_z_batch[i], image_z[j]) + torch.dist(text_z_batch[i], text_z[j]))
-        #semi_loss = semi_loss + (torch.dist(image_z_batch[i], image_z[j]) + torch.dist(text_z_batch[i], text_z[j])) /
-        #image_loss = a * batch_pairwise_squared_distances(image_z_batch, image_z)
-        #text_loss = a * batch_pairwise_squared_distances(text_z_batch, text_z)
-        semi_loss = torch.sum(torch.sum(a, dim=1))
-        semi_loss = self.trade_off * semi_loss / len(label_batch)
+    # def semi_loss_function(self, image_z_batch, text_z_batch, image_z, text_z, label_batch, train_labels):
+    #     a = torch.zeros(len(label_batch), len(train_labels))
+    #     for i in range(len(label_batch)):
+    #         for j in range(len(train_labels)):
+    #             if label_batch[i] != -1 and train_labels[j] != -1:
+    #                 if label_batch[i] == train_labels[j]:
+    #                     a[i][j] = 1
+    #                 elif label_batch[i] != train_labels[j]:
+    #                     a[i][j] = -1
+    #
+    #     image_loss = torch.sum(torch.sum(a * pdist(image_z_batch, image_z), dim=1))
+    #     text_loss = torch.sum(torch.sum(a * pdist(text_z_batch, text_z), dim=1))
+    #     semi_loss = image_loss + text_loss
+    #     semi_loss = self.trade_off * semi_loss / len(label_batch)
+    #     return semi_loss
+
+    def semi_loss_function(self, image_z, text_z, label):
+        a = []
+        for i in range(0, len(label) - 1):
+            for j in range(i + 1, len(label)):
+                if label[i] == -1 or label[j] == -1:
+                    a.append(0.)
+                elif label[i] == label[j]:
+                    a.append(1.)
+                else:
+                    #a.append((0.))
+                    a.append(-1.)
+        a = torch.from_numpy(np.array(a, dtype=np.float32))
+        image_dist = torch.pdist(image_z)
+        image_loss = self.trade_off * torch.sum(a * image_dist) / len(label)
+        text_dist = torch.pdist(text_z)
+        text_loss = self.trade_off * torch.sum(a * text_dist) / len(label)
+        semi_loss = image_loss + text_loss
         return semi_loss
 
-    # def semi_loss_function(self, image_z, text_z, label):
-    #     a = []
-    #     for i in range(0, len(label) - 1):
-    #         for j in range(i + 1, len(label)):
-    #             if label[i] == -1 or label[j] == -1:
-    #                 a.append(0.)
-    #             elif label[i] == label[j]:
-    #                 a.append(1.)
-    #             else:
-    #                 a.append((0.))
-    #                 #a.append(-1.)
-    #     a = torch.from_numpy(np.array(a, dtype=np.float32))
-    #     image_dist = torch.pdist(image_z)
-    #     image_loss = self.trade_off * torch.sum(a * image_dist) / len(label)
-    #     text_dist = torch.pdist(text_z)
-    #     text_loss = self.trade_off * torch.sum(a * text_dist) / len(label)
-    #     semi_loss = image_loss + text_loss
-    #     return semi_loss
+    def new_semi_loss_function(self, q_batch, r_batch, label_batch):
+        q_batch_list = []
+        r_batch_list = []
+        label_batch_list = []
+        for i in range(len(label_batch)):
+            if label_batch[i] != -1:
+                q_batch_list.append(q_batch[i])
+                r_batch_list.append(r_batch[i])
+                label_batch_list.append(label_batch[i])
+        q_batch = torch.stack(q_batch_list, 0).log()
+        r_batch = torch.stack(r_batch_list, 0).log()
+        #print(label_batch_list)
+        label_batch = Variable(torch.LongTensor(label_batch_list))
+        image_loss = F.nll_loss(q_batch, label_batch)
+        text_loss = F.nll_loss(r_batch, label_batch)
+        semi_loss = image_loss + text_loss
+        return semi_loss
 
 
     def target_distribution(self, q, r):
@@ -236,6 +254,7 @@ class MultiDEC(nn.Module):
         self.text_encoder.mu.data.copy_(torch.Tensor(text_cluster_centers))
         self.text_encoder.mu.data = self.text_encoder.mu.cpu()
         best_loss = 99999.
+        best_acc = 0.
         best_epoch = 0
 
         for epoch in range(num_epochs):
@@ -266,8 +285,9 @@ class MultiDEC(nn.Module):
                 loss = self.loss_function(target, qbatch, rbatch)
                 #print("#batch_idx: %d, after loss at %s" % (batch_idx, str(datetime.datetime.now())))
                 # semi_loss = self.semi_loss_function(_image_z.cpu(), _text_z.cpu(), label_batch)
-                semi_loss = self.semi_loss_function(_image_z.cpu(), _text_z.cpu(), image_z, text_z, label_batch, train_labels)
+                # semi_loss = self.semi_loss_function(_image_z.cpu(), _text_z.cpu(), image_z, text_z, label_batch, train_labels)
                 #print("#batch_idx: %d, after semi loss at %s" % (batch_idx, str(datetime.datetime.now())))
+                semi_loss = self.new_semi_loss_function(qbatch, rbatch, label_batch)
                 loss = loss + semi_loss
                 train_loss += loss.data * len(target)
                 loss.backward()
@@ -291,21 +311,22 @@ class MultiDEC(nn.Module):
                     val_label_count = val_label_count + 1
                     if y_pred == val_label:
                         acc = acc + 1
+            val_acc = acc/val_label_count
             #print(_y_pred)
             #print(_val_label)
-            print("acc = %.4f where  %d / %d" % (acc/val_label_count, acc, val_label_count))
+            print("acc = %.4f where  %d / %d" % (val_acc, acc, val_label_count))
 
-            if best_loss > train_loss:
-                best_loss = train_loss
+            if best_acc < val_acc:
+                best_acc = val_acc
                 best_epoch = epoch
                 if save_path:
                     self.save_model(os.path.join(save_path, "mdec_" + str(self.image_encoder.z_dim)) + '_' + str(
                     self.n_clusters) + ".pt")
-            print("#Epoch %3d: Loss: %.4f Best Loss: %.4f at %s" % (
-                epoch + 1, train_loss, best_loss, str(datetime.datetime.now())))
+            print("#Epoch %3d: Acc: %.4f Best Acc: %.4f at %s" % (
+                epoch + 1, val_acc, best_acc, str(datetime.datetime.now())))
 
-        print("#Best Epoch %3d: Best Loss: %.4f" % (
-            best_epoch, best_loss))
+        print("#Best Epoch %3d: Best Acc: %.4f" % (
+            best_epoch, best_acc))
 
     def fit_predict(self, X, batch_size=256):
         num = len(X)

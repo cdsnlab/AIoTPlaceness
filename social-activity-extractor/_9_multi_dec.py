@@ -31,7 +31,7 @@ def main():
     # learning
     parser.add_argument('-lr', type=float, default=1e-03, help='initial learning rate')
     parser.add_argument('-trade_off', type=float, default=1e-04, help='trade_off value for semi-supervised learning')
-    parser.add_argument('-epochs', type=int, default=50, help='number of epochs for train')
+    parser.add_argument('-epochs', type=int, default=100, help='number of epochs for train')
     parser.add_argument('-update_time', type=int, default=1, help='update time within epoch')
     parser.add_argument('-batch_size', type=int, default=256, help='batch size for training')
     # data
