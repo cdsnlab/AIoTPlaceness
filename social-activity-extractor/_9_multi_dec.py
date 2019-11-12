@@ -76,7 +76,7 @@ def train_multidec(args):
     df_train = pd.DataFrame(data=label_train, index=short_code_train, columns=df_label.columns)
     df_val = pd.DataFrame(data=label_val, index=short_code_val, columns=df_label.columns)
     print("Loading dataset...")
-    full_dataset = load_semi_supervised_csv_data(df_image_data, df_text_data, df_train, df_val, CONFIG)
+    full_dataset, train_dataset, val_dataset = load_semi_supervised_csv_data(df_image_data, df_text_data, df_train, df_val, CONFIG)
     print("Loading dataset completed")
 
     image_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=n_clusters,
@@ -92,7 +92,7 @@ def train_multidec(args):
     for arg, value in vars(args).items():
         exp.param(arg, value)
     try:
-        mdec.fit(full_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
+        mdec.fit(full_dataset, train_dataset, val_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
                  save_path=CONFIG.CHECKPOINT_PATH)
         print("Finish!!!")
 
