@@ -258,11 +258,12 @@ class MultiDEC(nn.Module):
 
                 del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
 
+            image_z, text_z = self.update_z(X, batch_size)
+            q, r = self.soft_assignemt(image_z, text_z)
+            p = self.target_distribution(q, r).data
+
             for batch_idx in range(X_num_batch):
                 # clustering phase
-                image_z, text_z = self.update_z(X, batch_size)
-                q, r = self.soft_assignemt(image_z, text_z)
-                p = self.target_distribution(q, r).data
                 image_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)][1]
                 text_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)][2]
                 pbatch = p[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)]
