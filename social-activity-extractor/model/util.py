@@ -115,6 +115,51 @@ class SemiSupervisedDataset(Dataset):
         text_tensor = torch.from_numpy(self.text_data[idx]).type(torch.FloatTensor)
         return self.short_codes[idx], image_tensor, text_tensor, self.train_label[idx], self.val_label[idx]
 
+# def load_semi_supervised_csv_data(df_image_data, df_text_data, df_train, df_val, CONFIG):
+#     train_index = set(df_train.index)
+#     val_index = set(df_val.index)
+#     short_codes = []
+#     image_data = []
+#     text_data = []
+#     train_label_data = []
+#     val_label_data = []
+#
+#     pbar = tqdm(total=df_image_data.shape[0])
+#     for index, row in df_image_data.iterrows():
+#         short_codes.append(index)
+#         image_data.append(np.array(row))
+#         text_data.append(np.array(df_text_data.loc[index]))
+#         if index in train_index:
+#             train_label_data.append(df_train.loc[index][0])
+#             val_label_data.append(-1)
+#         elif index in val_index:
+#             train_label_data.append(-1)
+#             val_label_data.append(df_val.loc[index][0])
+#         else:
+#             train_label_data.append(-1)
+#             val_label_data.append(-1)
+#         pbar.update(1)
+#     pbar.close()
+#     full_dataset = SemiSupervisedDataset(short_codes, np.array(image_data), np.array(text_data), train_label_data, val_label_data, CONFIG)
+#     return full_dataset
+#
+# class SemiSupervisedDataset(Dataset):
+#     def __init__(self, short_codes, image_data, text_data, train_label, val_label, CONFIG):
+#         self.short_codes = short_codes
+#         self.image_data = image_data
+#         self.text_data = text_data
+#         self.CONFIG = CONFIG
+#         self.train_label = train_label
+#         self.val_label = val_label
+#
+#     def __len__(self):
+#         return len(self.short_codes)
+#
+#     def __getitem__(self, idx):
+#         image_tensor = torch.from_numpy(self.image_data[idx]).type(torch.FloatTensor)
+#         text_tensor = torch.from_numpy(self.text_data[idx]).type(torch.FloatTensor)
+#         return self.short_codes[idx], image_tensor, text_tensor, self.train_label[idx], self.val_label[idx]
+
 # def load_multi_csv_data(df_image_data, df_text_data, CONFIG):
 #     short_codes = []
 #     image_data = []

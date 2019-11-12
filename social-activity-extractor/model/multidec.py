@@ -149,9 +149,6 @@ class MultiDEC(nn.Module):
 
     def new_semi_loss_function(self, q_batch, r_batch, label_batch):
         label_batch = Variable(torch.LongTensor(label_batch))
-        q_batch = q_batch[label_batch != -1]
-        r_batch = r_batch[label_batch != -1]
-        label_batch = label_batch[label_batch != -1]
         image_loss = F.nll_loss(q_batch, label_batch)
         text_loss = F.nll_loss(r_batch, label_batch)
         semi_loss = image_loss + text_loss
@@ -256,6 +253,7 @@ class MultiDEC(nn.Module):
             train_loss = 0.0
             train_labels = X[:][3]
             for batch_idx in range(X_num_batch):
+                # clustering phase
                 #print("#batch_idx: %d, before p update at %s" % (batch_idx, str(datetime.datetime.now())))
                 image_z, text_z = self.update_z(X, batch_size)
                 q, r = self.soft_assignemt(image_z, text_z)
@@ -279,8 +277,13 @@ class MultiDEC(nn.Module):
                 # semi_loss = self.semi_loss_function(_image_z.cpu(), _text_z.cpu(), label_batch)
                 # semi_loss = self.semi_loss_function(_image_z.cpu(), _text_z.cpu(), image_z, text_z, label_batch, train_labels)
                 #print("#batch_idx: %d, after semi loss at %s" % (batch_idx, str(datetime.datetime.now())))
-                if not all(x == -1 for x in label_batch):
-                    semi_loss = self.new_semi_loss_function(qbatch, rbatch, label_batch)
+                #label_batch = [-1] * len(label_batch)
+                label_input = Variable(torch.LongTensor(label_batch))
+                label_semi = label_input[label_input != -1]
+                if len(label_semi) != 0:
+                    qbatch_semi = qbatch[label_input != -1]
+                    rbatch_semi = rbatch[label_input != -1]
+                    semi_loss = self.new_semi_loss_function(qbatch_semi, rbatch_semi, label_semi)
                     loss = loss + semi_loss
                 train_loss += loss.data * len(target)
                 loss.backward()
