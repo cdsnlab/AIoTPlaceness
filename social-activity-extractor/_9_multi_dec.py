@@ -14,7 +14,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from model import util
 from sklearn.model_selection import train_test_split
-from model.util import load_multi_csv_data
+from model.util import load_multi_csv_data, load_semi_supervised_csv_data
 from model.multidec import MDEC_encoder, MultiDEC
 
 CONFIG = config.Config
@@ -30,14 +30,14 @@ def main():
     parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
     # learning
     parser.add_argument('-lr', type=float, default=1e-03, help='initial learning rate')
-    parser.add_argument('-trade_off', type=float, default=1e-02, help='trade_off value for semi-supervised learning')
+    parser.add_argument('-trade_off', type=float, default=1e-04, help='trade_off value for semi-supervised learning')
     parser.add_argument('-epochs', type=int, default=50, help='number of epochs for train')
     parser.add_argument('-update_time', type=int, default=1, help='update time within epoch')
     parser.add_argument('-batch_size', type=int, default=256, help='batch size for training')
     # data
-    parser.add_argument('-image_csv', type=str, default=None, help='file name of target csv')
-    parser.add_argument('-text_csv', type=str, default=None, help='file name of target csv')
-    parser.add_argument('-label_csv', type=str, default=None, help='file name of target label')
+    parser.add_argument('-image_csv', type=str, default='labeled_scaled_pca_normalized_image_encoded_seoul_subway.csv', help='file name of target csv')
+    parser.add_argument('-text_csv', type=str, default='labeled_scaled_text_doc2vec_seoul_subway.csv', help='file name of target csv')
+    parser.add_argument('-label_csv', type=str, default='category_label.csv', help='file name of target label')
     parser.add_argument('-split_rate', type=float, default=0.8, help='split rate between train and validation')
     # model
     parser.add_argument('-input_dim', type=int, default=300, help='size of input dimension')
@@ -76,7 +76,7 @@ def train_multidec(args):
     df_train = pd.DataFrame(data=label_train, index=short_code_train, columns=df_label.columns)
     df_val = pd.DataFrame(data=label_val, index=short_code_val, columns=df_label.columns)
     print("Loading dataset...")
-    full_dataset = load_multi_csv_data(df_image_data, df_text_data, df_train, df_val, CONFIG)
+    full_dataset = load_semi_supervised_csv_data(df_image_data, df_text_data, df_train, df_val, CONFIG)
     print("Loading dataset completed")
 
     image_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=n_clusters,
