@@ -148,18 +148,10 @@ class MultiDEC(nn.Module):
         return semi_loss
 
     def new_semi_loss_function(self, q_batch, r_batch, label_batch):
-        q_batch_list = []
-        r_batch_list = []
-        label_batch_list = []
-        for i in range(len(label_batch)):
-            if label_batch[i] != -1:
-                q_batch_list.append(q_batch[i])
-                r_batch_list.append(r_batch[i])
-                label_batch_list.append(label_batch[i])
-        q_batch = torch.stack(q_batch_list, 0).log()
-        r_batch = torch.stack(r_batch_list, 0).log()
-        #print(label_batch_list)
-        label_batch = Variable(torch.LongTensor(label_batch_list))
+        label_batch = Variable(torch.LongTensor(label_batch))
+        q_batch = q_batch[label_batch != -1]
+        r_batch = r_batch[label_batch != -1]
+        label_batch = label_batch[label_batch != -1]
         image_loss = F.nll_loss(q_batch, label_batch)
         text_loss = F.nll_loss(r_batch, label_batch)
         semi_loss = image_loss + text_loss
@@ -287,8 +279,9 @@ class MultiDEC(nn.Module):
                 # semi_loss = self.semi_loss_function(_image_z.cpu(), _text_z.cpu(), label_batch)
                 # semi_loss = self.semi_loss_function(_image_z.cpu(), _text_z.cpu(), image_z, text_z, label_batch, train_labels)
                 #print("#batch_idx: %d, after semi loss at %s" % (batch_idx, str(datetime.datetime.now())))
-                semi_loss = self.new_semi_loss_function(qbatch, rbatch, label_batch)
-                loss = loss + semi_loss
+                if not all(x == -1 for x in label_batch):
+                    semi_loss = self.new_semi_loss_function(qbatch, rbatch, label_batch)
+                    loss = loss + semi_loss
                 train_loss += loss.data * len(target)
                 loss.backward()
                 optimizer.step()
