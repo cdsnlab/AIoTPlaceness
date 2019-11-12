@@ -188,7 +188,7 @@ class MultiDEC(nn.Module):
         X_num = len(X)
         X_num_batch = int(math.ceil(1.0 * len(X) / batch_size))
         train_num = len(train_dataset)
-        train_num_batch = int(math.ceil(1.0 * len(X) / batch_size))
+        train_num_batch = int(math.ceil(1.0 * len(train_dataset) / batch_size))
         '''X: tensor data'''
         self.to(self.device)
         self.image_encoder.mu.data = self.image_encoder.mu.cpu()
