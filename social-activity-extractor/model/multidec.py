@@ -28,6 +28,9 @@ def buildNetwork(layers, activation="relu", dropout=0):
             net.append(nn.Dropout(dropout))
     return nn.Sequential(*net)
 
+def adjust_learning_rate(lr, optimizer):
+    for param_group in optimizer.param_groups:
+        param_group["lr"] = lr
 
 class MDEC_encoder(nn.Module):
     def __init__(self, input_dim=784, z_dim=10, n_clusters=10,
@@ -238,6 +241,8 @@ class MultiDEC(nn.Module):
             # train 1 epoch
             train_loss = 0.0
 
+            adjust_learning_rate(lr*10, optimizer)
+
             for batch_idx in range(train_num_batch):
                 # semi-supervised phase
                 image_batch = train_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, train_num)][1]
@@ -261,6 +266,8 @@ class MultiDEC(nn.Module):
             image_z, text_z = self.update_z(X, batch_size)
             q, r = self.soft_assignemt(image_z, text_z)
             p = self.target_distribution(q, r).data
+
+            adjust_learning_rate(lr, optimizer)
 
             for batch_idx in range(X_num_batch):
                 # clustering phase

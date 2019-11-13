@@ -485,8 +485,8 @@ def make_toy_csv(target_csv):
 
 
 def make_label_set(target_csv):
-    #categories = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 121, 122, 123, 124, 13, 14, 15, 16, 18, 50, 51, 52]
-    categories = [11, 124, 121, 18, 1, 13, 123, 7, 122, 5, 8, 6]
+    categories = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 121, 122, 123, 124, 13, 14, 15, 16, 18, 50, 51, 52]
+    #categories = [11, 124, 121, 18, 1, 13, 123, 7, 122, 5, 8, 6]
     #categories = [11, 124, 13]
     category_to_value = {v: i for i, v in enumerate(categories)}
     print(category_to_value)
@@ -528,7 +528,7 @@ def make_label_set(target_csv):
         #             match_count = match_count + 1
         if len(value['category']) == 3:
             most_category = Counter(value['category']).most_common(1)[0]
-            if most_category[1] >= 3:
+            if most_category[1] >= 2:
                 if most_category[0] in categories:
                     category_value = category_to_value[most_category[0]]
                     category_dict[shortcode] = category_value
@@ -570,6 +570,14 @@ def make_scaled_csv(target_csv):
     print(df_scaled_data[:5])
     df_scaled_data.to_csv(os.path.join(CONFIG.CSV_PATH, 'scaled_' + target_csv), encoding='utf-8-sig')
 
+def sampled_plus_labeled_csv(target_csv, label_csv):
+    df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, encoding='utf-8')
+    df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, label_csv), index_col=0, encoding='utf-8')
+    df_label = df_data.loc[df_label.index]
+    df_data = df_data.loc[set(df_data.index) - set(df_label.index)]
+    df_data = df_data.sample(n=90000)
+    df_data = pd.concat([df_data, df_label])
+    df_data.to_csv(os.path.join(CONFIG.CSV_PATH, 'sampled_plus_labeled_' + target_csv), encoding='utf-8-sig')
 
 def run(option):
     if option == 0:
@@ -604,6 +612,8 @@ def run(option):
         cut_label_csv(target_csv=sys.argv[2], label_csv=sys.argv[3])
     elif option == 15:
         make_scaled_csv(target_csv=sys.argv[2])
+    elif option == 16:
+        sampled_plus_labeled_csv(target_csv=sys.argv[2], label_csv=sys.argv[3])
     else:
         print("This option does not exist!\n")
 
