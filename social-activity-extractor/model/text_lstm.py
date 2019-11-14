@@ -5,7 +5,7 @@ from torch.nn import functional as F
 
 
 class LSTMClassifier(nn.Module):
-    def __init__(self, batch_size, output_size, hidden_size, vocab_size, embedding_length, weights):
+    def __init__(self, device, batch_size, output_size, hidden_size, vocab_size, embedding):
         super(LSTMClassifier, self).__init__()
 
         """
@@ -19,21 +19,18 @@ class LSTMClassifier(nn.Module):
         weights : Pre-trained word_embeddings which we will use to create our word_embedding look-up table 
 
         """
-
+        self.device = device
         self.batch_size = batch_size
         self.output_size = output_size
         self.hidden_size = hidden_size
         self.vocab_size = vocab_size
-        self.embedding_length = embedding_length
 
-        self.word_embeddings = nn.Embedding(vocab_size, embedding_length)  # Initializing the look-up table.
-        self.word_embeddings.weight = nn.Parameter(weights,
-                                                   requires_grad=False)  # Assigning the look-up table to the pre-trained GloVe word embedding.
-        self.lstm = nn.LSTM(embedding_length, hidden_size)
+        self.word_embeddings = embedding
+        self.lstm = nn.LSTM(embedding.embedding_dim, hidden_size)
         self.label = nn.Linear(hidden_size, output_size)
         self.softmax = nn.LogSoftmax(dim=1)
 
-    def forward(self, input_sentence, batch_size=None):
+    def forward(self, input_sentence):
 
         """
         Parameters
@@ -52,14 +49,34 @@ class LSTMClassifier(nn.Module):
         input = self.word_embeddings(
             input_sentence)  # embedded input of shape = (batch_size, num_sequences,  embedding_length)
         input = input.permute(1, 0, 2)  # input.size() = (num_sequences, batch_size, embedding_length)
-        if batch_size is None:
-            h_0 = Variable(torch.zeros(1, self.batch_size, self.hidden_size).cuda())  # Initial hidden state of the LSTM
-            c_0 = Variable(torch.zeros(1, self.batch_size, self.hidden_size).cuda())  # Initial cell state of the LSTM
-        else:
-            h_0 = Variable(torch.zeros(1, batch_size, self.hidden_size).cuda())
-            c_0 = Variable(torch.zeros(1, batch_size, self.hidden_size).cuda())
+        h_0 = Variable(torch.zeros(1, self.batch_size, self.hidden_size).to(self.device))  # Initial hidden state of the LSTM
+        c_0 = Variable(torch.zeros(1, self.batch_size, self.hidden_size).to(self.device))  # Initial cell state of the LSTM
         output, (final_hidden_state, final_cell_state) = self.lstm(input, (h_0, c_0))
         final_output = self.label(final_hidden_state[
                                       -1])  # final_hidden_state.size() = (1, batch_size, hidden_size) & final_output.size() = (batch_size, output_size)
         log_prob = self.softmax(final_output)
         return log_prob
+
+class MultiDEC(nn.Module):
+    def __init__(self, device, text_encoder):
+        super(self.__class__, self).__init__()
+        self.device = device
+        self.text_encoder = text_encoder
+
+    def save_model(self, path):
+        torch.save(self.state_dict(), path)
+
+    def load_model(self, path):
+        pretrained_dict = torch.load(path, map_location=lambda storage, loc: storage)
+        model_dict = self.state_dict()
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
+        model_dict.update(pretrained_dict)
+        self.load_state_dict(model_dict)
+
+    def forward(self, image_x, text_x):
+        image_z = self.image_encoder(image_x)
+        text_z = self.text_encoder(text_x)
+        return image_z, text_z
+
+    def fit(self, train_dataset, lr=0.001, batch_size=256, num_epochs=10, tol=1e-3):
+        pass
