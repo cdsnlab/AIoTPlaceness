@@ -31,11 +31,11 @@ class LSTMClassifier(nn.Module):
         self.hidden_size = hidden_size
 
         self.word_embeddings = embedding
-        self.lstm0 = nn.LSTM(embedding.embedding_dim, hidden_size[0], dropout=dropout)
+        self.lstm0 = nn.LSTM(embedding.embedding_dim, hidden_size[0])
         self.dropout0 = nn.Dropout(p=dropout)
-        self.lstm1 = nn.LSTM(hidden_size[0], hidden_size[1], dropout=dropout)
+        self.lstm1 = nn.LSTM(hidden_size[0], hidden_size[1])
         self.dropout1 = nn.Dropout(p=dropout)
-        self.lstm2 = nn.LSTM(hidden_size[1], hidden_size[2], dropout=dropout)
+        self.lstm2 = nn.LSTM(hidden_size[1], hidden_size[2])
         self.dropout2 = nn.Dropout(p=dropout)
         self.label = nn.Linear(hidden_size[2], output_size)
         self.softmax = nn.LogSoftmax(dim=1)
