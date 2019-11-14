@@ -300,7 +300,7 @@ class MultiDEC(nn.Module):
             train_pred = df_pred['pred']
             train_acc = accuracy_score(train_labels, train_pred)
             train_nmi = normalized_mutual_info_score(train_labels, train_pred)
-            train_f_1 = f1_score(train_labels, train_pred)
+            train_f_1 = f1_score(train_labels, train_pred, average='micro')
             print("#Epoch %3d: acc: %.4f, nmi: %5f, f_1: %4f, loss: %.4f at %s" % (
                 epoch + 1, train_acc, train_nmi, train_f_1, train_loss, str(datetime.datetime.now())))
             if epoch == 0:
@@ -324,7 +324,7 @@ class MultiDEC(nn.Module):
         test_pred = torch.argmax(test_p, dim=1).numpy()[X_num:]
         test_acc = accuracy_score(test_labels, test_pred)
         test_nmi = normalized_mutual_info_score(test_labels, test_pred)
-        test_f_1 = f1_score(test_labels, test_pred)
+        test_f_1 = f1_score(test_labels, test_pred, average='micro')
         print("#Test acc: %.4f, Test nmi: %5f, Test f_1: %4f" % (
             test_acc, test_nmi, test_f_1))
         self.acc = test_acc
