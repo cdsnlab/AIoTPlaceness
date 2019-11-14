@@ -39,10 +39,7 @@ def get_latent(args):
 
 	df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'posts.csv'), index_col=0, header=None, encoding='utf-8-sig')
 	df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.label_csv), index_col=0, encoding='utf-8-sig')
-	print(df_label[:5])
 	df_data = df_data.loc[df_label.index]
-	print(df_data[:5])
-	print(len(df_data))
 
 	short_code_array = np.array(df_data.index)
 	row_array = np.array(df_data[1])
@@ -65,7 +62,7 @@ def get_latent(args):
 		clf.fit(X_train_tfidf, Y_train)
 		test_pred = clf.predict(X_test_tfidf)
 		test_acc = accuracy_score(Y_test, test_pred)
-		test_nmi = normalized_mutual_info_score(Y_test, test_pred)
+		test_nmi = normalized_mutual_info_score(Y_test, test_pred, average_method='geometric')
 		test_f_1 = f1_score(Y_test, test_pred, average='micro')
 		print("#Test acc: %.4f, Test nmi: %5f, Test f_1: %4f" % (
 			test_acc, test_nmi, test_f_1))
