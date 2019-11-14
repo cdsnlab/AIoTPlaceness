@@ -298,7 +298,7 @@ class MultiDEC(nn.Module):
             train_pred = df_pred['pred']
             train_correct = sum(1 for x, y in zip(train_pred, train_labels) if x == y)
             train_acc = train_correct / len(train_pred)
-            print("#Epoch %3d: Acc: %.4f where %d / %d, test nmi: %5f, loss: %.4f at %s" % (
+            print("#Epoch %3d: Acc: %.4f where %d / %d, nmi: %5f, loss: %.4f at %s" % (
                 epoch + 1, train_acc, train_correct, len(train_pred), normalized_mutual_info_score(train_labels, train_pred, average_method='arithmetic'), train_loss, str(datetime.datetime.now())))
             if epoch == 0:
                 train_pred_last = train_pred
