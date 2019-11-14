@@ -213,7 +213,7 @@ def pickle_to_corpus(target_pickle):
 def make_word2vec(target_corpus):
 	corpus_path = os.path.join(CONFIG.DATASET_PATH, target_corpus, 'corpus.txt')
 	sentences = word2vec.LineSentence(corpus_path) 
-	embedding_size = 300
+	embedding_size = 100
 	pad_value = 1.
 	print("embedding started")
 	embedding_model = Word2Vec(size=embedding_size, window=5, min_count=CONFIG.MIN_WORD_COUNT, workers=4, sg = 1, hs=0, negative=5, sample = 0.00001, iter = 100)

@@ -312,11 +312,11 @@ def load_text_data(df_full, df_train_label, df_val_label, CONFIG, word2idx):
         pbar.update(1)
         if index in df_train_index:
             train_short_codes.append(index)
-            train_input_data.append(np.array(row[0]))
+            train_input_data.append(row.iloc[0])
             train_label_data.append(df_train_label.loc[index][0])
         elif index in df_val_index:
             val_short_codes.append(index)
-            val_input_data.append(np.array(row[0]))
+            val_input_data.append(row.iloc[0])
             val_label_data.append(df_val_label.loc[index][0])
     pbar.close()
     train_dataset, val_dataset = TextDataset(train_short_codes, train_input_data, train_label_data, CONFIG, word2idx), \

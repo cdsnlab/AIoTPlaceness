@@ -4,7 +4,7 @@ import os
 import pandas as pd
 import torch
 import torch.nn as nn
-from sklearn.metrics import normalized_mutual_info_score
+from sklearn.metrics import accuracy_score, normalized_mutual_info_score, f1_score
 from torch.nn import Parameter
 import torch.nn.functional as F
 import torch.optim as optim
@@ -73,7 +73,9 @@ class MultiDEC(nn.Module):
         self.n_clusters = n_clusters
         self.alpha = alpha
         self.trade_off = trade_off
-        self.score = 0.
+        self.acc = 0.
+        self.nmi = 0.
+        self.f_1 = 0.
 
     def save_model(self, path):
         torch.save(self.state_dict(), path)
@@ -296,10 +298,11 @@ class MultiDEC(nn.Module):
             df_pred = pd.DataFrame(data=train_pred, index=short_codes, columns=['pred'])
             df_pred = df_pred.loc[df_train.index]
             train_pred = df_pred['pred']
-            train_correct = sum(1 for x, y in zip(train_pred, train_labels) if x == y)
-            train_acc = train_correct / len(train_pred)
-            print("#Epoch %3d: Acc: %.4f where %d / %d, nmi: %5f, loss: %.4f at %s" % (
-                epoch + 1, train_acc, train_correct, len(train_pred), normalized_mutual_info_score(train_labels, train_pred, average_method='arithmetic'), train_loss, str(datetime.datetime.now())))
+            train_acc = accuracy_score(train_labels, train_pred)
+            train_nmi = normalized_mutual_info_score(train_labels, train_pred)
+            train_f_1 = f1_score(train_labels, train_pred)
+            print("#Epoch %3d: acc: %.4f, nmi: %5f, f_1: %4f, loss: %.4f at %s" % (
+                epoch + 1, train_acc, train_nmi, train_f_1, train_loss, str(datetime.datetime.now())))
             if epoch == 0:
                 train_pred_last = train_pred
             else:
@@ -319,10 +322,14 @@ class MultiDEC(nn.Module):
         q, r = self.soft_assignemt(image_z, text_z)
         test_p = self.target_distribution(q, r).data
         test_pred = torch.argmax(test_p, dim=1).numpy()[X_num:]
-        test_correct = sum(1 for x, y in zip(test_pred, test_labels) if x == y)
-        test_acc = test_correct / len(test_pred)
-        print("test acc = %.4f where  %d / %d, test nmi: %5f" % (test_acc, test_correct, len(test_pred), normalized_mutual_info_score(test_labels, test_pred, average_method='arithmetic')))
-        self.score = test_acc
+        test_acc = accuracy_score(test_labels, test_pred)
+        test_nmi = normalized_mutual_info_score(test_labels, test_pred)
+        test_f_1 = f1_score(test_labels, test_pred)
+        print("#Test acc: %.4f, Test nmi: %5f, Test f_1: %4f" % (
+            test_acc, test_nmi, test_f_1))
+        self.acc = test_acc
+        self.nmi = test_nmi
+        self.f_1 = test_f_1
         if save_path:
             self.save_model(os.path.join(save_path, "mdec_" + str(self.image_encoder.z_dim)) + '_' + str(
             self.n_clusters) + ".pt")

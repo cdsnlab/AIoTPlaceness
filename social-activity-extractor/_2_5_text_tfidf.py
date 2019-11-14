@@ -1,6 +1,7 @@
 import argparse
 
 from sklearn import svm
+from sklearn.metrics import accuracy_score, normalized_mutual_info_score, f1_score
 from sklearn.model_selection import KFold
 
 import config
@@ -50,7 +51,9 @@ def get_latent(args):
 	tf_vectorizer = TfidfVectorizer(ngram_range=(1, 2)).fit(row_array)
 
 	kf = KFold(n_splits=5, random_state=42)
-	score_list = []
+	acc_list = []
+	nmi_list = []
+	f_1_list = []
 	kf_count = 0
 	for train_index, test_index in kf.split(row_array):
 		print("Current fold: ", kf_count)
@@ -60,11 +63,18 @@ def get_latent(args):
 		Y_train, Y_test = category_array[train_index], category_array[test_index]
 		clf = svm.LinearSVC()
 		clf.fit(X_train_tfidf, Y_train)
-		score = clf.score(X_test_tfidf, Y_test)
-		print(score)
-		score_list.append(score)
+		test_pred = clf.predict(X_test_tfidf)
+		test_acc = accuracy_score(Y_test, test_pred)
+		test_nmi = normalized_mutual_info_score(Y_test, test_pred)
+		test_f_1 = f1_score(Y_test, test_pred)
+		print("#Test acc: %.4f, Test nmi: %5f, Test f_1: %4f" % (
+			test_acc, test_nmi, test_f_1))
+		acc_list.append(test_acc)
+		nmi_list.append(test_nmi)
+		f_1_list.append(test_f_1)
 		kf_count = kf_count + 1
-	print("average accuracy score is: ", str(np.mean(score_list)))
+	print("#Average acc: %.4f, Average nmi: %5f, Average f_1: %4f" % (
+		np.mean(acc_list), np.mean(nmi_list), np.mean(f_1_list)))
 
 
 	# print(row_array[:5])

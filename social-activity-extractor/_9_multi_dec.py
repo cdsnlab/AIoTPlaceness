@@ -78,7 +78,9 @@ def train_multidec(args):
         exp.param(arg, value)
     try:
         kf = KFold(n_splits=5, random_state=42)
-        score_list = []
+        acc_list = []
+        nmi_list = []
+        f_1_list = []
         kf_count = 0
         for train_index, val_index in kf.split(short_code_array):
             print("Current fold: ", kf_count)
@@ -103,11 +105,12 @@ def train_multidec(args):
                             n_clusters=n_clusters)
             mdec.fit_predict(full_dataset, train_dataset, val_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
                      save_path=CONFIG.CHECKPOINT_PATH)
-            score = mdec.score
-            print(score)
-            score_list.append(score)
+            acc_list.append(mdec.acc)
+            nmi_list.append(mdec.nmi)
+            f_1_list.append(mdec.f_1)
             kf_count = kf_count + 1
-        print("average accuracy score is: ", str(np.mean(score_list)))
+        print("#Average acc: %.4f, Average nmi: %5f, Average f_1: %4f" % (
+            np.mean(acc_list), np.mean(nmi_list), np.mean(f_1_list)))
 
     finally:
         exp.end()

@@ -485,8 +485,8 @@ def make_toy_csv(target_csv):
 
 
 def make_label_set(target_csv):
-    categories = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 121, 122, 123, 124, 13, 14, 15, 16, 18, 50, 51, 52]
-    #categories = [11, 124, 121, 18, 1, 13, 123, 7, 122, 5, 8, 6]
+    #categories = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 121, 122, 123, 124, 13, 14, 15, 16, 18, 50, 51, 52]
+    categories = [11, 124, 121, 18, 1, 13, 123, 7, 122, 5, 8, 6]
     #categories = [11, 124, 13]
     category_to_value = {v: i for i, v in enumerate(categories)}
     print(category_to_value)

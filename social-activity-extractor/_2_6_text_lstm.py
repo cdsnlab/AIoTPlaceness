@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader
 from model import util
 from sklearn.model_selection import train_test_split, KFold
 
-from model.text_lstm import LSTMClassifier
+from model.text_lstm import LSTMClassifier, TextModel
 from model.util import load_multi_csv_data, load_semi_supervised_csv_data, load_text_data
 from model.multidec import MDEC_encoder, MultiDEC
 
@@ -34,7 +34,7 @@ def main():
     # learning
     parser.add_argument('-lr', type=float, default=1e-03, help='initial learning rate')
     parser.add_argument('-trade_off', type=float, default=1e-04, help='trade_off value for semi-supervised learning')
-    parser.add_argument('-epochs', type=int, default=200, help='number of epochs for train')
+    parser.add_argument('-epochs', type=int, default=500, help='number of epochs for train')
     parser.add_argument('-update_time', type=int, default=1, help='update time within epoch')
     parser.add_argument('-batch_size', type=int, default=256, help='batch size for training')
     # data
@@ -43,7 +43,8 @@ def main():
     parser.add_argument('-label_csv', type=str, default='category_label.csv', help='file name of target label')
     # model
     parser.add_argument('-input_dim', type=int, default=300, help='size of input dimension')
-    parser.add_argument('-latent_dim', type=int, default=10, help='size of latent variable')
+    parser.add_argument('-hidden_size', type=int, default=256, help='size of latent variable')
+    parser.add_argument('-dropout', type=float, default=0.5, help='dropout rate')
     # train
     parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
     parser.add_argument('-gpu', type=str, default='cuda', help='gpu number')
@@ -70,21 +71,23 @@ def train_multidec(args):
         embedding_model = cPickle.load(f)
     with open(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'word_idx.json'), "r", encoding='utf-8') as f:
         word_idx = json.load(f)
-    df_text_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.target_csv), index_col=0,
-                               encoding='utf-8-sig')
-
+    df_text_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'posts.csv'), index_col=0, header=None,
+                          encoding='utf-8-sig')
+    print(df_text_data[:5])
     df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.label_csv), index_col=0, encoding='utf-8-sig')
     short_code_array = np.array(df_label.index)
     label_array = np.array(df_label['category'])
     n_clusters = np.max(label_array) + 1
 
-    exp = Experiment("Text lstm " + str(args.latent_dim), capture_io=True)
+    exp = Experiment("Text lstm", capture_io=True)
 
     for arg, value in vars(args).items():
         exp.param(arg, value)
     try:
         kf = KFold(n_splits=5, random_state=42)
-        score_list = []
+        acc_list = []
+        nmi_list = []
+        f_1_list = []
         kf_count = 0
         for train_index, val_index in kf.split(short_code_array):
             print("Current fold: ", kf_count)
@@ -95,21 +98,21 @@ def train_multidec(args):
             df_train = pd.DataFrame(data=label_train, index=short_code_train, columns=df_label.columns)
             df_val = pd.DataFrame(data=label_val, index=short_code_val, columns=df_label.columns)
             print("Loading dataset...")
-            train_dataset, val_dataset = load_text_data(df_text_data, df_train,
-                                                                                     df_val, CONFIG, word2idx=word_idx[1])
-            print("Loading dataset completed")
-
+            train_dataset, val_dataset = load_text_data(df_text_data, df_train, df_val, CONFIG, word2idx=word_idx[1])
+            print("\nLoading dataset completed")
             embedding = nn.Embedding.from_pretrained(torch.FloatTensor(embedding_model))
-            print(embedding.embedding_dim)
-            text_encoder = LSTMClassifier(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=n_clusters,
-                                         encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
-            # mdec.fit_predict(full_dataset, train_dataset, val_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
-            #          save_path=CONFIG.CHECKPOINT_PATH)
-            # score = mdec.score
-            print(score)
-            score_list.append(score)
+            text_encoder = LSTMClassifier(device=device, batch_size=args.batch_size, output_size=n_clusters, hidden_size=[128, 256, 512],
+                                          embedding=embedding, dropout=args.dropout)
+            text_model = TextModel(device=device, text_encoder=text_encoder)
+            text_model.fit(train_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
+                     save_path=CONFIG.CHECKPOINT_PATH)
+            text_model.predict(val_dataset, batch_size=args.batch_size)
+            acc_list.append(text_model.acc)
+            nmi_list.append(text_model.nmi)
+            f_1_list.append(text_model.f_1)
             kf_count = kf_count + 1
-        print("average accuracy score is: ", str(np.mean(score_list)))
+        print("#Average acc: %.4f, Average nmi: %5f, Average f_1: %4f" % (
+            np.mean(acc_list), np.mean(nmi_list), np.mean(f_1_list)))
 
     finally:
         exp.end()
