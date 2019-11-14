@@ -298,36 +298,45 @@ class CSVDataset(Dataset):
         return self.short_codes[idx], input_tensor
 
 
-def load_text_data(args, CONFIG, word2idx):
-    full_data = []
-    df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'posts.csv'), header=None,
-                          encoding='utf-8-sig')
-    pbar = tqdm(total=df_data.shape[0])
-    for index, row in df_data.iterrows():
+def load_text_data(df_full, df_train_label, df_val_label, CONFIG, word2idx):
+    df_train_index = set(df_train_label.index)
+    df_val_index = set(df_val_label.index)
+    train_short_codes = []
+    train_input_data = []
+    train_label_data = []
+    val_short_codes = []
+    val_input_data = []
+    val_label_data = []
+    pbar = tqdm(total=df_full.shape[0])
+    for index, row in df_full.iterrows():
         pbar.update(1)
-        text_data = row.iloc[1]
-        full_data.append(text_data)
-        del text_data
+        if index in df_train_index:
+            train_short_codes.append(index)
+            train_input_data.append(np.array(row[0]))
+            train_label_data.append(df_train_label.loc[index][0])
+        elif index in df_val_index:
+            val_short_codes.append(index)
+            val_input_data.append(np.array(row[0]))
+            val_label_data.append(df_val_label.loc[index][0])
     pbar.close()
-    train_size = int(args.split_rate * len(full_data))
-    val_size = len(full_data) - train_size
-    train_data, val_data = torch.utils.data.random_split(full_data, [train_size, val_size])
-    train_dataset, val_dataset = TextDataset(train_data, CONFIG, word2idx), \
-                                 TextDataset(val_data, CONFIG, word2idx)
+    train_dataset, val_dataset = TextDataset(train_short_codes, train_input_data, train_label_data, CONFIG, word2idx), \
+                                 TextDataset(val_short_codes, val_input_data, val_label_data, CONFIG, word2idx)
     return train_dataset, val_dataset
 
 
 class TextDataset(Dataset):
-    def __init__(self, data_list, CONFIG, word2idx):
-        self.data = data_list
+    def __init__(self, short_codes, input_data, label_data, CONFIG, word2idx):
+        self.short_codes = short_codes
+        self.input_data = input_data
+        self.label_data = label_data
         self.word2idx = word2idx
         self.CONFIG = CONFIG
 
     def __len__(self):
-        return len(self.data)
+        return len(self.short_codes)
 
     def __getitem__(self, idx):
-        word_list = self.data[idx].split()
+        word_list = self.input_data[idx].split()
         index_list = []
         if len(word_list) > self.CONFIG.MAX_SENTENCE_LEN:
             # truncate sentence if sentence length is longer than `max_sentence_len`
@@ -339,7 +348,8 @@ class TextDataset(Dataset):
             index_list.append(self.word2idx[word])
         text_array = np.array(index_list)
         text_tensor = torch.from_numpy(text_array).type(torch.LongTensor)
-        return text_tensor
+        label_tensor = torch.from_numpy(np.array(self.label_data[idx])).type(torch.LongTensor)
+        return self.short_codes[idx], text_tensor, label_tensor
 
 
 def load_text_data_with_short_code(args, CONFIG, word2idx):

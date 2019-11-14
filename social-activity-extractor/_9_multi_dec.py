@@ -13,7 +13,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from model import util
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, KFold
 from model.util import load_multi_csv_data, load_semi_supervised_csv_data
 from model.multidec import MDEC_encoder, MultiDEC
 
@@ -38,7 +38,6 @@ def main():
     parser.add_argument('-image_csv', type=str, default='labeled_scaled_pca_normalized_image_encoded_seoul_subway.csv', help='file name of target csv')
     parser.add_argument('-text_csv', type=str, default='labeled_scaled_text_doc2vec_seoul_subway.csv', help='file name of target csv')
     parser.add_argument('-label_csv', type=str, default='category_label.csv', help='file name of target label')
-    parser.add_argument('-split_rate', type=float, default=0.8, help='split rate between train and validation')
     # model
     parser.add_argument('-input_dim', type=int, default=300, help='size of input dimension')
     parser.add_argument('-latent_dim', type=int, default=10, help='size of latent variable')
@@ -72,29 +71,43 @@ def train_multidec(args):
     short_code_array = np.array(df_label.index)
     label_array = np.array(df_label['category'])
     n_clusters = np.max(label_array) + 1
-    short_code_train, short_code_val, label_train, label_val = train_test_split(short_code_array, label_array, test_size=0.2, random_state=42)
-    df_train = pd.DataFrame(data=label_train, index=short_code_train, columns=df_label.columns)
-    df_val = pd.DataFrame(data=label_val, index=short_code_val, columns=df_label.columns)
-    print("Loading dataset...")
-    full_dataset, train_dataset, val_dataset = load_semi_supervised_csv_data(df_image_data, df_text_data, df_train, df_val, CONFIG)
-    print("Loading dataset completed")
 
-    image_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=n_clusters,
-                                 encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
-    image_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "image_sdae_" + str(args.latent_dim)) + ".pt")
-    text_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=n_clusters,
-                                encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
-    text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "text_sdae_" + str(args.latent_dim)) + ".pt")
-    mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder, n_clusters=n_clusters)
     exp = Experiment("MDEC " + str(args.latent_dim), capture_io=True)
-    print(mdec)
 
     for arg, value in vars(args).items():
         exp.param(arg, value)
     try:
-        mdec.fit(full_dataset, train_dataset, val_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
-                 save_path=CONFIG.CHECKPOINT_PATH)
-        print("Finish!!!")
+        kf = KFold(n_splits=5, random_state=42)
+        score_list = []
+        kf_count = 0
+        for train_index, val_index in kf.split(short_code_array):
+            print("Current fold: ", kf_count)
+            short_code_train = short_code_array[train_index]
+            short_code_val = short_code_array[val_index]
+            label_train = label_array[train_index]
+            label_val = label_array[val_index]
+            df_train = pd.DataFrame(data=label_train, index=short_code_train, columns=df_label.columns)
+            df_val = pd.DataFrame(data=label_val, index=short_code_val, columns=df_label.columns)
+            print("Loading dataset...")
+            full_dataset, train_dataset, val_dataset = load_semi_supervised_csv_data(df_image_data, df_text_data, df_train,
+                                                                                     df_val, CONFIG)
+            print("Loading dataset completed")
+
+            image_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=n_clusters,
+                                         encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
+            image_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "image_sdae_" + str(args.latent_dim)) + ".pt")
+            text_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=n_clusters,
+                                        encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
+            text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "text_sdae_" + str(args.latent_dim)) + ".pt")
+            mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder,
+                            n_clusters=n_clusters)
+            mdec.fit_predict(full_dataset, train_dataset, val_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
+                     save_path=CONFIG.CHECKPOINT_PATH)
+            score = mdec.score
+            print(score)
+            score_list.append(score)
+            kf_count = kf_count + 1
+        print("average accuracy score is: ", str(np.mean(score_list)))
 
     finally:
         exp.end()

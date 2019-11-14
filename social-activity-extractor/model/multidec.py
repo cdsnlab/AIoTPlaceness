@@ -1,8 +1,10 @@
 import datetime
 import os
 
+import pandas as pd
 import torch
 import torch.nn as nn
+from sklearn.metrics import normalized_mutual_info_score
 from torch.nn import Parameter
 import torch.nn.functional as F
 import torch.optim as optim
@@ -71,6 +73,7 @@ class MultiDEC(nn.Module):
         self.n_clusters = n_clusters
         self.alpha = alpha
         self.trade_off = trade_off
+        self.score = 0.
 
     def save_model(self, path):
         torch.save(self.state_dict(), path)
@@ -187,7 +190,7 @@ class MultiDEC(nn.Module):
         p = self.target_distribution(q, r).data
         return image_z, text_z
 
-    def fit(self, X, train_dataset, val_dataset, lr=0.001, batch_size=256, num_epochs=10, update_time=1, save_path=None):
+    def fit_predict(self, X, train_dataset, test_dataset, lr=0.001, batch_size=256, num_epochs=10, update_time=1, save_path=None, tol=1e-3):
         X_num = len(X)
         X_num_batch = int(math.ceil(1.0 * len(X) / batch_size))
         train_num = len(train_dataset)
@@ -199,7 +202,7 @@ class MultiDEC(nn.Module):
         print("=====Training DEC=======")
         trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size,
                                                   shuffle=True)
-        validloader = torch.utils.data.DataLoader(val_dataset, batch_size=batch_size,
+        validloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size,
                                                   shuffle=False)
         optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=lr, momentum=0.9)
 
@@ -217,10 +220,12 @@ class MultiDEC(nn.Module):
         train_text_pred = text_kmeans.predict(train_text_z.data.cpu().numpy())
         print("Text kmeans completed at %s" % (str(datetime.datetime.now())))
 
-
-        train_label = train_dataset[:][3].data.cpu().numpy()
-        _, image_ind = align_cluster(train_label, train_image_pred)
-        _, text_ind = align_cluster(train_label, train_text_pred)
+        short_codes = X[:][0]
+        train_short_codes = train_dataset[:][0]
+        train_labels = train_dataset[:][3].data.cpu().numpy()
+        df_train = pd.DataFrame(data=train_labels, index=train_short_codes, columns=['label'])
+        _, image_ind = align_cluster(train_labels, train_image_pred)
+        _, text_ind = align_cluster(train_labels, train_text_pred)
 
         image_cluster_centers = np.zeros_like(image_kmeans.cluster_centers_)
         text_cluster_centers = np.zeros_like(text_kmeans.cluster_centers_)
@@ -231,9 +236,6 @@ class MultiDEC(nn.Module):
         self.image_encoder.mu.data = self.image_encoder.mu.cpu()
         self.text_encoder.mu.data.copy_(torch.Tensor(text_cluster_centers))
         self.text_encoder.mu.data = self.text_encoder.mu.cpu()
-        best_loss = 99999.
-        best_acc = 0.
-        best_epoch = 0
 
         for epoch in range(num_epochs):
             # update the target distribution p
@@ -241,7 +243,7 @@ class MultiDEC(nn.Module):
             # train 1 epoch
             train_loss = 0.0
 
-            adjust_learning_rate(lr*10, optimizer)
+            adjust_learning_rate(lr, optimizer)
 
             for batch_idx in range(train_num_batch):
                 # semi-supervised phase
@@ -257,7 +259,7 @@ class MultiDEC(nn.Module):
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
                 qbatch, rbatch = self.soft_assignemt(_image_z.cpu(), _text_z.cpu())
                 semi_loss = self.semi_loss_function(label_inputs, qbatch, rbatch)
-                train_loss += semi_loss.data
+                train_loss += semi_loss.data * len(label_inputs)
                 semi_loss.backward()
                 optimizer.step()
 
@@ -267,7 +269,7 @@ class MultiDEC(nn.Module):
             q, r = self.soft_assignemt(image_z, text_z)
             p = self.target_distribution(q, r).data
 
-            adjust_learning_rate(lr, optimizer)
+            adjust_learning_rate(lr/10, optimizer)
 
             for batch_idx in range(X_num_batch):
                 # clustering phase
@@ -278,45 +280,54 @@ class MultiDEC(nn.Module):
                 optimizer.zero_grad()
                 image_inputs = Variable(image_batch).to(self.device)
                 text_inputs = Variable(text_batch).to(self.device)
-                target = Variable(pbatch)
+                p_inputs = Variable(pbatch)
 
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
                 qbatch, rbatch = self.soft_assignemt(_image_z.cpu(), _text_z.cpu())
-                loss = self.loss_function(target, qbatch, rbatch)
-                train_loss += loss.data * len(target)
+                loss = self.loss_function(p_inputs, qbatch, rbatch)
+                train_loss += loss.data * len(p_inputs)
                 loss.backward()
                 optimizer.step()
 
                 del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
-            # torch.cuda.empty_cache()
             train_loss = train_loss / X_num
 
-            self.eval()
-            labels = val_dataset[:][3]
-            val_image_z, val_text_z = self.update_z(val_dataset, batch_size)
-            image_z = torch.cat([image_z, val_image_z], dim=0)
-            text_z = torch.cat([text_z, val_text_z], dim=0)
+            train_pred = torch.argmax(p, dim=1).numpy()
+            df_pred = pd.DataFrame(data=train_pred, index=short_codes, columns=['pred'])
+            df_pred = df_pred.loc[df_train.index]
+            train_pred = df_pred['pred']
+            train_correct = sum(1 for x, y in zip(train_pred, train_labels) if x == y)
+            train_acc = train_correct / len(train_pred)
+            print("#Epoch %3d: Acc: %.4f where %d / %d, test nmi: %5f, loss: %.4f at %s" % (
+                epoch + 1, train_acc, train_correct, len(train_pred), normalized_mutual_info_score(train_labels, train_pred, average_method='arithmetic'), train_loss, str(datetime.datetime.now())))
+            if epoch == 0:
+                train_pred_last = train_pred
+            else:
+                delta_label = np.sum(train_pred != train_pred_last).astype(np.float32) / len(train_pred)
+                train_pred_last = train_pred
+                if delta_label < tol:
+                    print('delta_label ', delta_label, '< tol ', tol)
+                    print("Reach tolerance threshold. Stopping training.")
+                    break
 
-            q, r = self.soft_assignemt(image_z, text_z)
-            val_p = self.target_distribution(q, r).data
-            y_pred = torch.argmax(val_p, dim=1).numpy()[X_num:]
-            val_correct = sum(1 for x, y in zip(y_pred, labels) if x == y)
-            val_acc = val_correct / len(y_pred)
-            print("acc = %.4f where  %d / %d" % (val_acc, val_correct, len(y_pred)))
+        self.eval()
+        test_labels = test_dataset[:][3]
+        test_image_z, test_text_z = self.update_z(test_dataset, batch_size)
+        image_z = torch.cat([image_z, test_image_z], dim=0)
+        text_z = torch.cat([text_z, test_text_z], dim=0)
 
-            if best_acc < val_acc:
-                best_acc = val_acc
-                best_epoch = epoch
-                if save_path:
-                    self.save_model(os.path.join(save_path, "mdec_" + str(self.image_encoder.z_dim)) + '_' + str(
-                    self.n_clusters) + ".pt")
-            print("#Epoch %3d: Acc: %.4f Best Acc: %.4f at %s" % (
-                epoch + 1, val_acc, best_acc, str(datetime.datetime.now())))
+        q, r = self.soft_assignemt(image_z, text_z)
+        test_p = self.target_distribution(q, r).data
+        test_pred = torch.argmax(test_p, dim=1).numpy()[X_num:]
+        test_correct = sum(1 for x, y in zip(test_pred, test_labels) if x == y)
+        test_acc = test_correct / len(test_pred)
+        print("test acc = %.4f where  %d / %d, test nmi: %5f" % (test_acc, test_correct, len(test_pred), normalized_mutual_info_score(test_labels, test_pred, average_method='arithmetic')))
+        self.score = test_acc
+        if save_path:
+            self.save_model(os.path.join(save_path, "mdec_" + str(self.image_encoder.z_dim)) + '_' + str(
+            self.n_clusters) + ".pt")
 
-        print("#Best Epoch %3d: Best Acc: %.4f" % (
-            best_epoch, best_acc))
-
-    def fit_predict(self, X, batch_size=256):
+    def predict(self, X, batch_size=256):
         num = len(X)
         num_batch = int(math.ceil(1.0 * len(X) / batch_size))
         self.to(self.device)
