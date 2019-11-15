@@ -14,7 +14,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from model import util
-from sklearn.model_selection import train_test_split, KFold
+from sklearn.model_selection import train_test_split, StratifiedKFold
 
 from model.text_lstm import LSTMClassifier, TextModel
 from model.util import load_multi_csv_data, load_semi_supervised_csv_data, load_text_data
@@ -82,12 +82,12 @@ def train_multidec(args):
     for arg, value in vars(args).items():
         exp.param(arg, value)
     try:
-        kf = KFold(n_splits=5, shuffle=True, random_state=42)
+        kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
         acc_list = []
         nmi_list = []
         f_1_list = []
         kf_count = 0
-        for train_index, val_index in kf.split(short_code_array):
+        for train_index, val_index in kf.split(short_code_array, label_array):
             print("Current fold: ", kf_count)
             short_code_train = short_code_array[train_index]
             short_code_val = short_code_array[val_index]

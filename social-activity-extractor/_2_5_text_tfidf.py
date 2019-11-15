@@ -2,7 +2,7 @@ import argparse
 
 from sklearn import svm
 from sklearn.metrics import accuracy_score, normalized_mutual_info_score, f1_score
-from sklearn.model_selection import KFold
+from sklearn.model_selection import StratifiedKFold
 
 import config
 import requests
@@ -43,21 +43,21 @@ def get_latent(args):
 
 	short_code_array = np.array(df_data.index)
 	row_array = np.array(df_data[1])
-	category_array = np.array(df_label['category'])
+	label_array = np.array(df_label['category'])
 
 	tf_vectorizer = TfidfVectorizer(ngram_range=(1, 2)).fit(row_array)
 
-	kf = KFold(n_splits=5, shuffle=True, random_state=42)
+	kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 	acc_list = []
 	nmi_list = []
 	f_1_list = []
 	kf_count = 0
-	for train_index, test_index in kf.split(row_array):
+	for train_index, test_index in kf.split(row_array, label_array):
 		print("Current fold: ", kf_count)
 		X_train, X_test = row_array[train_index], row_array[test_index]
 		X_train_tfidf = tf_vectorizer.transform(X_train)
 		X_test_tfidf = tf_vectorizer.transform(X_test)
-		Y_train, Y_test = category_array[train_index], category_array[test_index]
+		Y_train, Y_test = label_array[train_index], label_array[test_index]
 		clf = svm.LinearSVC()
 		clf.fit(X_train_tfidf, Y_train)
 		test_pred = clf.predict(X_test_tfidf)
@@ -73,17 +73,6 @@ def get_latent(args):
 	print("#Average acc: %.4f, Average nmi: %.4f, Average f_1: %.4f" % (
 		np.mean(acc_list), np.mean(nmi_list), np.mean(f_1_list)))
 
-
-	# print(row_array[:5])
-	# print(row_array.shape)
-	# csv_name = 'text_tfidf_' + args.target_dataset + '.csv'
-
-
-
-	# result_df = pd.DataFrame(data=row_array, index=short_code_array, columns=[i for i in range(embedding_model.vector_size)])
-	# result_df.index.name = "short_code"
-	# result_df.sort_index(inplace=True)
-	# result_df.to_csv(os.path.join(CONFIG.CSV_PATH, csv_name), encoding='utf-8-sig')
 	print("Finish!!!")
 
 
