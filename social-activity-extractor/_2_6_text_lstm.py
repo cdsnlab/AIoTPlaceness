@@ -109,7 +109,7 @@ def train_multidec(args):
             nmi_list.append(text_model.nmi)
             f_1_list.append(text_model.f_1)
             kf_count = kf_count + 1
-        print("#Average acc: %.4f, Average nmi: %5f, Average f_1: %4f" % (
+        print("#Average acc: %.4f, Average nmi: %.4f, Average f_1: %.4f" % (
             np.mean(acc_list), np.mean(nmi_list), np.mean(f_1_list)))
 
     finally:
