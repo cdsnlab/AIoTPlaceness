@@ -6,7 +6,6 @@ import pandas as pd
 import config
 import requests
 import json
-import _pickle as cPickle
 from hyperdash import Experiment
 
 import os
@@ -15,10 +14,8 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from model import util
 from sklearn.model_selection import train_test_split, KFold
-
-from model.text_lstm import LSTMClassifier, TextModel
-from model.util import load_multi_csv_data, load_semi_supervised_csv_data, load_text_data
-from model.multidec import MDEC_encoder, MultiDEC
+from model.util import load_semi_supervised_uni_csv_data
+from model.unidec import UDEC_encoder, UniDEC
 
 CONFIG = config.Config
 
@@ -32,17 +29,18 @@ def slacknoti(contentstr):
 def main():
     parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
     # learning
-    parser.add_argument('-lr', type=float, default=1e-03, help='initial learning rate')
-    parser.add_argument('-epochs', type=int, default=500, help='number of epochs for train')
+    parser.add_argument('-lr', type=float, default=1e-02, help='initial learning rate')
+    parser.add_argument('-trade_off', type=float, default=1e-04, help='trade_off value for semi-supervised learning')
+    parser.add_argument('-epochs', type=int, default=200, help='number of epochs for train')
     parser.add_argument('-update_time', type=int, default=1, help='update time within epoch')
     parser.add_argument('-batch_size', type=int, default=256, help='batch size for training')
     # data
-    parser.add_argument('-target_dataset', type=str, default='seoul_subway', help='folder name of target dataset')
+    parser.add_argument('-input_csv', type=str, default='labeled_scaled_pca_normalized_image_encoded_seoul_subway.csv', help='file name of target csv')
+    parser.add_argument('-target_modal', type=str, default='image', help='file name of target label')
     parser.add_argument('-label_csv', type=str, default='category_label.csv', help='file name of target label')
     # model
     parser.add_argument('-input_dim', type=int, default=300, help='size of input dimension')
-    parser.add_argument('-hidden_size', type=int, default=256, help='size of latent variable')
-    parser.add_argument('-dropout', type=float, default=0.5, help='dropout rate')
+    parser.add_argument('-latent_dim', type=int, default=10, help='size of latent variable')
     # train
     parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
     parser.add_argument('-gpu', type=str, default='cuda', help='gpu number')
@@ -62,22 +60,17 @@ def main():
 
 
 def train_multidec(args):
-    print("Training test lstm")
+    print("Training unidec")
     device = torch.device(args.gpu)
+    df_input_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.input_csv), index_col=0,
+                                encoding='utf-8-sig')
 
-    with open(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'word_embedding.p'), "rb") as f:
-        embedding_model = cPickle.load(f)
-    with open(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'word_idx.json'), "r", encoding='utf-8') as f:
-        word_idx = json.load(f)
-    df_text_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'posts.csv'), index_col=0, header=None,
-                          encoding='utf-8-sig')
-    print(df_text_data[:5])
     df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.label_csv), index_col=0, encoding='utf-8-sig')
     short_code_array = np.array(df_label.index)
     label_array = np.array(df_label['category'])
     n_clusters = np.max(label_array) + 1
 
-    exp = Experiment("Text lstm", capture_io=True)
+    exp = Experiment("UDEC " + str(args.latent_dim), capture_io=True)
 
     for arg, value in vars(args).items():
         exp.param(arg, value)
@@ -96,18 +89,19 @@ def train_multidec(args):
             df_train = pd.DataFrame(data=label_train, index=short_code_train, columns=df_label.columns)
             df_val = pd.DataFrame(data=label_val, index=short_code_val, columns=df_label.columns)
             print("Loading dataset...")
-            train_dataset, val_dataset = load_text_data(df_text_data, df_train, df_val, CONFIG, word2idx=word_idx[1])
+            full_dataset, train_dataset, val_dataset = load_semi_supervised_uni_csv_data(df_input_data, df_train,
+                                                                                     df_val, CONFIG)
             print("\nLoading dataset completed")
-            embedding = nn.Embedding.from_pretrained(torch.FloatTensor(embedding_model))
-            text_encoder = LSTMClassifier(device=device, batch_size=args.batch_size, output_size=n_clusters, hidden_size=[128, 256, 512],
-                                          embedding=embedding, dropout=args.dropout)
-            text_model = TextModel(device=device, text_encoder=text_encoder)
-            text_model.fit(train_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
+
+            encoder = UDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=n_clusters,
+                                         encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
+            encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.target_modal + "_sdae_" + str(args.latent_dim)) + ".pt")
+            udec = UniDEC(device=device, encoder=encoder, n_clusters=n_clusters)
+            udec.fit_predict(full_dataset, train_dataset, val_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
                      save_path=CONFIG.CHECKPOINT_PATH)
-            text_model.predict(val_dataset, batch_size=args.batch_size)
-            acc_list.append(text_model.acc)
-            nmi_list.append(text_model.nmi)
-            f_1_list.append(text_model.f_1)
+            acc_list.append(udec.acc)
+            nmi_list.append(udec.nmi)
+            f_1_list.append(udec.f_1)
             kf_count = kf_count + 1
         print("#Average acc: %.4f, Average nmi: %5f, Average f_1: %4f" % (
             np.mean(acc_list), np.mean(nmi_list), np.mean(f_1_list)))

@@ -47,7 +47,7 @@ def get_latent(args):
 
 	tf_vectorizer = TfidfVectorizer(ngram_range=(1, 2)).fit(row_array)
 
-	kf = KFold(n_splits=5, random_state=42)
+	kf = KFold(n_splits=5, shuffle=True, random_state=42)
 	acc_list = []
 	nmi_list = []
 	f_1_list = []

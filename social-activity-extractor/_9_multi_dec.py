@@ -77,7 +77,7 @@ def train_multidec(args):
     for arg, value in vars(args).items():
         exp.param(arg, value)
     try:
-        kf = KFold(n_splits=5, random_state=42)
+        kf = KFold(n_splits=5, shuffle=True, random_state=42)
         acc_list = []
         nmi_list = []
         f_1_list = []
@@ -93,7 +93,7 @@ def train_multidec(args):
             print("Loading dataset...")
             full_dataset, train_dataset, val_dataset = load_semi_supervised_csv_data(df_image_data, df_text_data, df_train,
                                                                                      df_val, CONFIG)
-            print("Loading dataset completed")
+            print("\nLoading dataset completed")
 
             image_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=n_clusters,
                                          encodeLayer=[500, 500, 2000], activation="relu", dropout=0)

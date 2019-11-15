@@ -575,7 +575,7 @@ def sampled_plus_labeled_csv(target_csv, label_csv):
     df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, label_csv), index_col=0, encoding='utf-8')
     df_label = df_data.loc[df_label.index]
     df_data = df_data.loc[set(df_data.index) - set(df_label.index)]
-    df_data = df_data.sample(n=90000)
+    df_data = df_data.sample(n=100000, random_state=42)
     df_data = pd.concat([df_data, df_label])
     df_data.to_csv(os.path.join(CONFIG.CSV_PATH, 'sampled_plus_labeled_' + target_csv), encoding='utf-8-sig')
 

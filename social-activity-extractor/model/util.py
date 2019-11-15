@@ -143,6 +143,68 @@ class LabeledMultiCSVDataset(Dataset):
         label_tensor = torch.LongTensor(self.label_data[idx])
         return self.short_codes[idx], image_tensor, text_tensor, label_tensor
 
+def load_semi_supervised_uni_csv_data(df_input_data, df_train, df_val, CONFIG):
+    train_index = set(df_train.index)
+    val_index = set(df_val.index)
+    full_short_codes = []
+    full_input_data = []
+    train_short_codes = []
+    train_input_data = []
+    train_label_data = []
+    val_short_codes = []
+    val_input_data = []
+    val_label_data = []
+
+    pbar = tqdm(total=df_input_data.shape[0])
+    for index, row in df_input_data.iterrows():
+        if index in train_index:
+            full_short_codes.append(index)
+            full_input_data.append(np.array(row))
+            train_short_codes.append(index)
+            train_input_data.append(np.array(row))
+            train_label_data.append(df_train.loc[index][0])
+        elif index in val_index:
+            val_short_codes.append(index)
+            val_input_data.append(np.array(row))
+            val_label_data.append(df_val.loc[index][0])
+        else:
+            full_short_codes.append(index)
+            full_input_data.append(np.array(row))
+        pbar.update(1)
+    pbar.close()
+    full_dataset = UniCSVDataset(full_short_codes, np.array(full_input_data), CONFIG)
+    train_dataset = LabeledUniCSVDataset(train_short_codes, np.array(train_input_data), train_label_data, CONFIG)
+    val_dataset = LabeledUniCSVDataset(val_short_codes, np.array(val_input_data), val_label_data, CONFIG)
+    return full_dataset, train_dataset, val_dataset
+
+class UniCSVDataset(Dataset):
+    def __init__(self, short_codes, input_data, CONFIG):
+        self.short_codes = short_codes
+        self.input_data = input_data
+        self.CONFIG = CONFIG
+
+    def __len__(self):
+        return len(self.short_codes)
+
+    def __getitem__(self, idx):
+        input_tensor = torch.from_numpy(self.input_data[idx]).type(torch.FloatTensor)
+        return self.short_codes[idx], input_tensor
+
+class LabeledUniCSVDataset(Dataset):
+    def __init__(self, short_codes, input_data, label_data, CONFIG):
+        self.short_codes = short_codes
+        self.input_data = input_data
+        self.CONFIG = CONFIG
+        self.label_data = label_data
+
+    def __len__(self):
+        return len(self.short_codes)
+
+    def __getitem__(self, idx):
+        input_tensor = torch.from_numpy(self.input_data[idx]).type(torch.FloatTensor)
+        label_tensor = torch.LongTensor(self.label_data[idx])
+        return self.short_codes[idx], input_tensor, label_tensor
+
 # def load_semi_supervised_csv_data(df_image_data, df_text_data, df_train, df_val, CONFIG):
 #     train_index = set(df_train.index)
 #     val_index = set(df_val.index)
