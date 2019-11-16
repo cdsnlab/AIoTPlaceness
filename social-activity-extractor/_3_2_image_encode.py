@@ -105,7 +105,7 @@ def get_latent(args):
     short_code_list = []
     row_list = []
     for short_code, image_batch in tqdm(full_loader):
-        torch.cuda.empty_cache()
+        # torch.cuda.empty_cache()
         with torch.no_grad():
             image_feature = Variable(image_batch).to(device)
         h = image_encoder(image_feature)
