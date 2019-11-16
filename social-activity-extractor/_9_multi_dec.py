@@ -14,6 +14,8 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from model import util
 from sklearn.model_selection import train_test_split, StratifiedKFold
+
+from model.Weight_Calculator import WeightCalculator
 from model.util import load_multi_csv_data, load_semi_supervised_csv_data
 from model.multidec import MDEC_encoder, MultiDEC
 
@@ -38,9 +40,11 @@ def main():
     parser.add_argument('-image_csv', type=str, default='labeled_scaled_pca_normalized_image_encoded_seoul_subway.csv', help='file name of target csv')
     parser.add_argument('-text_csv', type=str, default='labeled_scaled_text_doc2vec_seoul_subway.csv', help='file name of target csv')
     parser.add_argument('-label_csv', type=str, default='category_label.csv', help='file name of target label')
+    parser.add_argument('-weight_csv', type=str, default='weight_label.csv', help='file name of target label')
     # model
     parser.add_argument('-input_dim', type=int, default=300, help='size of input dimension')
     parser.add_argument('-latent_dim', type=int, default=10, help='size of latent variable')
+    parser.add_argument('-wc', action='store_true', default=False, help='use weight calculator')
     # train
     parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
     parser.add_argument('-gpu', type=str, default='cuda', help='gpu number')
@@ -68,6 +72,7 @@ def train_multidec(args):
                                encoding='utf-8-sig')
 
     df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.label_csv), index_col=0, encoding='utf-8-sig')
+    df_weight = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.weight_csv), index_col=0, encoding='utf-8-sig')
     short_code_array = np.array(df_label.index)
     label_array = np.array(df_label['category'])
     n_clusters = np.max(label_array) + 1
@@ -92,8 +97,9 @@ def train_multidec(args):
             df_val = pd.DataFrame(data=label_val, index=short_code_val, columns=df_label.columns)
             print("Loading dataset...")
             full_dataset, train_dataset, val_dataset = load_semi_supervised_csv_data(df_image_data, df_text_data, df_train,
-                                                                                     df_val, CONFIG)
+                                                                                     df_val, df_weight, CONFIG)
             print("\nLoading dataset completed")
+
 
             image_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=n_clusters,
                                          encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
@@ -101,13 +107,22 @@ def train_multidec(args):
             text_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=n_clusters,
                                         encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
             text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "text_sdae_" + str(args.latent_dim)) + ".pt")
-            mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder,
-                            n_clusters=n_clusters)
+            if args.wc:
+                weight_calculator = WeightCalculator(device=device, input_dim=300)
+                weight_calculator.fit_predict(train_dataset, val_dataset, num_epochs=100, save_path=os.path.join(CONFIG.CHECKPOINT_PATH, "weight_calculator.pt"))
+                weight_calculator.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "weight_calculator.pt"))
+                mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder, weight_calculator=weight_calculator,
+                                n_clusters=n_clusters)
+            else:
+                mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder,
+                                n_clusters=n_clusters)
+
             mdec.fit_predict(full_dataset, train_dataset, val_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
                      save_path=CONFIG.CHECKPOINT_PATH)
             acc_list.append(mdec.acc)
             nmi_list.append(mdec.nmi)
             f_1_list.append(mdec.f_1)
+            # break
             kf_count = kf_count + 1
         print("#Average acc: %.4f, Average nmi: %.4f, Average f_1: %.4f" % (
             np.mean(acc_list), np.mean(nmi_list), np.mean(f_1_list)))

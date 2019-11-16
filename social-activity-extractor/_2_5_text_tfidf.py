@@ -63,7 +63,7 @@ def get_latent(args):
 		test_pred = clf.predict(X_test_tfidf)
 		test_acc = accuracy_score(Y_test, test_pred)
 		test_nmi = normalized_mutual_info_score(Y_test, test_pred, average_method='geometric')
-		test_f_1 = f1_score(Y_test, test_pred, average='micro')
+		test_f_1 = f1_score(Y_test, test_pred, average='macro')
 		print("#Test acc: %.4f, Test nmi: %.4f, Test f_1: %.4f" % (
 			test_acc, test_nmi, test_f_1))
 		acc_list.append(test_acc)

@@ -96,9 +96,12 @@ def train_multidec(args):
             train_dataset, val_dataset = load_multi_csv_data(df_image_data, df_text_data, df_weight, df_train, df_val,
                                                              CONFIG)
             print("\nLoading dataset completed")
-            image_classifier = SingleClassifier(device=device, input_dim=args.input_dim, filter_num=64, n_classes=n_classes)
-            text_classifier = SingleClassifier(device=device, input_dim=args.input_dim, filter_num=64, n_classes=n_classes)
+
             if args.fixed_weight is None:
+                image_classifier = SingleClassifier(device=device, input_dim=args.input_dim, filter_num=64,
+                                                    n_classes=n_classes)
+                text_classifier = SingleClassifier(device=device, input_dim=args.input_dim, filter_num=64,
+                                                   n_classes=n_classes)
                 print("pretraining image classifier...")
                 image_classifier.fit(train_dataset, val_dataset, input_modal=1, lr=args.lr, num_epochs=args.pretrain_epochs,
                                      save_path=os.path.join(CONFIG.CHECKPOINT_PATH, "image_classifier") + ".pt")
@@ -108,7 +111,7 @@ def train_multidec(args):
                                                    save_path=os.path.join(CONFIG.CHECKPOINT_PATH, "text_classifier") + ".pt")
                 text_classifier.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "text_classifier") + ".pt")
                 print("pretraining weight classifier...")
-                weight_calculator = WeightCalculator(device=device, input_dim=args.input_dim*2, filter_num=64)
+                weight_calculator = WeightCalculator(device=device, input_dim=args.input_dim*2, n_classes=n_classes)
                 weight_calculator.fit(train_dataset, val_dataset, lr=args.lr, num_epochs=args.pretrain_epochs,
                                       save_path=os.path.join(CONFIG.CHECKPOINT_PATH, "weight_calculator") + ".pt")
                 weight_calculator.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "weight_calculator") + ".pt")
@@ -119,6 +122,10 @@ def train_multidec(args):
                 multi_classifier.fit(train_dataset, val_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
                                      save_path=os.path.join(CONFIG.CHECKPOINT_PATH, "multi_classifier") + ".pt")
             else:
+                image_classifier = SingleClassifier(device=device, input_dim=args.input_dim, filter_num=64,
+                                                    n_classes=n_classes)
+                text_classifier = SingleClassifier(device=device, input_dim=args.input_dim, filter_num=64,
+                                                   n_classes=n_classes)
                 print("pretraining image classifier...")
                 image_classifier.fit(train_dataset, val_dataset, input_modal=1, lr=args.lr, num_epochs=args.pretrain_epochs,
                                      save_path=os.path.join(CONFIG.CHECKPOINT_PATH, "image_classifier_fw_" + str(args.fixed_weight)) + ".pt")

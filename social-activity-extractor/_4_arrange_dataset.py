@@ -532,10 +532,11 @@ def make_label_set(target_csv):
                 if most_category[0] in categories:
                     category_value = category_to_value[most_category[0]]
                     category_dict[shortcode] = category_value
-                    weight_value = 0
-                    for weight in value['weight']:
-                        weight_value = weight_value + weight_to_value[weight]
-                    weight_value = weight_value / len(value['weight'])
+                    weight_value = []
+                    for idx, weight in enumerate(value['weight']):
+                        if value['category'][idx] == most_category[0]:
+                            weight_value.append(weight_to_value[weight])
+                    weight_value = np.mean(weight_value)
                     weight_dict[shortcode] = [weight_value, 1 - weight_value]
 
             three_count = three_count + 1

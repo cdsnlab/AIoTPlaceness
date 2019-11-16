@@ -38,10 +38,13 @@ class MultiClassifier(nn.Module):
         model_dict.update(pretrained_dict)
         self.load_state_dict(model_dict)
 
-    def forward(self, image_x, text_x):
+    def forward(self, image_x, text_x, weight):
         image_h = self.image_classifier(image_x)
         text_h = self.text_classifier(text_x)
         if self.weight_calculator is None and self.fixed_weight is not None:
+            # weight = weight.unsqueeze(dim=-1)
+            # h = torch.stack([image_h, text_h], dim=2)
+            # h = torch.bmm(h, weight).squeeze()
             h = self.fixed_weight * image_h + (1 - self.fixed_weight) * text_h
         else:
             weight = self.weight_calculator(image_x, text_x).unsqueeze(dim=-1)
@@ -69,8 +72,9 @@ class MultiClassifier(nn.Module):
                 image_feature_batch = Variable(input_batch[1]).to(self.device)
                 text_feature_batch = Variable(input_batch[2]).to(self.device)
                 target_batch = Variable(input_batch[3]).to(self.device)
+                weight_batch = Variable(input_batch[4]).to(self.device)
                 optimizer.zero_grad()
-                log_prob = self.forward(image_feature_batch, text_feature_batch)
+                log_prob = self.forward(image_feature_batch, text_feature_batch, weight_batch)
                 loss = criterion(log_prob, target_batch)
                 loss.backward()
                 optimizer.step()
@@ -88,7 +92,8 @@ class MultiClassifier(nn.Module):
                 image_feature_batch = Variable(input_batch[1]).to(self.device)
                 text_feature_batch = Variable(input_batch[2]).to(self.device)
                 target_batch = Variable(input_batch[3]).to(self.device)
-                log_prob = self.forward(image_feature_batch, text_feature_batch)
+                weight_batch = Variable(input_batch[4]).to(self.device)
+                log_prob = self.forward(image_feature_batch, text_feature_batch, weight_batch)
                 loss = criterion(log_prob, target_batch)
                 valid_loss = valid_loss + loss
                 pred_batch = torch.argmax(log_prob, dim=1).cpu().numpy()
