@@ -357,8 +357,6 @@ class MultiDEC(nn.Module):
         self.p_calculator.to('cpu')
         if self.weight_calculator is not None:
             self.weight_calculator.to('cpu')
-
-        if self.weight_calculator is not None:
             train_weight = self.weight_calculator(X[:][1], X[:][2])
         for epoch in range(num_epochs):
             # update the target distribution p

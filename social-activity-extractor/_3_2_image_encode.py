@@ -42,7 +42,7 @@ def main():
     parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
     parser.add_argument('-tau', type=float, default=0.01, help='temperature parameter')
     # data
-    parser.add_argument('-target_dataset', type=str, default=None, help='folder name of target dataset')
+    parser.add_argument('-target_dataset', type=str, default='seoul_subway', help='folder name of target dataset')
     parser.add_argument('-shuffle', default=True, help='shuffle data every epoch')
     parser.add_argument('-split_rate', type=float, default=0.9, help='split rate between train and validation')
     parser.add_argument('-batch_size', type=int, default=16, help='batch size for training')
@@ -118,7 +118,7 @@ def get_latent(args):
     result_df = pd.DataFrame(data=row_list, index=short_code_list, columns=[i for i in range(args.latent_size)])
     result_df.index.name = "short_code"
     result_df.sort_index(inplace=True)
-    result_df.to_csv(os.path.join(CONFIG.CSV_PATH, csv_name), encoding='utf-8-sig')
+    result_df.to_csv(os.path.join('/ssdmnt/placeness', csv_name), encoding='utf-8-sig')
     print("Finish!!!")
 
 

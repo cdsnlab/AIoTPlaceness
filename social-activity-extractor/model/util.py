@@ -476,7 +476,7 @@ def load_image_data_with_short_code(args, CONFIG):
     for index, row in df_data.iterrows():
         pbar.update(1)
         short_code = row.iloc[0]
-        image_path = row.iloc[2]
+        image_path = row.iloc[2].replace('/mnt/SEOUL_SUBWAY_DATA/', '/ssdmnt/placeness/SEOUL_SUBWAY_DATA_300x300/')
         full_data.append([short_code, image_path])
     pbar.close()
     full_dataset = ImageDataset_with_short_code(full_data, CONFIG, img_transform)

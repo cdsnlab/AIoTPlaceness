@@ -528,7 +528,7 @@ def make_label_set(target_csv):
         #             match_count = match_count + 1
         if len(value['category']) == 3:
             most_category = Counter(value['category']).most_common(1)[0]
-            if most_category[1] >= 2:
+            if most_category[1] >= 3:
                 if most_category[0] in categories:
                     category_value = category_to_value[most_category[0]]
                     category_dict[shortcode] = category_value
