@@ -340,9 +340,7 @@ class MultiDEC(nn.Module):
 
         short_codes = X[:][0]
         train_short_codes = train_dataset[:][0]
-        print(train_dataset[:][3].size())
         train_labels = train_dataset[:][3].squeeze(dim=0).data.cpu().numpy()
-        print(train_labels)
         df_train = pd.DataFrame(data=train_labels, index=train_short_codes, columns=['label'])
         _, image_ind = align_cluster(train_labels, train_image_pred)
         _, text_ind = align_cluster(train_labels, train_text_pred)
@@ -359,6 +357,9 @@ class MultiDEC(nn.Module):
         self.p_calculator.to('cpu')
         if self.weight_calculator is not None:
             self.weight_calculator.to('cpu')
+
+        if self.weight_calculator is not None:
+            train_weight = self.weight_calculator(X[:][1], X[:][2])
         for epoch in range(num_epochs):
             # update the target distribution p
             self.train()
@@ -391,7 +392,6 @@ class MultiDEC(nn.Module):
             image_z, text_z = self.update_z(X, batch_size)
             q, r = self.soft_assignemt(image_z, text_z)
             if self.weight_calculator is not None:
-                train_weight = self.weight_calculator(X[:][1], X[:][2])
                 p = self.target_distribution(q, r, train_weight)
             else:
                 p = self.target_distribution(q, r)
