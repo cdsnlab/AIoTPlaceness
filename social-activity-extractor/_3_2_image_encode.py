@@ -118,7 +118,7 @@ def get_latent(args):
     result_df = pd.DataFrame(data=row_list, index=short_code_list, columns=[i for i in range(args.latent_size)])
     result_df.index.name = "short_code"
     result_df.sort_index(inplace=True)
-    result_df.to_csv(os.path.join('/ssdmnt/placeness', csv_name), encoding='utf-8-sig')
+    result_df.to_csv(os.path.join('/ssdmnt/dist', csv_name), encoding='utf-8-sig')
     print("Finish!!!")
 
 
