@@ -32,7 +32,7 @@ def main():
     parser.add_argument('-target_csv', type=str, default=None, help='file name of target csv')
     parser.add_argument('-target_modal', type=str, default=None, help='file name of target csv')
     parser.add_argument('-shuffle', default=True, help='shuffle data every epoch')
-    parser.add_argument('-split_rate', type=float, default=0.8, help='split rate between train and validation')
+    parser.add_argument('-split_rate', type=float, default=0.2, help='split rate between train and validation')
     # model
     parser.add_argument('-input_dim', type=int, default=300, help='size of input dimension')
     parser.add_argument('-latent_dim', type=int, default=10, help='size of latent variable')

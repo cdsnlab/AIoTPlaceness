@@ -327,9 +327,7 @@ class LabeledUniCSVDataset(Dataset):
 def load_csv_data(args, CONFIG):
     df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.target_csv), index_col=0,
                           encoding='utf-8-sig')
-    scaled_data = StandardScaler().fit_transform(np.array(df_data.values))
-    df_scaled = pd.DataFrame(data=scaled_data, index=df_data.index, columns=df_data.columns)
-    df_train, df_val = train_test_split(df_scaled, test_size=args.split_rate)
+    df_train, df_val = train_test_split(df_data, test_size=args.split_rate)
     train_short_codes = []
     train_data = []
     pbar = tqdm(total=df_train.shape[0])
