@@ -1,4 +1,5 @@
 import datetime
+import os
 
 import torch
 import torch.nn as nn
@@ -151,7 +152,7 @@ class StackedDAE(nn.Module):
         self.decoder[0].bias.data.copy_(daeLayers[-1].vbias.data)
 
     def fit(self, trainloader, validloader, lr=0.001, num_epochs=10, corrupt=0.3,
-            loss_type="mse"):
+            loss_type="mse", save_path=None):
         """
         data_x: FloatTensor
         valid_x: FloatTensor
@@ -180,6 +181,7 @@ class StackedDAE(nn.Module):
         valid_loss = total_loss / total_num
         print("#Epoch 0: Valid Reconstruct Loss: %.6f at %s" % (valid_loss, str(datetime.datetime.now())))
         self.train()
+        best_loss = valid_loss
         for epoch in range(num_epochs):
             # train 1 epoch
             adjust_learning_rate(lr, optimizer, epoch)
@@ -207,5 +209,9 @@ class StackedDAE(nn.Module):
                 valid_recon_loss = criterion(outputs, inputs)
                 valid_loss += valid_recon_loss.data * len(inputs)
 
-            print("#Epoch %3d: Reconstruct Loss: %.6f, Valid Reconstruct Loss: %.6f at %s" % (
-                epoch + 1, train_loss / len(trainloader.dataset), valid_loss / len(validloader.dataset), str(datetime.datetime.now())))
+            if best_loss > valid_loss:
+                best_loss = valid_loss
+                self.save_model(save_path)
+
+            print("#Epoch %3d: Reconstruct Loss: %.6f, Valid Reconstruct Loss: %.6f, Best Reconstruct Loss: %.6f at %s" % (
+                epoch + 1, train_loss / len(trainloader.dataset), valid_loss / len(validloader.dataset), best_loss, str(datetime.datetime.now())))

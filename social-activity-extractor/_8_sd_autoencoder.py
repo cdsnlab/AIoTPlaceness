@@ -76,8 +76,8 @@ def train_reconstruction(args):
         if not args.resume:
             sdae.pretrain(train_loader, val_loader, lr=args.lr, batch_size=args.batch_size,
                           num_epochs=args.pretrain_epochs, corrupt=0.2, loss_type="mse")
-        sdae.fit(train_loader, val_loader, lr=args.lr, num_epochs=args.epochs, corrupt=0.2, loss_type="mse")
-        sdae.save_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.target_modal + "_sdae_" + str(args.latent_dim)) + ".pt")
+        sdae.fit(train_loader, val_loader, lr=args.lr, num_epochs=args.epochs, corrupt=0.2, loss_type="mse",
+                 save_path=os.path.join(CONFIG.CHECKPOINT_PATH, args.target_modal + "_sdae_" + str(args.latent_dim)) + ".pt")
         print("Finish!!!")
 
     finally:
