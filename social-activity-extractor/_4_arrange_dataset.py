@@ -456,15 +456,15 @@ def process_dataset_image(target_dataset):
 # 		del image_data
 # pbar.close()
 
-def normalized_csv(target_csv):
-    df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, encoding='utf-8')
+def normalized_csv(csv_path, target_csv):
+    df_data = pd.read_csv(os.path.join(csv_path, target_csv), index_col=0, encoding='utf-8')
     print(df_data[:5])
     df_normalized = df_data.div((np.sqrt(np.sum(np.square(df_data), axis=1))), axis=0)
-    df_normalized.to_csv(os.path.join(CONFIG.CSV_PATH, 'normalized_' + target_csv), encoding='utf-8-sig')
+    df_normalized.to_csv(os.path.join(csv_path, 'normalized_' + target_csv), encoding='utf-8-sig')
 
 
-def normalized_and_pca(target_csv):
-    df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, encoding='utf-8')
+def normalized_and_pca(csv_path, target_csv):
+    df_data = pd.read_csv(os.path.join(csv_path, target_csv), index_col=0, encoding='utf-8')
     print(df_data[:5])
     df_normalized = df_data.div((np.sqrt(np.sum(np.square(df_data), axis=1))), axis=0)
     pca_normalized = PCA(n_components=300, random_state=42)
@@ -472,7 +472,7 @@ def normalized_and_pca(target_csv):
     df_pca_normalized.columns = ['PC' + str(i) for i in range(df_pca_normalized.shape[1])]
     df_pca_normalized.index = df_normalized.index
     print(df_pca_normalized[:5])
-    df_pca_normalized.to_csv(os.path.join(CONFIG.CSV_PATH, 'pca_normalized_' + target_csv), encoding='utf-8-sig')
+    df_pca_normalized.to_csv(os.path.join(csv_path, 'pca_normalized_' + target_csv), encoding='utf-8-sig')
 
 
 def make_toy_csv(target_csv):
@@ -562,14 +562,14 @@ def cut_label_csv(target_csv, label_csv):
     print(df_label[:5])
     df_data.to_csv(os.path.join(CONFIG.CSV_PATH, 'labeled_' + target_csv), encoding='utf-8-sig')
 
-def make_scaled_csv(target_csv):
-    df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, encoding='utf-8')
+def make_scaled_csv(csv_path, target_csv):
+    df_data = pd.read_csv(os.path.join(csv_path, target_csv), index_col=0, encoding='utf-8')
     scaled_data = StandardScaler().fit_transform(np.array(df_data.values))
     df_scaled_data = pd.DataFrame(data=scaled_data, index=df_data.index,
                                         columns=df_data.columns)
     print(df_data[:5])
     print(df_scaled_data[:5])
-    df_scaled_data.to_csv(os.path.join(CONFIG.CSV_PATH, 'scaled_' + target_csv), encoding='utf-8-sig')
+    df_scaled_data.to_csv(os.path.join(csv_path, 'scaled_' + target_csv), encoding='utf-8-sig')
 
 def sampled_plus_labeled_csv(target_csv, label_csv):
     df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, encoding='utf-8')
@@ -602,9 +602,9 @@ def run(option):
     elif option == 9:
         process_dataset_image(target_dataset=sys.argv[2])
     elif option == 10:
-        normalized_csv(target_csv=sys.argv[2])
+        normalized_csv(csv_path=sys.argv[2], target_csv=sys.argv[3])
     elif option == 11:
-        normalized_and_pca(target_csv=sys.argv[2])
+        normalized_and_pca(csv_path=sys.argv[2], target_csv=sys.argv[3])
     elif option == 12:
         make_toy_csv(target_csv=sys.argv[2])
     elif option == 13:
@@ -612,7 +612,7 @@ def run(option):
     elif option == 14:
         cut_label_csv(target_csv=sys.argv[2], label_csv=sys.argv[3])
     elif option == 15:
-        make_scaled_csv(target_csv=sys.argv[2])
+        make_scaled_csv(csv_path=sys.argv[2], target_csv=sys.argv[3])
     elif option == 16:
         sampled_plus_labeled_csv(target_csv=sys.argv[2], label_csv=sys.argv[3])
     else:
