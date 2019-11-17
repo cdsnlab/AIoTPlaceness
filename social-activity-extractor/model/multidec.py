@@ -131,13 +131,12 @@ class PCalculator(nn.Module):
 #         # return prob
 
 class MultiDEC(nn.Module):
-    def __init__(self, device, image_encoder, text_encoder, weight_calculator=None, n_clusters=10, alpha=1, trade_off=1e-6):
+    def __init__(self, device, image_encoder, text_encoder, ours=False, n_clusters=10, alpha=1, trade_off=1e-6):
         super(self.__class__, self).__init__()
         self.device = device
         self.image_encoder = image_encoder
         self.text_encoder = text_encoder
-        self.weight_calculator = weight_calculator
-        self.p_calculator = PCalculator(n_clusters=n_clusters)
+        self.ours = ours
         self.n_clusters = n_clusters
         self.alpha = alpha
         self.trade_off = trade_off
@@ -229,57 +228,29 @@ class MultiDEC(nn.Module):
     #     semi_loss = image_loss + text_loss
     #     return semi_loss
 
-    # def target_distribution(self, q, r, weight):
-    #     p_image = q ** 2 / torch.sum(q, dim=0)
-    #     p_image = p_image / (2 * torch.sum(p_image, dim=1, keepdim=True))
-    #     p_text = r ** 2 / torch.sum(r, dim=0)
-    #     p_text = p_text / (2 * torch.sum(p_text, dim=1, keepdim=True))
-    #     p = p_image + p_text
+    # def target_distribution(self, q, r, weight=None):
+    #     if weight is not None:
+    #         weight_list = torch.split(weight, 1, dim=1)
+    #         # p_image = q ** 2 / torch.sum(q, dim=0)
+    #         # p_image = p_image / (2 * torch.sum(p_image, dim=1, keepdim=True))
+    #         # p_text = r ** 2 / torch.sum(r, dim=0)
+    #         # p_text = p_text / (2 * torch.sum(p_text, dim=1, keepdim=True))
+    #         p = q * weight_list[0] + r * weight_list[1]
+    #         # p = p_image * weight_list[0] + p_text * weight_list[1]
+    #         p = p ** 2 / torch.sum(p, dim=0)
+    #         p = p / torch.sum(p, dim=1, keepdim=True)
+    #     else:
+    #         p_image = q ** 2 / torch.sum(q, dim=0)
+    #         p_image = p_image / (2 * torch.sum(p_image, dim=1, keepdim=True))
+    #         p_text = r ** 2 / torch.sum(r, dim=0)
+    #         p_text = p_text / (2 * torch.sum(p_text, dim=1, keepdim=True))
+    #         p = p_image + p_text
     #     return p
 
-    # def target_distribution(self, q, r, weight):
-    #     p_image = q ** 2 / torch.sum(q, dim=0)
-    #     p_image = p_image / (torch.sum(p_image, dim=1, keepdim=True))
-    #     p_text = r ** 2 / torch.sum(r, dim=0)
-    #     p_text = p_text / (torch.sum(p_text, dim=1, keepdim=True))
-    #     # p = p_image / 2 + p_text / 2
-    #     p = self.p_calculator(p_image, p_text)
-    #     p = p ** 2 / torch.sum(p, dim=0)
-    #     p = p / torch.sum(p, dim=1, keepdim=True)
-    #     return p
-
-    # def target_distribution(self, q, r, weight):
-    #     weight_list = torch.split(weight, 1, dim=1)
-    #     p_image = q ** 2 / torch.sum(q, dim=0)
-    #     p_image = p_image / torch.sum(p_image, dim=1, keepdim=True)
-    #     p_text = r ** 2 / torch.sum(r, dim=0)
-    #     p_text = p_text / torch.sum(p_text, dim=1, keepdim=True)
-    #     p = p_image * 0.5 + p_text * 0.5
-    #     # p = p_image * weight_list[0] + p_text * weight_list[1]
-    #     return p
-
-    # def target_distribution(self, q, r, weight):
-    #     weight = self.weight_calculator(q, r)
-    #     print(weight[:10])
-    #     weight_list = torch.split(weight, 1, dim=1)
-    #     p_image = q ** 2 / torch.sum(q, dim=0)
-    #     p_image = p_image / torch.sum(p_image, dim=1, keepdim=True)
-    #     p_text = r ** 2 / torch.sum(r, dim=0)
-    #     p_text = p_text / torch.sum(p_text, dim=1, keepdim=True)
-    #     p = p_image * weight_list[0] + p_text * weight_list[1]
-    #     p = F.softmax(p, dim=1)
-    #     return p
-
-    def target_distribution(self, q, r, weight=None):
-        if weight is not None:
-            weight_list = torch.split(weight, 1, dim=1)
-            # p_image = q ** 2 / torch.sum(q, dim=0)
-            # p_image = p_image / (2 * torch.sum(p_image, dim=1, keepdim=True))
-            # p_text = r ** 2 / torch.sum(r, dim=0)
-            # p_text = p_text / (2 * torch.sum(p_text, dim=1, keepdim=True))
-            p = q * weight_list[0] + r * weight_list[1]
-            # p = p_image * weight_list[0] + p_text * weight_list[1]
-            p = p ** 2 / torch.sum(p, dim=0)
+    def target_distribution(self, q, r):
+        if self.ours:
+            s = q * r
+            p = s ** 2 / torch.sum(s, dim=0)
             p = p / torch.sum(p, dim=1, keepdim=True)
         else:
             p_image = q ** 2 / torch.sum(q, dim=0)
@@ -354,16 +325,11 @@ class MultiDEC(nn.Module):
         self.image_encoder.mu.data = self.image_encoder.mu.cpu()
         self.text_encoder.mu.data.copy_(torch.Tensor(text_cluster_centers))
         self.text_encoder.mu.data = self.text_encoder.mu.cpu()
-        self.p_calculator.to('cpu')
-        if self.weight_calculator is not None:
-            self.weight_calculator.to('cpu')
-            train_weight = self.weight_calculator(X[:][1], X[:][2])
         for epoch in range(num_epochs):
             # update the target distribution p
             self.train()
             # train 1 epoch
             train_loss = 0.0
-
             adjust_learning_rate(lr, optimizer)
             for batch_idx in range(train_num_batch):
                 # semi-supervised phase
@@ -384,30 +350,17 @@ class MultiDEC(nn.Module):
                 optimizer.step()
 
                 del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
-
-
-
             image_z, text_z = self.update_z(X, batch_size)
             q, r = self.soft_assignemt(image_z, text_z)
-            if self.weight_calculator is not None:
-                p = self.target_distribution(q, r, train_weight)
-            else:
-                p = self.target_distribution(q, r)
+            p = self.target_distribution(q, r)
 
             adjust_learning_rate(lr/10, optimizer)
 
             for batch_idx in range(X_num_batch):
-                # image_z, text_z = self.update_z(X, batch_size)
-                # q, r = self.soft_assignemt(image_z, text_z)
-                # train_weight = Variable(train_dataset[:][4])
-                # # p = self.target_distribution(q, r).data
-                # p = self.target_distribution(q, r, train_weight)
                 # clustering phase
                 image_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)][1]
                 text_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)][2]
                 pbatch = p[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)]
-                # p_inputs = p[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)]
-
 
                 image_inputs = Variable(image_batch).to(self.device)
                 text_inputs = Variable(text_batch).to(self.device)
@@ -451,12 +404,7 @@ class MultiDEC(nn.Module):
 
         q, r = self.soft_assignemt(image_z, text_z)
 
-        if self.weight_calculator is not None:
-            test_weight = self.weight_calculator(test_dataset[:][1], test_dataset[:][2])
-            test_weight = torch.cat([train_weight, test_weight], dim=0)
-            test_p = self.target_distribution(q, r, test_weight).data
-        else:
-            test_p = self.target_distribution(q, r).data
+        test_p = self.target_distribution(q, r).data
         test_pred = torch.argmax(test_p, dim=1).numpy()[X_num:]
         test_acc = accuracy_score(test_labels, test_pred)
         test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')

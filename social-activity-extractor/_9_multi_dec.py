@@ -44,7 +44,7 @@ def main():
     # model
     parser.add_argument('-input_dim', type=int, default=300, help='size of input dimension')
     parser.add_argument('-latent_dim', type=int, default=10, help='size of latent variable')
-    parser.add_argument('-wc', action='store_true', default=False, help='use weight calculator')
+    parser.add_argument('-ours', action='store_true', default=False, help='use our target distribution')
     # train
     parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
     parser.add_argument('-gpu', type=str, default='cuda', help='gpu number')
@@ -107,11 +107,8 @@ def train_multidec(args):
             text_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=n_clusters,
                                         encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
             text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "text_sdae_" + str(args.latent_dim)) + ".pt")
-            if args.wc:
-                weight_calculator = WeightCalculator(device=device, input_dim=300)
-                weight_calculator.fit_predict(train_dataset, val_dataset, num_epochs=100, save_path=os.path.join(CONFIG.CHECKPOINT_PATH, "weight_calculator.pt"))
-                weight_calculator.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "weight_calculator.pt"))
-                mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder, weight_calculator=weight_calculator,
+            if args.ours:
+                mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder, ours=args.ours,
                                 n_clusters=n_clusters)
             else:
                 mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder,
