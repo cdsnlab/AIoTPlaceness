@@ -168,7 +168,6 @@ class StackedDAE(nn.Module):
 
         # validate
         total_loss = 0.0
-        total_num = 0
         for batch_idx, (_, inputs) in enumerate(validloader):
             inputs = inputs.view(inputs.size(0), -1).float()
             inputs = Variable(inputs).to(self.device)
@@ -176,9 +175,8 @@ class StackedDAE(nn.Module):
 
             valid_recon_loss = criterion(outputs, inputs)
             total_loss += valid_recon_loss.data * len(inputs)
-            total_num += inputs.size()[0]
 
-        valid_loss = total_loss / total_num
+        valid_loss = total_loss / len(validloader.dataset)
         print("#Epoch 0: Valid Reconstruct Loss: %.6f at %s" % (valid_loss, str(datetime.datetime.now())))
         self.train()
         best_loss = valid_loss
@@ -198,6 +196,7 @@ class StackedDAE(nn.Module):
                 train_loss += recon_loss.data * len(inputs)
                 recon_loss.backward()
                 optimizer.step()
+            train_loss = train_loss / len(trainloader.dataset)
 
             # validate
             valid_loss = 0.0
@@ -208,10 +207,11 @@ class StackedDAE(nn.Module):
 
                 valid_recon_loss = criterion(outputs, inputs)
                 valid_loss += valid_recon_loss.data * len(inputs)
-
+            valid_loss = valid_loss / len(validloader.dataset)
             if best_loss > valid_loss:
                 best_loss = valid_loss
+                print("saving..")
                 self.save_model(save_path)
 
             print("#Epoch %3d: Reconstruct Loss: %.6f, Valid Reconstruct Loss: %.6f, Best Reconstruct Loss: %.6f at %s" % (
-                epoch + 1, train_loss / len(trainloader.dataset), valid_loss / len(validloader.dataset), best_loss, str(datetime.datetime.now())))
+                epoch + 1, train_loss, valid_loss, best_loss, str(datetime.datetime.now())))
