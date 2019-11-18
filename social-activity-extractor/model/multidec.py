@@ -131,7 +131,7 @@ class PCalculator(nn.Module):
 #         # return prob
 
 class MultiDEC(nn.Module):
-    def __init__(self, device, image_encoder, text_encoder, ours=False, n_clusters=10, alpha=1, trade_off=1e-6):
+    def __init__(self, device, image_encoder, text_encoder, ours=False, use_prior=False, n_clusters=10, alpha=1):
         super(self.__class__, self).__init__()
         self.device = device
         self.image_encoder = image_encoder
@@ -139,7 +139,9 @@ class MultiDEC(nn.Module):
         self.ours = ours
         self.n_clusters = n_clusters
         self.alpha = alpha
-        self.trade_off = trade_off
+        self.use_prior = use_prior
+        if use_prior:
+            self.prior = torch.zeros(n_clusters).float()
         self.acc = 0.
         self.nmi = 0.
         self.f_1 = 0.
@@ -171,9 +173,14 @@ class MultiDEC(nn.Module):
 
     def loss_function(self, p, q, r):
         h = torch.mean(p, dim=0, keepdim=True)
-        u = torch.full_like(h, fill_value=1/h.size()[1])
-        image_loss = F.kl_div(q.log(), p, reduction='batchmean') + F.kl_div(u.log(), h, reduction='batchmean')
-        text_loss = F.kl_div(r.log(), p, reduction='batchmean') + F.kl_div(u.log(), h, reduction='batchmean')
+
+        if self.use_prior:
+            image_loss = F.kl_div(q.log(), p, reduction='batchmean') + F.kl_div(self.prior.log(), h, reduction='batchmean')
+            text_loss = F.kl_div(r.log(), p, reduction='batchmean') + F.kl_div(self.prior.log(), h, reduction='batchmean')
+        else:
+            u = torch.full_like(h, fill_value=1/h.size()[1])
+            image_loss = F.kl_div(q.log(), p, reduction='batchmean') + F.kl_div(u.log(), h, reduction='batchmean')
+            text_loss = F.kl_div(r.log(), p, reduction='batchmean') + F.kl_div(u.log(), h, reduction='batchmean')
         loss = image_loss + text_loss
         return loss
 
@@ -249,9 +256,11 @@ class MultiDEC(nn.Module):
 
     def target_distribution(self, q, r):
         if self.ours:
-            s = q * r
-            p = s ** 2 / torch.sum(s, dim=0)
-            p = p / torch.sum(p, dim=1, keepdim=True)
+            p_image = q ** 2 / torch.sum(q, dim=0)
+            p_image = p_image / (2 * torch.sum(p_image, dim=1, keepdim=True))
+            p_text = r ** 2 / torch.sum(r, dim=0)
+            p_text = p_text / (2 * torch.sum(p_text, dim=1, keepdim=True))
+            p = (p_image * p_text)
         else:
             p_image = q ** 2 / torch.sum(q, dim=0)
             p_image = p_image / (2 * torch.sum(p_image, dim=1, keepdim=True))
@@ -289,10 +298,6 @@ class MultiDEC(nn.Module):
         self.image_encoder.mu.data = self.image_encoder.mu.cpu()
         self.text_encoder.mu.data = self.text_encoder.mu.cpu()
         print("=====Training DEC=======")
-        trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size,
-                                                  shuffle=True)
-        validloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size,
-                                                  shuffle=False)
         optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=lr, momentum=0.9)
 
         print("Extracting initial features at %s" % (str(datetime.datetime.now())))
@@ -325,6 +330,10 @@ class MultiDEC(nn.Module):
         self.image_encoder.mu.data = self.image_encoder.mu.cpu()
         self.text_encoder.mu.data.copy_(torch.Tensor(text_cluster_centers))
         self.text_encoder.mu.data = self.text_encoder.mu.cpu()
+        if self.use_prior:
+            for label in train_labels:
+                self.prior[label] = self.prior[label] + 1
+            self.prior = self.prior / len(train_labels)
         for epoch in range(num_epochs):
             # update the target distribution p
             self.train()

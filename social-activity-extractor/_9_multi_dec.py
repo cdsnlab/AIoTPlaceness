@@ -45,6 +45,7 @@ def main():
     parser.add_argument('-input_dim', type=int, default=300, help='size of input dimension')
     parser.add_argument('-latent_dim', type=int, default=10, help='size of latent variable')
     parser.add_argument('-ours', action='store_true', default=False, help='use our target distribution')
+    parser.add_argument('-use_prior', action='store_true', default=False, help='use prior knowledge')
     # train
     parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
     parser.add_argument('-gpu', type=str, default='cuda', help='gpu number')
@@ -107,12 +108,8 @@ def train_multidec(args):
             text_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=n_clusters,
                                         encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
             text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "text_sdae_" + str(args.latent_dim)) + ".pt")
-            if args.ours:
-                mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder, ours=args.ours,
-                                n_clusters=n_clusters)
-            else:
-                mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder,
-                                n_clusters=n_clusters)
+            mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder, ours=args.ours, use_prior=args.use_prior,
+                            n_clusters=n_clusters)
 
             mdec.fit_predict(full_dataset, train_dataset, val_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
                      save_path=CONFIG.CHECKPOINT_PATH)
