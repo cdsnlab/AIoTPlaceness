@@ -31,6 +31,7 @@ def main():
 	# data
 	parser.add_argument('-target_dataset', type=str, default='seoul_subway', help='folder name of target dataset')
 	parser.add_argument('-label_csv', type=str, default='category_label.csv', help='folder name of target dataset')
+	parser.add_argument('-fold', type=int, default=5, help='number of fold')
 	args = parser.parse_args()
 
 	get_latent(args)
@@ -41,23 +42,23 @@ def get_latent(args):
 	df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.label_csv), index_col=0, encoding='utf-8-sig')
 	df_data = df_data.loc[df_label.index]
 
-	short_code_array = np.array(df_data.index)
-	row_array = np.array(df_data[1])
-	label_array = np.array(df_label['category'])
-
-	tf_vectorizer = TfidfVectorizer(ngram_range=(1, 2)).fit(row_array)
-
-	kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 	acc_list = []
 	nmi_list = []
 	f_1_list = []
 	kf_count = 0
-	for train_index, test_index in kf.split(row_array, label_array):
+	for fold_idx in range(args.fold):
 		print("Current fold: ", kf_count)
-		X_train, X_test = row_array[train_index], row_array[test_index]
+		df_train = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "train_" + str(fold_idx) + "_category_label.csv"),
+							  index_col=0,
+							  encoding='utf-8-sig')
+		df_test = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "test_" + str(fold_idx) + "_category_label.csv"),
+							  index_col=0,
+							  encoding='utf-8-sig')
+		X_train, X_test = np.array(df_data.loc[df_train.index][1]), np.array(df_data.loc[df_test.index][1])
+		tf_vectorizer = TfidfVectorizer(ngram_range=(1, 2)).fit(X_train)
 		X_train_tfidf = tf_vectorizer.transform(X_train)
 		X_test_tfidf = tf_vectorizer.transform(X_test)
-		Y_train, Y_test = label_array[train_index], label_array[test_index]
+		Y_train, Y_test = np.array(df_label.loc[df_train.index]['category']), np.array(df_label.loc[df_test.index]['category'])
 		clf = svm.LinearSVC()
 		clf.fit(X_train_tfidf, Y_train)
 		test_pred = clf.predict(X_test_tfidf)

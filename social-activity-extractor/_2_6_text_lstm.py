@@ -44,6 +44,7 @@ def main():
     parser.add_argument('-hidden_size', type=int, default=256, help='size of latent variable')
     parser.add_argument('-dropout', type=float, default=0.5, help='dropout rate')
     # train
+    parser.add_argument('-fold', type=int, default=5, help='number of fold')
     parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
     parser.add_argument('-gpu', type=str, default='cuda', help='gpu number')
     # option
@@ -73,7 +74,6 @@ def train_multidec(args):
                           encoding='utf-8-sig')
     print(df_text_data[:5])
     df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.label_csv), index_col=0, encoding='utf-8-sig')
-    short_code_array = np.array(df_label.index)
     label_array = np.array(df_label['category'])
     n_clusters = np.max(label_array) + 1
 
@@ -82,21 +82,20 @@ def train_multidec(args):
     for arg, value in vars(args).items():
         exp.param(arg, value)
     try:
-        kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
         acc_list = []
         nmi_list = []
         f_1_list = []
         kf_count = 0
-        for train_index, val_index in kf.split(short_code_array, label_array):
+        for fold_idx in range(args.fold):
             print("Current fold: ", kf_count)
-            short_code_train = short_code_array[train_index]
-            short_code_val = short_code_array[val_index]
-            label_train = label_array[train_index]
-            label_val = label_array[val_index]
-            df_train = pd.DataFrame(data=label_train, index=short_code_train, columns=df_label.columns)
-            df_val = pd.DataFrame(data=label_val, index=short_code_val, columns=df_label.columns)
+            df_train = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "train_" + str(fold_idx) + "_category_label.csv"),
+                                   index_col=0,
+                                   encoding='utf-8-sig')
+            df_test = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "test_" + str(fold_idx) + "_category_label.csv"),
+                                  index_col=0,
+                                  encoding='utf-8-sig')
             print("Loading dataset...")
-            train_dataset, val_dataset = load_text_data(df_text_data, df_train, df_val, CONFIG, word2idx=word_idx[1])
+            train_dataset, test_dataset = load_text_data(df_text_data, df_train, df_test, CONFIG, word2idx=word_idx[1])
             print("\nLoading dataset completed")
             embedding = nn.Embedding.from_pretrained(torch.FloatTensor(embedding_model))
             text_encoder = LSTMClassifier(device=device, batch_size=args.batch_size, output_size=n_clusters, hidden_size=[128, 256, 512],
@@ -104,7 +103,7 @@ def train_multidec(args):
             text_model = TextModel(device=device, text_encoder=text_encoder)
             text_model.fit(train_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
                      save_path=CONFIG.CHECKPOINT_PATH)
-            text_model.predict(val_dataset, batch_size=args.batch_size)
+            text_model.predict(test_dataset, batch_size=args.batch_size)
             acc_list.append(text_model.acc)
             nmi_list.append(text_model.nmi)
             f_1_list.append(text_model.f_1)
