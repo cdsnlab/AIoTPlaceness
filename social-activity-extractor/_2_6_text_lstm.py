@@ -74,6 +74,7 @@ def train_multidec(args):
                           encoding='utf-8-sig')
     print(df_text_data[:5])
     df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.label_csv), index_col=0, encoding='utf-8-sig')
+    df_text_data = df_text_data.loc[df_label.index]
     label_array = np.array(df_label['category'])
     n_clusters = np.max(label_array) + 1
 
