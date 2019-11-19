@@ -324,6 +324,29 @@ class LabeledUniCSVDataset(Dataset):
 #         return self.short_codes[idx], image_tensor, text_tensor, self.label_data[idx]
 
 
+def load_autoencoder_data(df_input_data, CONFIG):
+    df_train, df_val = train_test_split(df_input_data, test_size=0.2, shuffle=True, random_state=42)
+    train_short_codes = []
+    train_data = []
+    pbar = tqdm(total=df_train.shape[0])
+    for index, row in df_train.iterrows():
+        train_short_codes.append(index)
+        train_data.append(np.array(row))
+        pbar.update(1)
+    pbar.close()
+    train_dataset = CSVDataset(train_short_codes, np.array(train_data), CONFIG)
+
+    val_short_codes = []
+    val_data = []
+    pbar = tqdm(total=df_val.shape[0])
+    for index, row in df_val.iterrows():
+        val_short_codes.append(index)
+        val_data.append(np.array(row))
+        pbar.update(1)
+    pbar.close()
+    val_dataset = CSVDataset(val_short_codes, np.array(val_data), CONFIG)
+    return train_dataset, val_dataset
+
 def load_csv_data(args, CONFIG):
     df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.target_csv), index_col=0,
                           encoding='utf-8-sig')
@@ -348,7 +371,6 @@ def load_csv_data(args, CONFIG):
     pbar.close()
     val_dataset = CSVDataset(val_short_codes, np.array(val_data), CONFIG)
     return train_dataset, val_dataset
-
 
 class CSVDataset(Dataset):
     def __init__(self, short_codes, data, CONFIG):

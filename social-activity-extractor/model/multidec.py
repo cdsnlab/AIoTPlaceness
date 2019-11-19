@@ -1,5 +1,6 @@
 import datetime
 import os
+from time import sleep
 
 import pandas as pd
 import torch
@@ -257,17 +258,18 @@ class MultiDEC(nn.Module):
     def target_distribution(self, q, r):
         if self.ours:
             p_image = q ** 2 / torch.sum(q, dim=0)
-            p_image = p_image / (2 * torch.sum(p_image, dim=1, keepdim=True))
+            p_image = p_image / torch.sum(p_image, dim=1, keepdim=True)
             p_text = r ** 2 / torch.sum(r, dim=0)
-            p_text = p_text / (2 * torch.sum(p_text, dim=1, keepdim=True))
-            p = (p_image * p_text)
+            p_text = p_text / torch.sum(p_text, dim=1, keepdim=True)
+            p = (p_image ** 0.5) * (p_text ** 0.5)
+            # p = (p_image * p_text) ** 0.5
         else:
             p_image = q ** 2 / torch.sum(q, dim=0)
-            p_image = p_image / (2 * torch.sum(p_image, dim=1, keepdim=True))
+            p_image = p_image / torch.sum(p_image, dim=1, keepdim=True)
             p_text = r ** 2 / torch.sum(r, dim=0)
-            p_text = p_text / (2 * torch.sum(p_text, dim=1, keepdim=True))
-            p = p_image + p_text
-        return p
+            p_text = p_text / torch.sum(p_text, dim=1, keepdim=True)
+            p = p_image/2 + p_text/2
+        return p, p_image, p_text
 
     def update_z(self, input, batch_size):
         input_num = len(input)
@@ -361,7 +363,8 @@ class MultiDEC(nn.Module):
                 del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
             image_z, text_z = self.update_z(X, batch_size)
             q, r = self.soft_assignemt(image_z, text_z)
-            p = self.target_distribution(q, r)
+
+            p, _, _ = self.target_distribution(q, r)
 
             adjust_learning_rate(lr/10, optimizer)
 
@@ -412,10 +415,17 @@ class MultiDEC(nn.Module):
         text_z = torch.cat([text_z, test_text_z], dim=0)
 
         q, r = self.soft_assignemt(image_z, text_z)
-
-        test_p = self.target_distribution(q, r).data
+        test_p, test_p_image, test_p_text = self.target_distribution(q, r)
         test_pred = torch.argmax(test_p, dim=1).numpy()[X_num:]
         test_acc = accuracy_score(test_labels, test_pred)
+        # df_test = pd.DataFrame(data=test_pred, index=test_dataset[:][0], columns=['labels'])
+        # df_test.to_csv('mdec_label.csv', encoding='utf-8-sig')
+        # df_test_p = pd.DataFrame(data=test_p.data.numpy()[X_num:], index=test_dataset[:][0])
+        # df_test_p.to_csv('mdec_p.csv', encoding='utf-8-sig')
+        # df_test_p_image = pd.DataFrame(data=test_p_image.data.numpy()[X_num:], index=test_dataset[:][0])
+        # df_test_p_image.to_csv('mdec_p_image.csv', encoding='utf-8-sig')
+        # df_test_p_text = pd.DataFrame(data=test_p_text.data.numpy()[X_num:], index=test_dataset[:][0])
+        # df_test_p_text.to_csv('mdec_p_text.csv', encoding='utf-8-sig')
         test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')
         test_f_1 = f1_score(test_labels, test_pred, average='macro')
         print("#Test acc: %.4f, Test nmi: %.4f, Test f_1: %.4f" % (

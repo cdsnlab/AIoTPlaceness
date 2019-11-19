@@ -2,6 +2,7 @@
 import os
 import shutil
 
+from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import StandardScaler
 
 import config
@@ -530,14 +531,17 @@ def make_label_set(target_csv):
             most_category = Counter(value['category']).most_common(1)[0]
             if most_category[1] >= 3:
                 if most_category[0] in categories:
-                    category_value = category_to_value[most_category[0]]
-                    category_dict[shortcode] = category_value
-                    weight_value = []
-                    for idx, weight in enumerate(value['weight']):
-                        if value['category'][idx] == most_category[0]:
-                            weight_value.append(weight_to_value[weight])
-                    weight_value = np.mean(weight_value)
-                    weight_dict[shortcode] = [weight_value, 1 - weight_value]
+                    if value['weight'][0] == 'image_text' and value['weight'][1] == 'image_text' and value['weight'][2] == 'image_text':
+                        category_value = category_to_value[most_category[0]]
+                        category_dict[shortcode] = category_value
+                    # category_value = category_to_value[most_category[0]]
+                    # category_dict[shortcode] = category_value
+                    # weight_value = []
+                    # for idx, weight in enumerate(value['weight']):
+                    #     if value['category'][idx] == most_category[0]:
+                    #         weight_value.append(weight_to_value[weight])
+                    # weight_value = np.mean(weight_value)
+                    # weight_dict[shortcode] = [weight_value, 1 - weight_value]
 
             three_count = three_count + 1
             if most_category[1] == 3:
@@ -580,6 +584,24 @@ def sampled_plus_labeled_csv(target_csv, label_csv):
     df_data = pd.concat([df_data, df_label])
     df_data.to_csv(os.path.join(CONFIG.CSV_PATH, 'sampled_plus_labeled_' + target_csv), encoding='utf-8-sig')
 
+def kfold_cut_csv(label_csv):
+    df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, label_csv), index_col=0, encoding='utf-8')
+    short_code_array = np.array(df_label.index)
+    label_array = np.array(df_label['category'])
+    kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    kf_count = 0
+    for train_index, test_index in kf.split(short_code_array, label_array):
+        print("Current fold: ", kf_count)
+        short_code_train = short_code_array[train_index]
+        short_code_test = short_code_array[test_index]
+        label_train = label_array[train_index]
+        label_test = label_array[test_index]
+        df_train = pd.DataFrame(data=label_train, index=short_code_train, columns=df_label.columns)
+        df_test = pd.DataFrame(data=label_test, index=short_code_test, columns=df_label.columns)
+        df_train.to_csv(os.path.join(CONFIG.CSV_PATH, 'train_' + str(kf_count) + '_' + label_csv), encoding='utf-8-sig')
+        df_test.to_csv(os.path.join(CONFIG.CSV_PATH, 'test_' + str(kf_count) + '_' + label_csv), encoding='utf-8-sig')
+        kf_count = kf_count + 1
+
 def run(option):
     if option == 0:
         copy_selected_post(target_folder=sys.argv[2])
@@ -615,6 +637,8 @@ def run(option):
         make_scaled_csv(csv_path=sys.argv[2], target_csv=sys.argv[3])
     elif option == 16:
         sampled_plus_labeled_csv(target_csv=sys.argv[2], label_csv=sys.argv[3])
+    elif option == 17:
+        kfold_cut_csv(label_csv=sys.argv[2])
     else:
         print("This option does not exist!\n")
 

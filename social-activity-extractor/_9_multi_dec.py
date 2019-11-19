@@ -96,6 +96,7 @@ def train_multidec(args):
             label_val = label_array[val_index]
             df_train = pd.DataFrame(data=label_train, index=short_code_train, columns=df_label.columns)
             df_val = pd.DataFrame(data=label_val, index=short_code_val, columns=df_label.columns)
+            df_val.to_csv('real_label.csv', encoding='utf-8-sig')
             print("Loading dataset...")
             full_dataset, train_dataset, val_dataset = load_semi_supervised_csv_data(df_image_data, df_text_data, df_train,
                                                                                      df_val, df_weight, CONFIG)
@@ -109,14 +110,14 @@ def train_multidec(args):
                                         encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
             text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "text_sdae_" + str(args.latent_dim)) + ".pt")
             mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder, ours=args.ours, use_prior=args.use_prior,
-                            n_clusters=n_clusters)
+                                n_clusters=n_clusters)
 
             mdec.fit_predict(full_dataset, train_dataset, val_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
                      save_path=CONFIG.CHECKPOINT_PATH)
             acc_list.append(mdec.acc)
             nmi_list.append(mdec.nmi)
             f_1_list.append(mdec.f_1)
-            # break
+            break
             kf_count = kf_count + 1
         print("#Average acc: %.4f, Average nmi: %.4f, Average f_1: %.4f" % (
             np.mean(acc_list), np.mean(nmi_list), np.mean(f_1_list)))
