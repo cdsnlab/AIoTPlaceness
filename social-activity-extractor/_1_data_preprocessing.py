@@ -1,4 +1,5 @@
 # -*- coding: UTF-8 -*-
+import operator
 import sys
 import math
 import torch
@@ -326,7 +327,8 @@ def make_doc2vec(target_posts):
 
 def make_tfidf(target_posts):
 	df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, target_posts, 'posts.csv'), index_col=0, header=None, encoding='utf-8-sig')
-	print(df_data[:5])
+	with open(os.path.join(CONFIG.DATASET_PATH, 'seoul_subway', 'word_idx.json'), "r", encoding='utf-8') as f:
+		word_idx = json.load(f)
 	with open(os.path.join(CONFIG.DATASET_PATH, target_posts, 'corpus.txt'), 'r', encoding='utf-8') as f:
 		data = f.read()
 		text_data = [data.split()]
@@ -334,10 +336,27 @@ def make_tfidf(target_posts):
 	dct = Dictionary(text_data)
 	documents = [dct.doc2bow(value[1].split()) for index, value in df_data.iterrows()]
 	print("embedding started")
-	embedding_model = TfidfModel(documents)
+	embedding_model = TfidfModel(documents, id2word=word_idx[0])
 	model_name = "TFIDF_"+ target_posts + ".model"
 	embedding_model.save(os.path.join(CONFIG.EMBEDDING_PATH, model_name))
 	print("embedding completed")
+
+	corpus_tfidf = embedding_model[documents]
+	d = {}
+	for doc in corpus_tfidf:
+		for id, value in doc:
+			word = word_idx[0][str(id)]
+			d[word] = value
+	sorted_d = sorted(d.items(), key=operator.itemgetter(1), reverse=True)
+	print(sorted_d[:10])
+	dictionary_list = []
+	sorted_d = sorted_d[:3000]
+	for word, value in sorted_d:
+		dictionary_list.append(word)
+
+	with open(os.path.join(CONFIG.DATASET_PATH, 'seoul_subway', 'dictionary_list.p'), 'wb') as f:
+		cPickle.dump(dictionary_list, f)
+
 
 
 def run(option):

@@ -43,6 +43,7 @@ def main():
     parser.add_argument('-input_dim', type=int, default=300, help='size of input dimension')
     parser.add_argument('-hidden_size', type=int, default=256, help='size of latent variable')
     parser.add_argument('-dropout', type=float, default=0.5, help='dropout rate')
+    parser.add_argument('-use_de', action='store_true', default=False, help='use dictionary embedding')
     # train
     parser.add_argument('-fold', type=int, default=5, help='number of fold')
     parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
@@ -68,6 +69,8 @@ def train_multidec(args):
 
     with open(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'word_embedding.p'), "rb") as f:
         embedding_model = cPickle.load(f)
+    with open(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'dictionary_list.p'), 'rb') as f:
+        dictionary_list = cPickle.load(f)
     with open(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'word_idx.json'), "r", encoding='utf-8') as f:
         word_idx = json.load(f)
     df_text_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'posts.csv'), index_col=0, header=None,
@@ -95,16 +98,26 @@ def train_multidec(args):
             df_test = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "test_" + str(fold_idx) + "_category_label.csv"),
                                   index_col=0,
                                   encoding='utf-8-sig')
-            print("Loading dataset...")
-            train_dataset, test_dataset = load_text_data(df_text_data, df_train, df_test, CONFIG, word2idx=word_idx[1])
-            print("\nLoading dataset completed")
             embedding = nn.Embedding.from_pretrained(torch.FloatTensor(embedding_model))
-            text_encoder = LSTMClassifier(device=device, batch_size=args.batch_size, output_size=n_clusters, hidden_size=[128, 256, 512],
+            if args.use_de:
+                print("make dictionary embedding")
+                dictionary_embedding = make_de(df_text_data, df_train, dictionary_list, n_clusters)
+                input_size = int(embedding.embedding_dim + n_clusters)
+                print("Loading dataset...")
+                train_dataset, test_dataset = load_text_data(df_text_data, df_train, df_test, CONFIG,
+                                                             word2idx=word_idx[1], n_clusters=n_clusters, de=dictionary_embedding)
+                print("\nLoading dataset completed")
+            else:
+                input_size = int(embedding.embedding_dim)
+                print("Loading dataset...")
+                train_dataset, test_dataset = load_text_data(df_text_data, df_train, df_test, CONFIG, word2idx=word_idx[1], n_clusters=n_clusters)
+                print("\nLoading dataset completed")
+            text_encoder = LSTMClassifier(device=device, batch_size=args.batch_size, input_size=input_size, output_size=n_clusters, hidden_size=[128, 256, 512],
                                           embedding=embedding, dropout=args.dropout)
             text_model = TextModel(device=device, text_encoder=text_encoder)
             text_model.fit(train_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
-                     save_path=CONFIG.CHECKPOINT_PATH)
-            text_model.predict(test_dataset, batch_size=args.batch_size)
+                     save_path=CONFIG.CHECKPOINT_PATH, use_de=args.use_de)
+            text_model.predict(test_dataset, batch_size=args.batch_size, use_de=args.use_de)
             acc_list.append(text_model.acc)
             nmi_list.append(text_model.nmi)
             f_1_list.append(text_model.f_1)
@@ -149,6 +162,21 @@ def eval_multidec(args):
         os.path.join(CONFIG.CSV_PATH, 'multidec_pvalue_' + str(args.latent_dim) + '_' + '.csv'),
         encoding='utf-8-sig')
 
+
+def make_de(df_text_data, df_train, dictionary_list, n_clusters=12):
+    df_text_data = df_text_data.loc[df_train.index]
+    dictionary_count = {word: np.zeros(n_clusters) for word in dictionary_list}
+    for index, row in df_text_data.iterrows():
+        word_list = row.iloc[0].split()
+        label = df_train.loc[index][0]
+        for word in word_list:
+            if word in dictionary_count:
+                dictionary_count[word][label] = dictionary_count[word][label] + 1
+    dictionary_embedding = {}
+    for index, value in dictionary_count.items():
+        if np.sum(value) > 0:
+            dictionary_embedding[index] = np.argmax(value)
+    return dictionary_embedding
 
 if __name__ == '__main__':
     main()

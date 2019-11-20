@@ -11,7 +11,7 @@ from torch.nn import functional as F
 
 
 class LSTMClassifier(nn.Module):
-    def __init__(self, device, batch_size, output_size, hidden_size, embedding, dropout):
+    def __init__(self, device, batch_size, input_size, output_size, hidden_size, embedding, dropout):
         super(LSTMClassifier, self).__init__()
 
         """
@@ -31,7 +31,7 @@ class LSTMClassifier(nn.Module):
         self.hidden_size = hidden_size
 
         self.word_embeddings = embedding
-        self.lstm0 = nn.LSTM(embedding.embedding_dim, hidden_size[0])
+        self.lstm0 = nn.LSTM(input_size, hidden_size[0])
         self.dropout0 = nn.Dropout(p=dropout)
         self.lstm1 = nn.LSTM(hidden_size[0], hidden_size[1])
         self.dropout1 = nn.Dropout(p=dropout)
@@ -40,7 +40,7 @@ class LSTMClassifier(nn.Module):
         self.label = nn.Linear(hidden_size[2], output_size)
         self.softmax = nn.LogSoftmax(dim=1)
 
-    def forward(self, input_sentence):
+    def forward(self, input_sentence, de=None):
 
         """
         Parameters
@@ -58,6 +58,10 @@ class LSTMClassifier(nn.Module):
         ''' Here we will map all the indexes present in the input sequence to the corresponding word vector using our pre-trained word_embedddins.'''
         input = self.word_embeddings(
             input_sentence)  # embedded input of shape = (batch_size, num_sequences,  embedding_length)
+        if de is not None:
+            de = de.unsqueeze(dim=1)
+            de = de.repeat(1, input.size()[1], 1)
+            input = torch.cat([input, de], dim=2)
         input = input.permute(1, 0, 2)  # input.size() = (num_sequences, batch_size, embedding_length)
         output0, _ = self.lstm0(input)
         output1, _ = self.lstm1(self.dropout0(output0))
@@ -85,11 +89,11 @@ class TextModel(nn.Module):
         model_dict.update(pretrained_dict)
         self.load_state_dict(model_dict)
 
-    def forward(self, x):
-        log_prob = self.text_encoder(x)
+    def forward(self, x, de=None):
+        log_prob = self.text_encoder(x, de)
         return log_prob
 
-    def fit(self, train_dataset, lr=0.001, batch_size=256, num_epochs=10, save_path=None, tol=1e-3):
+    def fit(self, train_dataset, lr=0.001, batch_size=256, num_epochs=10, save_path=None, tol=1e-3, use_de=False):
         trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size,
                                                   shuffle=True)
         optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=lr)
@@ -105,8 +109,14 @@ class TextModel(nn.Module):
             for batch_idx, input_batch in enumerate(trainloader):
                 feature_batch = Variable(input_batch[1]).to(self.device)
                 target_batch = Variable(input_batch[2]).to(self.device)
+                if use_de:
+                    de_batch = Variable(input_batch[3]).to(self.device)
                 optimizer.zero_grad()
-                log_prob = self.forward(feature_batch)
+
+                if use_de:
+                    log_prob = self.forward(feature_batch, de_batch)
+                else:
+                    log_prob = self.forward(feature_batch)
                 loss = criterion(log_prob, target_batch)
                 loss.backward()
                 optimizer.step()
@@ -124,7 +134,7 @@ class TextModel(nn.Module):
         if save_path:
             self.save_model(os.path.join(save_path, "text_lstm.pt"))
 
-    def predict(self, test_dataset, batch_size=256):
+    def predict(self, test_dataset, batch_size=256, use_de=False):
         testloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size,
                                                   shuffle=False)
         self.to(self.device)
@@ -134,7 +144,11 @@ class TextModel(nn.Module):
         for batch_idx, input_batch in enumerate(testloader):
             feature_batch = Variable(input_batch[1]).to(self.device)
             target_batch = Variable(input_batch[2]).to(self.device)
-            log_prob = self.forward(feature_batch)
+            if use_de:
+                de_batch = Variable(input_batch[3]).to(self.device)
+                log_prob = self.forward(feature_batch, de_batch)
+            else:
+                log_prob = self.forward(feature_batch)
             pred_batch = torch.argmax(log_prob, dim=1).cpu().numpy()
             test_pred.extend(pred_batch)
             test_labels.extend(target_batch.cpu().numpy())

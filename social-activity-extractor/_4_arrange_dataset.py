@@ -2,6 +2,7 @@
 import os
 import shutil
 
+from sklearn.metrics import accuracy_score
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import StandardScaler
 
@@ -491,7 +492,7 @@ def make_label_set(target_csv):
     #categories = [11, 124, 13]
     category_to_value = {v: i for i, v in enumerate(categories)}
     print(category_to_value)
-    weight_to_value = {'image': 1, 'image_text': 0.5, 'text': 0}
+    weight_to_value = {'image': 0, 'text': 1, 'image_text': 2}
     csv_path = os.path.join(CONFIG.CSV_PATH, target_csv)
     df_data = pd.read_csv(csv_path, index_col=0, encoding='utf-8')
     print(df_data[:5])
@@ -529,14 +530,14 @@ def make_label_set(target_csv):
         #             match_count = match_count + 1
         if len(value['category']) == 3:
             most_category = Counter(value['category']).most_common(1)[0]
-            if most_category[1] >= 3:
+            if most_category[1] >= 2:
                 if most_category[0] in categories:
-                    if value['weight'][0] == 'image_text' and value['weight'][1] == 'image_text' and value['weight'][2] == 'image_text':
-                        category_value = category_to_value[most_category[0]]
-                        category_dict[shortcode] = category_value
-                    # category_value = category_to_value[most_category[0]]
-                    # category_dict[shortcode] = category_value
-                    # weight_value = []
+                    category_value = category_to_value[most_category[0]]
+                    category_dict[shortcode] = category_value
+                    most_weight = Counter(value['weight']).most_common(1)[0]
+                    weight_value = weight_to_value[most_weight[0]]
+                    weight_dict[shortcode] = weight_value
+
                     # for idx, weight in enumerate(value['weight']):
                     #     if value['category'][idx] == most_category[0]:
                     #         weight_value.append(weight_to_value[weight])
@@ -554,7 +555,7 @@ def make_label_set(target_csv):
     df_category = pd.DataFrame.from_dict(category_dict, orient='index', columns=['category'])
     #df_category = df_category.sample(n=100)
     df_category.to_csv(os.path.join(CONFIG.CSV_PATH, "category_label.csv"), encoding='utf-8-sig')
-    df_weight = pd.DataFrame.from_dict(weight_dict, orient='index', columns=['iamge_weight', 'text_weight'])
+    df_weight = pd.DataFrame.from_dict(weight_dict, orient='index', columns=['weight'])
     #df_weight = df_weight.loc[df_category.index]
     df_weight.to_csv(os.path.join(CONFIG.CSV_PATH, "weight_label.csv"), encoding='utf-8-sig')
 
@@ -602,6 +603,68 @@ def kfold_cut_csv(label_csv):
         df_test.to_csv(os.path.join(CONFIG.CSV_PATH, 'test_' + str(kf_count) + '_' + label_csv), encoding='utf-8-sig')
         kf_count = kf_count + 1
 
+def test2():
+    df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'real_label.csv'), index_col=0, encoding='utf-8')
+    df_ours = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'ours_label.csv'), index_col=0, encoding='utf-8')
+    df_mdec = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'mdec_label.csv'), index_col=0, encoding='utf-8')
+    df_weight = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'weight_label.csv'), index_col=0, encoding='utf-8')
+    df_tagged = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'tagged.csv'), index_col=0, encoding='utf-8')
+    print(df_tagged[:5])
+    df_weight = df_weight.loc[df_label.index]
+
+    df_label_image_only = df_label.loc[df_weight['weight'] == 0]
+    df_ours_image_only = df_ours.loc[df_label_image_only.index]
+    df_mdec_image_only = df_mdec.loc[df_label_image_only.index]
+    print("image only result: ", len(df_label_image_only))
+    print("mdec accuracy on image only %.4f" % accuracy_score(np.array(df_mdec_image_only['labels']), np.array(df_label_image_only['category'])))
+    print("ours accuracy on image only %.4f" % accuracy_score(np.array(df_ours_image_only['labels']), np.array(df_label_image_only['category'])))
+
+    df_label_text_only = df_label.loc[df_weight['weight'] == 1]
+    df_ours_text_only = df_ours.loc[df_label_text_only.index]
+    df_mdec_text_only = df_mdec.loc[df_label_text_only.index]
+    print("text only result: ", len(df_label_text_only))
+    print("mdec accuracy on text only %.4f" % accuracy_score(np.array(df_mdec_text_only['labels']),
+                                                                  np.array(df_label_text_only['category'])))
+    print("ours accuracy on text only %.4f" % accuracy_score(np.array(df_ours_text_only['labels']),
+                                                                  np.array(df_label_text_only['category'])))
+
+    df_label_image_text = df_label.loc[df_weight['weight'] == 2]
+    df_ours_image_text = df_ours.loc[df_label_image_text.index]
+    df_mdec_image_text = df_mdec.loc[df_label_image_text.index]
+    print("image_text result: ", len(df_label_image_text))
+    print("mdec accuracy on image_text %.4f" % accuracy_score(np.array(df_mdec_image_text['labels']), np.array(df_label_image_text['category'])))
+    print("ours accuracy on image_text %.4f" % accuracy_score(np.array(df_ours_image_text['labels']), np.array(df_label_image_text['category'])))
+
+
+    print("mdec accuracy on total %.4f" % accuracy_score(np.array(df_mdec['labels']), np.array(df_label['category'])))
+    print("ours accuracy on total %.4f" % accuracy_score(np.array(df_ours['labels']), np.array(df_label['category'])))
+    mutual_list = []
+    for index, row in df_label.iterrows():
+        if df_mdec.loc[index][0] == df_label.loc[index][0]:
+            predicted_label = df_mdec.loc[index][0]
+        else:
+            predicted_label = df_ours.loc[index][0]
+        mutual_list.append(predicted_label)
+    print("mutual accuracy on total %.4f" % accuracy_score(np.array(mutual_list), np.array(df_label['category'])))
+
+
+    df_label_tagged = df_label.loc[df_tagged.index]
+    df_mdec_tagged = df_mdec.loc[df_tagged.index]
+    df_ours_tagged = df_ours.loc[df_tagged.index]
+
+    result_matrix = np.zeros((3, 3))
+    for index, row in df_tagged.iterrows():
+        tagging_category = row['category']
+        result_matrix[0][tagging_category] = result_matrix[0][tagging_category] + 1
+        if df_mdec_tagged.loc[index][0] == df_label_tagged.loc[index][0]:
+            result_matrix[1][tagging_category] = result_matrix[1][tagging_category] + 1
+            if (df_ours_tagged.loc[index][0] != df_label_tagged.loc[index][0]) and (tagging_category == 2):
+                print(index)
+        if df_ours_tagged.loc[index][0] == df_label_tagged.loc[index][0]:
+            result_matrix[2][tagging_category] = result_matrix[2][tagging_category] + 1
+    print(result_matrix)
+
+
 def run(option):
     if option == 0:
         copy_selected_post(target_folder=sys.argv[2])
@@ -639,6 +702,8 @@ def run(option):
         sampled_plus_labeled_csv(target_csv=sys.argv[2], label_csv=sys.argv[3])
     elif option == 17:
         kfold_cut_csv(label_csv=sys.argv[2])
+    elif option == 18:
+        test2()
     else:
         print("This option does not exist!\n")
 

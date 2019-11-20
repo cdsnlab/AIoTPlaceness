@@ -386,7 +386,7 @@ class CSVDataset(Dataset):
         return self.short_codes[idx], input_tensor
 
 
-def load_text_data(df_full, df_train_label, df_val_label, CONFIG, word2idx):
+def load_text_data(df_full, df_train_label, df_val_label, CONFIG, word2idx, n_clusters, de=None):
     df_train_index = set(df_train_label.index)
     df_val_index = set(df_val_label.index)
     train_short_codes = []
@@ -407,18 +407,20 @@ def load_text_data(df_full, df_train_label, df_val_label, CONFIG, word2idx):
             val_input_data.append(row.iloc[0])
             val_label_data.append(df_val_label.loc[index][0])
     pbar.close()
-    train_dataset, val_dataset = TextDataset(train_short_codes, train_input_data, train_label_data, CONFIG, word2idx), \
-                                 TextDataset(val_short_codes, val_input_data, val_label_data, CONFIG, word2idx)
+    train_dataset, val_dataset = TextDataset(train_short_codes, train_input_data, train_label_data, CONFIG, word2idx, de, n_clusters=n_clusters), \
+                                 TextDataset(val_short_codes, val_input_data, val_label_data, CONFIG, word2idx, de, n_clusters=n_clusters)
     return train_dataset, val_dataset
 
 
 class TextDataset(Dataset):
-    def __init__(self, short_codes, input_data, label_data, CONFIG, word2idx):
+    def __init__(self, short_codes, input_data, label_data, CONFIG, word2idx, de=None, n_clusters=12):
         self.short_codes = short_codes
         self.input_data = input_data
         self.label_data = label_data
         self.word2idx = word2idx
         self.CONFIG = CONFIG
+        self.n_clusters = n_clusters
+        self.de = de
 
     def __len__(self):
         return len(self.short_codes)
@@ -437,7 +439,16 @@ class TextDataset(Dataset):
         text_array = np.array(index_list)
         text_tensor = torch.from_numpy(text_array).type(torch.LongTensor)
         label_tensor = torch.from_numpy(np.array(self.label_data[idx])).type(torch.LongTensor)
-        return self.short_codes[idx], text_tensor, label_tensor
+        if self.de is not None:
+            de_data = np.zeros(self.n_clusters)
+            for word in word_list:
+                if word in self.de:
+                    dic_label = self.de[word]
+                    de_data[dic_label] = de_data[dic_label] + 1
+            de_tensor = torch.from_numpy(de_data).type(torch.FloatTensor)
+            return self.short_codes[idx], text_tensor, label_tensor, de_tensor
+        else:
+            return self.short_codes[idx], text_tensor, label_tensor
 
 
 # def load_text_data_with_short_code(args, CONFIG, word2idx):
