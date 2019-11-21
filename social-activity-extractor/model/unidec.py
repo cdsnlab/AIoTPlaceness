@@ -255,7 +255,7 @@ class UniDEC(nn.Module):
         test_pred = torch.argmax(test_p, dim=1).numpy()[X_num:]
         test_acc = accuracy_score(test_labels, test_pred)
         test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')
-        test_f_1 = f1_score(test_labels, test_pred, average='micro')
+        test_f_1 = f1_score(test_labels, test_pred, average='macro')
         print("#Test acc: %.4f, Test nmi: %.4f, Test f_1: %.4f" % (
             test_acc, test_nmi, test_f_1))
         self.acc = test_acc
