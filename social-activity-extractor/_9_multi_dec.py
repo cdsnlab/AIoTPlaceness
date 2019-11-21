@@ -79,7 +79,7 @@ def train_multidec(args):
     label_array = np.array(df_label['category'])
     n_clusters = np.max(label_array) + 1
 
-    exp = Experiment("MDEC " + str(args.latent_dim), capture_io=True)
+    exp = Experiment(args.prefix + "_MDEC", capture_io=True)
 
     for arg, value in vars(args).items():
         exp.param(arg, value)

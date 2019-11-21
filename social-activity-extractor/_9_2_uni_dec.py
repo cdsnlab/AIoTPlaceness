@@ -35,13 +35,16 @@ def main():
     parser.add_argument('-update_time', type=int, default=1, help='update time within epoch')
     parser.add_argument('-batch_size', type=int, default=256, help='batch size for training')
     # data
+    parser.add_argument('-prefix', type=str, default=None, help='prefix of file name')
     parser.add_argument('-input_csv', type=str, default='labeled_scaled_pca_normalized_image_encoded_seoul_subway.csv', help='file name of target csv')
     parser.add_argument('-target_modal', type=str, default='image', help='file name of target label')
     parser.add_argument('-label_csv', type=str, default='category_label.csv', help='file name of target label')
     # model
     parser.add_argument('-input_dim', type=int, default=300, help='size of input dimension')
     parser.add_argument('-latent_dim', type=int, default=10, help='size of latent variable')
+    parser.add_argument('-use_prior', action='store_true', default=False, help='use prior knowledge')
     # train
+    parser.add_argument('-fold', type=int, default=5, help='number of fold')
     parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
     parser.add_argument('-gpu', type=str, default='cuda', help='gpu number')
     # option
@@ -62,43 +65,41 @@ def main():
 def train_multidec(args):
     print("Training unidec")
     device = torch.device(args.gpu)
-    df_input_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.input_csv), index_col=0,
+    df_input_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.prefix + "_" + args.input_csv), index_col=0,
                                 encoding='utf-8-sig')
 
     df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.label_csv), index_col=0, encoding='utf-8-sig')
-    short_code_array = np.array(df_label.index)
     label_array = np.array(df_label['category'])
     n_clusters = np.max(label_array) + 1
 
-    exp = Experiment("UDEC " + str(args.latent_dim), capture_io=True)
+    exp = Experiment(args.prefix + "_" + args.target_modal + "_UDEC", capture_io=True)
 
     for arg, value in vars(args).items():
         exp.param(arg, value)
     try:
-        kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
         acc_list = []
         nmi_list = []
         f_1_list = []
         kf_count = 0
-        for train_index, val_index in kf.split(short_code_array, label_array):
+        for fold_idx in range(args.fold):
             print("Current fold: ", kf_count)
-            short_code_train = short_code_array[train_index]
-            short_code_val = short_code_array[val_index]
-            label_train = label_array[train_index]
-            label_val = label_array[val_index]
-            df_train = pd.DataFrame(data=label_train, index=short_code_train, columns=df_label.columns)
-            df_val = pd.DataFrame(data=label_val, index=short_code_val, columns=df_label.columns)
+            df_train = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "train_" + str(fold_idx) + "_category_label.csv"),
+                                  index_col=0,
+                                  encoding='utf-8-sig')
+            df_test = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "test_" + str(fold_idx) + "_category_label.csv"),
+                                  index_col=0,
+                                  encoding='utf-8-sig')
             print("Loading dataset...")
             full_dataset, train_dataset, val_dataset = load_semi_supervised_uni_csv_data(df_input_data, df_train,
-                                                                                     df_val, CONFIG)
+                                                                                     df_test, CONFIG)
             print("\nLoading dataset completed")
 
             encoder = UDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=n_clusters,
                                          encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
-            encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.target_modal + "_sdae_" + str(args.latent_dim)) + ".pt")
-            udec = UniDEC(device=device, encoder=encoder, n_clusters=n_clusters)
+            encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix + "_" + args.target_modal + "_sdae_" + str(fold_idx)) + ".pt")
+            udec = UniDEC(device=device, encoder=encoder, use_prior=args.use_prior, n_clusters=n_clusters)
             udec.fit_predict(full_dataset, train_dataset, val_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
-                     save_path=CONFIG.CHECKPOINT_PATH)
+                     save_path=os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix + "_" + args.target_modal + "_udec_" + str(fold_idx)) + ".pt")
             acc_list.append(udec.acc)
             nmi_list.append(udec.nmi)
             f_1_list.append(udec.f_1)

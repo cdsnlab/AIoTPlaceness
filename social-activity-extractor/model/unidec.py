@@ -65,13 +65,15 @@ class UDEC_encoder(nn.Module):
 
 
 class UniDEC(nn.Module):
-    def __init__(self, device, encoder, n_clusters=10, alpha=1, trade_off=1e-6):
+    def __init__(self, device, encoder, use_prior=False, n_clusters=10, alpha=1):
         super(self.__class__, self).__init__()
         self.device = device
         self.encoder = encoder
         self.n_clusters = n_clusters
         self.alpha = alpha
-        self.trade_off = trade_off
+        self.use_prior = use_prior
+        if use_prior:
+            self.prior = torch.zeros(n_clusters).float()
         self.acc = 0.
         self.nmi = 0.
         self.f_1 = 0.
@@ -98,8 +100,12 @@ class UniDEC(nn.Module):
 
     def loss_function(self, p, q):
         h = torch.mean(p, dim=0, keepdim=True)
-        u = torch.full_like(h, fill_value=1/h.size()[1])
-        loss = F.kl_div(q.log(), p, reduction='batchmean') + F.kl_div(u.log(), h, reduction='batchmean')
+
+        if self.use_prior:
+            loss = F.kl_div(q.log(), p, reduction='batchmean') + F.kl_div(self.prior.log(), h, reduction='batchmean')
+        else:
+            u = torch.full_like(h, fill_value=1/h.size()[1])
+            loss = F.kl_div(q.log(), p, reduction='batchmean') + F.kl_div(u.log(), h, reduction='batchmean')
         return loss
 
     def semi_loss_function(self, label_batch, q_batch):
@@ -165,6 +171,10 @@ class UniDEC(nn.Module):
         self.encoder.mu.data.copy_(torch.Tensor(cluster_centers))
         self.encoder.mu.data = self.encoder.mu.cpu()
 
+        if self.use_prior:
+            for label in train_labels:
+                self.prior[label] = self.prior[label] + 1
+            self.prior = self.prior / len(train_labels)
         for epoch in range(num_epochs):
             # update the target distribution p
             self.train()
