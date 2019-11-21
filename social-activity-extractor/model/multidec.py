@@ -434,8 +434,7 @@ class MultiDEC(nn.Module):
         self.nmi = test_nmi
         self.f_1 = test_f_1
         if save_path:
-            self.save_model(os.path.join(save_path, "mdec_" + str(self.image_encoder.z_dim)) + '_' + str(
-            self.n_clusters) + ".pt")
+            self.save_model(save_path)
 
     def predict(self, X, batch_size=256):
         num = len(X)

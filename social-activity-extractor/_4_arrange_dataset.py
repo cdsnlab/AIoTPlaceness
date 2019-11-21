@@ -658,10 +658,10 @@ def test2():
         result_matrix[0][tagging_category] = result_matrix[0][tagging_category] + 1
         if df_mdec_tagged.loc[index][0] == df_label_tagged.loc[index][0]:
             result_matrix[1][tagging_category] = result_matrix[1][tagging_category] + 1
-            if (df_ours_tagged.loc[index][0] != df_label_tagged.loc[index][0]) and (tagging_category == 2):
-                print(index)
         if df_ours_tagged.loc[index][0] == df_label_tagged.loc[index][0]:
             result_matrix[2][tagging_category] = result_matrix[2][tagging_category] + 1
+            if (df_mdec_tagged.loc[index][0] != df_label_tagged.loc[index][0]) and (tagging_category == 1):
+                print(index)
     print(result_matrix)
 
 

@@ -37,8 +37,9 @@ def main():
     parser.add_argument('-update_time', type=int, default=1, help='update time within epoch')
     parser.add_argument('-batch_size', type=int, default=256, help='batch size for training')
     # data
-    parser.add_argument('-image_csv', type=str, default='labeled_scaled_pca_normalized_image_encoded_seoul_subway.csv', help='file name of target csv')
-    parser.add_argument('-text_csv', type=str, default='labeled_scaled_text_doc2vec_seoul_subway.csv', help='file name of target csv')
+    parser.add_argument('-prefix', type=str, default=None, help='prefix of file name')
+    parser.add_argument('-image_csv', type=str, default='pca_normalized_image_encoded_seoul_subway.csv', help='file name of target csv')
+    parser.add_argument('-text_csv', type=str, default='text_doc2vec_seoul_subway.csv', help='file name of target csv')
     parser.add_argument('-label_csv', type=str, default='category_label.csv', help='file name of target label')
     parser.add_argument('-weight_csv', type=str, default='weight_label.csv', help='file name of target label')
     # model
@@ -47,6 +48,7 @@ def main():
     parser.add_argument('-ours', action='store_true', default=False, help='use our target distribution')
     parser.add_argument('-use_prior', action='store_true', default=False, help='use prior knowledge')
     # train
+    parser.add_argument('-fold', type=int, default=5, help='number of fold')
     parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
     parser.add_argument('-gpu', type=str, default='cuda', help='gpu number')
     # option
@@ -67,14 +69,13 @@ def main():
 def train_multidec(args):
     print("Training multidec")
     device = torch.device(args.gpu)
-    df_image_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.image_csv), index_col=0,
+    df_image_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.prefix + "_" + args.image_csv), index_col=0,
                                 encoding='utf-8-sig')
-    df_text_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.text_csv), index_col=0,
+    df_text_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.prefix + "_" + args.text_csv), index_col=0,
                                encoding='utf-8-sig')
 
     df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.label_csv), index_col=0, encoding='utf-8-sig')
     df_weight = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.weight_csv), index_col=0, encoding='utf-8-sig')
-    short_code_array = np.array(df_label.index)
     label_array = np.array(df_label['category'])
     n_clusters = np.max(label_array) + 1
 
@@ -83,41 +84,38 @@ def train_multidec(args):
     for arg, value in vars(args).items():
         exp.param(arg, value)
     try:
-        kf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
         acc_list = []
         nmi_list = []
         f_1_list = []
         kf_count = 0
-        for train_index, val_index in kf.split(short_code_array, label_array):
+        for fold_idx in range(args.fold):
             print("Current fold: ", kf_count)
-            short_code_train = short_code_array[train_index]
-            short_code_val = short_code_array[val_index]
-            label_train = label_array[train_index]
-            label_val = label_array[val_index]
-            df_train = pd.DataFrame(data=label_train, index=short_code_train, columns=df_label.columns)
-            df_val = pd.DataFrame(data=label_val, index=short_code_val, columns=df_label.columns)
-            df_val.to_csv('real_label.csv', encoding='utf-8-sig')
+            df_train = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "train_" + str(fold_idx) + "_category_label.csv"),
+                                  index_col=0,
+                                  encoding='utf-8-sig')
+            df_test = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "test_" + str(fold_idx) + "_category_label.csv"),
+                                  index_col=0,
+                                  encoding='utf-8-sig')
             print("Loading dataset...")
             full_dataset, train_dataset, val_dataset = load_semi_supervised_csv_data(df_image_data, df_text_data, df_train,
-                                                                                     df_val, df_weight, CONFIG)
+                                                                                     df_test, df_weight, CONFIG)
             print("\nLoading dataset completed")
 
 
             image_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=n_clusters,
                                          encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
-            image_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "image_sdae_" + str(args.latent_dim)) + ".pt")
+            image_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "sampled_plus_labeled_scaled_image_sdae_" + str(fold_idx)) + ".pt")
             text_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=n_clusters,
                                         encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
-            text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "text_sdae_" + str(args.latent_dim)) + ".pt")
+            text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "sampled_plus_labeled_scaled_text_sdae_" + str(fold_idx)) + ".pt")
             mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder, ours=args.ours, use_prior=args.use_prior,
                                 n_clusters=n_clusters)
 
             mdec.fit_predict(full_dataset, train_dataset, val_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
-                     save_path=CONFIG.CHECKPOINT_PATH)
+                     save_path=os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix + "_mdec_" + str(fold_idx)) + ".pt")
             acc_list.append(mdec.acc)
             nmi_list.append(mdec.nmi)
             f_1_list.append(mdec.f_1)
-            break
             kf_count = kf_count + 1
         print("#Average acc: %.4f, Average nmi: %.4f, Average f_1: %.4f" % (
             np.mean(acc_list), np.mean(nmi_list), np.mean(f_1_list)))
