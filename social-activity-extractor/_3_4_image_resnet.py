@@ -117,6 +117,7 @@ def train_multidec(args):
                 state_dict = {str.replace(k, 'module.', ''): v for k, v in checkpoint['state_dict'].items()}
                 image_encoder.load_state_dict(state_dict)
             else:
+                print("Loading model")
                 image_encoder = models.__dict__[args.arch](pretrained=True)
             image_encoder.fc = LastLayer(image_encoder.fc.in_features, n_clusters)
             image_model = ImageModel(device=device, image_encoder=image_encoder)

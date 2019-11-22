@@ -549,12 +549,12 @@ def load_image_data(df_full, df_train_label, df_val_label, CONFIG):
         pbar.update(1)
         if index in df_train_index:
             train_short_codes.append(index)
-            image_path = row.iloc[2].replace('/mnt/SEOUL_SUBWAY_DATA/', '/ssdmnt/placeness/SEOUL_SUBWAY_DATA_300x300/')
+            image_path = row.iloc[1].replace('/mnt/SEOUL_SUBWAY_DATA/', '/ssdmnt/placeness/SEOUL_SUBWAY_DATA_300x300/')
             train_input_data.append(image_path)
             train_label_data.append(df_train_label.loc[index][0])
         elif index in df_val_index:
             val_short_codes.append(index)
-            image_path = row.iloc[2].replace('/mnt/SEOUL_SUBWAY_DATA/', '/ssdmnt/placeness/SEOUL_SUBWAY_DATA_300x300/')
+            image_path = row.iloc[1].replace('/mnt/SEOUL_SUBWAY_DATA/', '/ssdmnt/placeness/SEOUL_SUBWAY_DATA_300x300/')
             val_input_data.append(image_path)
             val_label_data.append(df_val_label.loc[index][0])
     pbar.close()
