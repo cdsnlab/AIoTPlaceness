@@ -128,7 +128,7 @@ def train_multidec(args):
             image_model = ImageModel(device=device, image_encoder=image_encoder)
             image_model.fit(train_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
                      save_path=os.path.join(CONFIG.CHECKPOINT_PATH, "image_resnet.pt"))
-            image_model.predict(test_dataset, batch_size=args.batch_size, use_de=args.use_de)
+            image_model.predict(test_dataset, batch_size=args.batch_size)
             acc_list.append(image_model.acc)
             nmi_list.append(image_model.nmi)
             f_1_list.append(image_model.f_1)

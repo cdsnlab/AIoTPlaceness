@@ -67,7 +67,7 @@ class ImageModel(nn.Module):
         if save_path:
             self.save_model(save_path)
 
-    def predict(self, test_dataset, batch_size=256, use_de=False):
+    def predict(self, test_dataset, batch_size=256):
         testloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size,
                                                   shuffle=False)
         self.to(self.device)
