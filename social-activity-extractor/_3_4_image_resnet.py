@@ -16,8 +16,9 @@ from torch.utils.data import DataLoader
 from model import util
 from sklearn.model_selection import train_test_split, StratifiedKFold
 
+import torchvision.models as models
 from model.image_resnet import ImageModel
-from model.util import load_multi_csv_data, load_semi_supervised_csv_data, load_text_data
+from model.util import load_multi_csv_data, load_semi_supervised_csv_data, load_text_data, load_image_data
 from model.multidec import MDEC_encoder, MultiDEC
 
 CONFIG = config.Config
@@ -43,7 +44,7 @@ def main():
     parser.add_argument('-input_dim', type=int, default=300, help='size of input dimension')
     parser.add_argument('-hidden_size', type=int, default=256, help='size of latent variable')
     parser.add_argument('-dropout', type=float, default=0.5, help='dropout rate')
-    parser.add_argument('-use_de', action='store_true', default=False, help='use dictionary embedding')
+    parser.add_argument('-arch', type=str, default='resnet50', help='torchvision model')
     # train
     parser.add_argument('-fold', type=int, default=5, help='number of fold')
     parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
@@ -62,6 +63,18 @@ def main():
     if args.noti:
         slacknoti("underkoo end using")
 
+class LastLayer(nn.Module):
+    def __init__(self, in_features, n_clusters):
+        super(self.__class__, self).__init__()
+        self.fc = nn.Sequential(
+            nn.Linear(in_features, n_clusters),
+            nn.Sigmoid(),
+            nn.LogSoftmax(dim=1)
+        )
+
+    def forward(self, x):
+        log_prob = self.fc(x)
+        return log_prob
 
 def train_multidec(args):
     print("Training test lstm")
@@ -96,6 +109,16 @@ def train_multidec(args):
             print("Loading dataset...")
             train_dataset, test_dataset = load_image_data(df_image_data, df_train, df_test, CONFIG)
             print("\nLoading dataset completed")
+            if args.arch == 'placesCNN':
+                print("Loading model trained in places")
+                image_encoder = models.__dict__[args.arch](num_classes=365)
+                checkpoint = torch.load(os.path.join(CONFIG.CHECKPOINT_PATH, 'resnet50_places365.pth.tar'),
+                                        map_location=lambda storage, loc: storage)
+                state_dict = {str.replace(k, 'module.', ''): v for k, v in checkpoint['state_dict'].items()}
+                image_encoder.load_state_dict(state_dict)
+            else:
+                image_encoder = models.__dict__[args.arch](pretrained=True)
+            image_encoder.fc = LastLayer(image_encoder.fc.in_features, n_clusters)
             image_model = ImageModel(device=device, image_encoder=image_encoder)
             image_model.fit(train_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
                      save_path=os.path.join(CONFIG.CHECKPOINT_PATH, "image_resnet.pt"))
