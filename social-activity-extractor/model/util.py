@@ -550,12 +550,16 @@ def load_image_data(df_full, df_train_label, df_val_label, CONFIG):
         if index in df_train_index:
             train_short_codes.append(index)
             image_path = row.iloc[1].replace('/mnt/SEOUL_SUBWAY_DATA/', '/ssdmnt/placeness/SEOUL_SUBWAY_DATA_300x300/')
-            train_input_data.append(image_path)
+            #train_input_data.append(image_path)
+            image_data = img_transform(pil_loader(image_path))
+            train_input_data.append(image_data)
             train_label_data.append(df_train_label.loc[index][0])
         elif index in df_val_index:
             val_short_codes.append(index)
             image_path = row.iloc[1].replace('/mnt/SEOUL_SUBWAY_DATA/', '/ssdmnt/placeness/SEOUL_SUBWAY_DATA_300x300/')
-            val_input_data.append(image_path)
+            #val_input_data.append(image_path)
+            image_data = img_transform(pil_loader(image_path))
+            val_input_data.append(image_data)
             val_label_data.append(df_val_label.loc[index][0])
     pbar.close()
     train_dataset, val_dataset = ImageDataset(train_short_codes, train_input_data, train_label_data, img_transform, CONFIG), \
@@ -575,7 +579,8 @@ class ImageDataset(Dataset):
         return len(self.input_data)
 
     def __getitem__(self, idx):
-        image_tensor = self.transform(pil_loader(self.input_data[idx]))
+        # image_tensor = self.transform(pil_loader(self.input_data[idx]))
+        image_tensor = torch.from_numpy(np.array(self.image_data[idx])).type(torch.FloatTensor)
         label_tensor = torch.from_numpy(np.array(self.label_data[idx])).type(torch.LongTensor)
         return self.short_codes[idx], image_tensor, label_tensor
 
