@@ -77,7 +77,7 @@ class LastLayer(nn.Module):
         return log_prob
 
 def train_multidec(args):
-    print("Training test lstm")
+    print("Training test image resnet")
     device = torch.device(args.gpu)
 
     df_image_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'posts.csv'), index_col=0, header=None,
@@ -88,7 +88,7 @@ def train_multidec(args):
     label_array = np.array(df_label['category'])
     n_clusters = np.max(label_array) + 1
 
-    exp = Experiment("Text lstm", capture_io=True)
+    exp = Experiment("Image resnet", capture_io=True)
 
     for arg, value in vars(args).items():
         exp.param(arg, value)
