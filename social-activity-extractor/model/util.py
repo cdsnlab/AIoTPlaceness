@@ -580,7 +580,7 @@ class ImageDataset(Dataset):
 
     def __getitem__(self, idx):
         # image_tensor = self.transform(pil_loader(self.input_data[idx]))
-        image_tensor = torch.from_numpy(np.array(self.image_data[idx])).type(torch.FloatTensor)
+        image_tensor = torch.from_numpy(np.array(self.input_data[idx])).type(torch.FloatTensor)
         label_tensor = torch.from_numpy(np.array(self.label_data[idx])).type(torch.LongTensor)
         return self.short_codes[idx], image_tensor, label_tensor
 
