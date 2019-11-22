@@ -33,16 +33,14 @@ def slacknoti(contentstr):
 def main():
     parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
     # learning
-    parser.add_argument('-lr', type=float, default=1e-03, help='initial learning rate')
-    parser.add_argument('-epochs', type=int, default=500, help='number of epochs for train')
+    parser.add_argument('-lr', type=float, default=0.01, help='initial learning rate')
+    parser.add_argument('-epochs', type=int, default=50, help='number of epochs for train')
     parser.add_argument('-update_time', type=int, default=1, help='update time within epoch')
-    parser.add_argument('-batch_size', type=int, default=256, help='batch size for training')
+    parser.add_argument('-batch_size', type=int, default=64, help='batch size for training')
     # data
     parser.add_argument('-target_dataset', type=str, default='seoul_subway', help='folder name of target dataset')
     parser.add_argument('-label_csv', type=str, default='category_label.csv', help='file name of target label')
     # model
-    parser.add_argument('-input_dim', type=int, default=300, help='size of input dimension')
-    parser.add_argument('-hidden_size', type=int, default=256, help='size of latent variable')
     parser.add_argument('-dropout', type=float, default=0.5, help='dropout rate')
     parser.add_argument('-arch', type=str, default='resnet50', help='torchvision model')
     # train
@@ -64,16 +62,23 @@ def main():
         slacknoti("underkoo end using")
 
 class LastLayer(nn.Module):
-    def __init__(self, in_features, n_clusters):
+    def __init__(self, in_features, n_clusters, dropout=0.):
         super(self.__class__, self).__init__()
-        self.fc = nn.Sequential(
-            nn.Linear(in_features, n_clusters),
+        self.fc1 = nn.Sequential(
+            nn.Linear(in_features, 512),
+            nn.ReLU(),
+            nn.BatchNorm1d(512),
+            nn.Dropout(dropout)
+        )
+        self.fc2 = nn.Sequential(
+            nn.Linear(512, n_clusters),
             nn.Sigmoid(),
             nn.LogSoftmax(dim=1)
         )
 
     def forward(self, x):
-        log_prob = self.fc(x)
+        out = self.fc1(x)
+        log_prob = self.fc2(out)
         return log_prob
 
 def train_multidec(args):
@@ -119,7 +124,7 @@ def train_multidec(args):
             else:
                 print("Loading model")
                 image_encoder = models.__dict__[args.arch](pretrained=True)
-            image_encoder.fc = LastLayer(image_encoder.fc.in_features, n_clusters)
+            image_encoder.fc = LastLayer(image_encoder.fc.in_features, n_clusters, dropout=args.dropout)
             image_model = ImageModel(device=device, image_encoder=image_encoder)
             image_model.fit(train_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
                      save_path=os.path.join(CONFIG.CHECKPOINT_PATH, "image_resnet.pt"))

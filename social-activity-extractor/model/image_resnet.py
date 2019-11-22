@@ -35,7 +35,7 @@ class ImageModel(nn.Module):
     def fit(self, train_dataset, lr=0.001, batch_size=256, num_epochs=10, save_path=None, tol=1e-3):
         trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size,
                                                   shuffle=True)
-        optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=lr)
+        optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=lr)
         criterion = nn.NLLLoss().to(self.device)
         self.to(self.device)
 
