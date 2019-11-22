@@ -232,7 +232,7 @@ class UniDEC(nn.Module):
             train_pred = df_pred['pred']
             train_acc = accuracy_score(train_labels, train_pred)
             train_nmi = normalized_mutual_info_score(train_labels, train_pred, average_method='geometric')
-            train_f_1 = f1_score(train_labels, train_pred, average='micro')
+            train_f_1 = f1_score(train_labels, train_pred, average='macro')
             print("#Epoch %3d: acc: %.4f, nmi: %.4f, f_1: %.4f, loss: %.4f at %s" % (
                 epoch + 1, train_acc, train_nmi, train_f_1, train_loss, str(datetime.datetime.now())))
             if epoch == 0:

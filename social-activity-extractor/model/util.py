@@ -528,6 +528,58 @@ class ImageDataset_with_short_code(Dataset):
         return self.data[idx][0], image_tensor
 
 
+def load_image_data(df_full, df_train_label, df_val_label, CONFIG):
+    img_transform = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225])
+    ])
+    df_train_index = set(df_train_label.index)
+    df_val_index = set(df_val_label.index)
+    train_short_codes = []
+    train_input_data = []
+    train_label_data = []
+    val_short_codes = []
+    val_input_data = []
+    val_label_data = []
+    pbar = tqdm(total=df_full.shape[0])
+    for index, row in df_full.iterrows():
+        pbar.update(1)
+        if index in df_train_index:
+            train_short_codes.append(index)
+            image_path = row.iloc[2].replace('/mnt/SEOUL_SUBWAY_DATA/', '/ssdmnt/placeness/SEOUL_SUBWAY_DATA_300x300/')
+            train_input_data.append(image_path)
+            train_label_data.append(df_train_label.loc[index][0])
+        elif index in df_val_index:
+            val_short_codes.append(index)
+            image_path = row.iloc[2].replace('/mnt/SEOUL_SUBWAY_DATA/', '/ssdmnt/placeness/SEOUL_SUBWAY_DATA_300x300/')
+            val_input_data.append(image_path)
+            val_label_data.append(df_val_label.loc[index][0])
+    pbar.close()
+    train_dataset, val_dataset = ImageDataset(train_short_codes, train_input_data, train_label_data, img_transform, CONFIG), \
+                                 ImageDataset(val_short_codes, val_input_data, val_label_data, img_transform, CONFIG)
+    return train_dataset, val_dataset
+
+
+class ImageDataset(Dataset):
+    def __init__(self, short_codes, input_data, label_data, transform, CONFIG):
+        self.short_codes = short_codes
+        self.input_data = input_data
+        self.label_data = label_data
+        self.CONFIG = CONFIG
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.input_data)
+
+    def __getitem__(self, idx):
+        image_tensor = self.transform(pil_loader(self.input_data[idx][1]))
+        label_tensor = torch.from_numpy(np.array(self.label_data[idx])).type(torch.LongTensor)
+        return self.short_codes[idx], image_tensor, label_tensor
+
+
 def load_image_pretrain_data(args, CONFIG):
     full_data = []
     dataset_path = os.path.join(CONFIG.DATA_PATH, 'dataset', args.target_dataset)

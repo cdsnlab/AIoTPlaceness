@@ -508,6 +508,7 @@ def make_label_set(target_csv):
     total_count = len(shortcode_dict)
     match_count = 0
     three_count = 0
+    print(len(shortcode_dict))
     for shortcode, value in shortcode_dict.items():
         # if len(value['category']) == 1:
         #     category_value = category_to_value[value['category'][0]]

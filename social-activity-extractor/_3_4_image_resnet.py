@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader
 from model import util
 from sklearn.model_selection import train_test_split, StratifiedKFold
 
-from model.text_lstm import LSTMClassifier, TextModel
+from model.image_resnet import ImageModel
 from model.util import load_multi_csv_data, load_semi_supervised_csv_data, load_text_data
 from model.multidec import MDEC_encoder, MultiDEC
 
@@ -67,17 +67,11 @@ def train_multidec(args):
     print("Training test lstm")
     device = torch.device(args.gpu)
 
-    with open(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'word_embedding.p'), "rb") as f:
-        embedding_model = cPickle.load(f)
-    with open(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'dictionary_list.p'), 'rb') as f:
-        dictionary_list = cPickle.load(f)
-    with open(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'word_idx.json'), "r", encoding='utf-8') as f:
-        word_idx = json.load(f)
-    df_text_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'posts.csv'), index_col=0, header=None,
+    df_image_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, args.target_dataset, 'posts.csv'), index_col=0, header=None,
                           encoding='utf-8-sig')
-    print(df_text_data[:5])
+    print(df_image_data[:5])
     df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.label_csv), index_col=0, encoding='utf-8-sig')
-    df_text_data = df_text_data.loc[df_label.index]
+    df_image_data = df_image_data.loc[df_label.index]
     label_array = np.array(df_label['category'])
     n_clusters = np.max(label_array) + 1
 
@@ -98,29 +92,17 @@ def train_multidec(args):
             df_test = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "test_" + str(fold_idx) + "_category_label.csv"),
                                   index_col=0,
                                   encoding='utf-8-sig')
-            embedding = nn.Embedding.from_pretrained(torch.FloatTensor(embedding_model))
-            if args.use_de:
-                print("make dictionary embedding")
-                dictionary_embedding = make_de(df_text_data, df_train, dictionary_list, n_clusters)
-                input_size = int(embedding.embedding_dim + n_clusters)
-                print("Loading dataset...")
-                train_dataset, test_dataset = load_text_data(df_text_data, df_train, df_test, CONFIG,
-                                                             word2idx=word_idx[1], n_clusters=n_clusters, de=dictionary_embedding)
-                print("\nLoading dataset completed")
-            else:
-                input_size = int(embedding.embedding_dim)
-                print("Loading dataset...")
-                train_dataset, test_dataset = load_text_data(df_text_data, df_train, df_test, CONFIG, word2idx=word_idx[1], n_clusters=n_clusters)
-                print("\nLoading dataset completed")
-            text_encoder = LSTMClassifier(device=device, batch_size=args.batch_size, input_size=input_size, output_size=n_clusters, hidden_size=[128, 256, 512],
-                                          embedding=embedding, dropout=args.dropout)
-            text_model = TextModel(device=device, text_encoder=text_encoder)
-            text_model.fit(train_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
-                     save_path=os.path.join(CONFIG.CHECKPOINT_PATH, "text_lstm.pt"), use_de=args.use_de)
-            text_model.predict(test_dataset, batch_size=args.batch_size, use_de=args.use_de)
-            acc_list.append(text_model.acc)
-            nmi_list.append(text_model.nmi)
-            f_1_list.append(text_model.f_1)
+
+            print("Loading dataset...")
+            train_dataset, test_dataset = load_image_data(df_image_data, df_train, df_test, CONFIG)
+            print("\nLoading dataset completed")
+            image_model = ImageModel(device=device, image_encoder=image_encoder)
+            image_model.fit(train_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
+                     save_path=os.path.join(CONFIG.CHECKPOINT_PATH, "image_resnet.pt"))
+            image_model.predict(test_dataset, batch_size=args.batch_size, use_de=args.use_de)
+            acc_list.append(image_model.acc)
+            nmi_list.append(image_model.nmi)
+            f_1_list.append(image_model.f_1)
             kf_count = kf_count + 1
         print("#Average acc: %.4f, Average nmi: %.4f, Average f_1: %.4f" % (
             np.mean(acc_list), np.mean(nmi_list), np.mean(f_1_list)))
