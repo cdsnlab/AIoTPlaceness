@@ -575,7 +575,7 @@ class ImageDataset(Dataset):
         return len(self.input_data)
 
     def __getitem__(self, idx):
-        image_tensor = self.transform(pil_loader(self.input_data[idx][1]))
+        image_tensor = self.transform(pil_loader(self.input_data[idx]))
         label_tensor = torch.from_numpy(np.array(self.label_data[idx])).type(torch.LongTensor)
         return self.short_codes[idx], image_tensor, label_tensor
 
