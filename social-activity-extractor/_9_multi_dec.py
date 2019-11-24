@@ -104,12 +104,12 @@ def train_multidec(args):
 
             image_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=n_clusters,
                                          encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
-            # image_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix + "_image_sdae_" + str(fold_idx)) + ".pt")
-            image_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "sampled_plus_labeled_scaled_image_sdae_" + str(fold_idx)) + ".pt")
+            image_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix + "_image_sdae_" + str(fold_idx)) + ".pt")
+            # image_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "sampled_plus_labeled_scaled_image_sdae_" + str(fold_idx)) + ".pt")
             text_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=n_clusters,
                                         encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
-            # text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix + "_text_sdae_" + str(fold_idx)) + ".pt")
-            text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "sampled_plus_labeled_scaled_text_sdae_" + str(fold_idx)) + ".pt")
+            text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix + "_text_sdae_" + str(fold_idx)) + ".pt")
+            # text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "sampled_plus_labeled_scaled_text_sdae_" + str(fold_idx)) + ".pt")
             mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder, ours=args.ours, use_prior=args.use_prior,
                                 n_clusters=n_clusters)
 

@@ -95,8 +95,8 @@ def train_multidec(args):
 
             encoder = UDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=n_clusters,
                                          encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
-            # encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix + "_" + args.target_modal + "_sdae_" + str(fold_idx)) + ".pt")
-            encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "sampled_plus_labeled_scaled_" + args.target_modal + "_sdae_" + str(fold_idx)) + ".pt")
+            encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix + "_" + args.target_modal + "_sdae_" + str(fold_idx)) + ".pt")
+            # encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "sampled_plus_labeled_scaled_" + args.target_modal + "_sdae_" + str(fold_idx)) + ".pt")
             udec = UniDEC(device=device, encoder=encoder, use_prior=args.use_prior, n_clusters=n_clusters)
             udec.fit_predict(full_dataset, train_dataset, val_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
                      save_path=os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix + "_" + args.target_modal + "_udec_" + str(fold_idx)) + ".pt")
