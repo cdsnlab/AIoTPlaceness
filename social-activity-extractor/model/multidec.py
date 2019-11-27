@@ -418,13 +418,16 @@ class MultiDEC(nn.Module):
         test_p, test_p_image, test_p_text = self.target_distribution(q, r)
         test_pred = torch.argmax(test_p, dim=1).numpy()[X_num:]
         test_acc = accuracy_score(test_labels, test_pred)
-        df_test = pd.DataFrame(data=test_pred, index=test_dataset[:][0], columns=['labels'])
+
+        test_short_codes = test_dataset[:][0]
+        test_short_codes = np.concatenate([short_codes, test_short_codes],axis=0)
+        df_test = pd.DataFrame(data=torch.argmax(test_p, dim=1).numpy(), index=test_short_codes, columns=['labels'])
         df_test.to_csv('mdec_label.csv', encoding='utf-8-sig')
-        df_test_p = pd.DataFrame(data=test_p.data.numpy()[X_num:], index=test_dataset[:][0])
+        df_test_p = pd.DataFrame(data=test_p.data.numpy(), index=test_short_codes)
         df_test_p.to_csv('mdec_p.csv', encoding='utf-8-sig')
-        df_test_p_image = pd.DataFrame(data=test_p_image.data.numpy()[X_num:], index=test_dataset[:][0])
+        df_test_p_image = pd.DataFrame(data=test_p_image.data.numpy(), index=test_short_codes)
         df_test_p_image.to_csv('mdec_p_image.csv', encoding='utf-8-sig')
-        df_test_p_text = pd.DataFrame(data=test_p_text.data.numpy()[X_num:], index=test_dataset[:][0])
+        df_test_p_text = pd.DataFrame(data=test_p_text.data.numpy(), index=test_short_codes)
         df_test_p_text.to_csv('mdec_p_text.csv', encoding='utf-8-sig')
         test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')
         test_f_1 = f1_score(test_labels, test_pred, average='macro')
