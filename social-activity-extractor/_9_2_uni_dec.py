@@ -30,6 +30,7 @@ def main():
     parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
     # learning
     parser.add_argument('-lr', type=float, default=1e-02, help='initial learning rate')
+    parser.add_argument('-tol', type=float, default=1e-03, help='tolerance for early stopping')
     parser.add_argument('-epochs', type=int, default=200, help='number of epochs for train')
     parser.add_argument('-update_time', type=int, default=1, help='update time within epoch')
     parser.add_argument('-batch_size', type=int, default=256, help='batch size for training')
@@ -99,7 +100,7 @@ def train_multidec(args):
             # encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "sampled_plus_labeled_scaled_" + args.target_modal + "_sdae_" + str(fold_idx)) + ".pt")
             udec = UniDEC(device=device, encoder=encoder, use_prior=args.use_prior, n_clusters=n_clusters)
             udec.fit_predict(full_dataset, train_dataset, val_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
-                     save_path=os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix + "_" + args.target_modal + "_udec_" + str(fold_idx)) + ".pt")
+                     save_path=os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix + "_" + args.target_modal + "_udec_" + str(fold_idx)) + ".pt", tol=args.tol)
             acc_list.append(udec.acc)
             nmi_list.append(udec.nmi)
             f_1_list.append(udec.f_1)
