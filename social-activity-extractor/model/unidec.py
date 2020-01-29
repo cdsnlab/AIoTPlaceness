@@ -254,6 +254,13 @@ class UniDEC(nn.Module):
         test_p = self.target_distribution(q).data
         test_pred = torch.argmax(test_p, dim=1).numpy()[X_num:]
         test_acc = accuracy_score(test_labels, test_pred)
+
+        test_short_codes = test_dataset[:][0]
+        test_short_codes = np.concatenate([short_codes, test_short_codes],axis=0)
+        df_test = pd.DataFrame(data=torch.argmax(test_p, dim=1).numpy(), index=test_short_codes, columns=['labels'])
+        df_test.to_csv('udec_label.csv', encoding='utf-8-sig')
+        df_test_p = pd.DataFrame(data=test_p.data.numpy(), index=test_short_codes)
+        df_test_p.to_csv('udec_p.csv', encoding='utf-8-sig')
         test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')
         test_f_1 = f1_score(test_labels, test_pred, average='macro')
         print("#Test acc: %.4f, Test nmi: %.4f, Test f_1: %.4f" % (
