@@ -180,6 +180,7 @@ class UniDEC(nn.Module):
             self.train()
             # train 1 epoch
             train_loss = 0.0
+            semi_train_loss = 0.0
 
             adjust_learning_rate(lr, optimizer)
 
@@ -195,7 +196,7 @@ class UniDEC(nn.Module):
                 _z = self.forward(data_inputs)
                 qbatch = self.soft_assignemt(_z.cpu())
                 semi_loss = self.semi_loss_function(label_inputs, qbatch)
-                train_loss += semi_loss.data * len(label_inputs)
+                semi_train_loss += semi_loss.data * len(label_inputs)
                 semi_loss.backward()
                 optimizer.step()
 
@@ -225,6 +226,7 @@ class UniDEC(nn.Module):
 
                 del data_batch, data_inputs, _z
             train_loss = train_loss / X_num
+            semi_train_loss = semi_train_loss / train_num
 
             train_pred = torch.argmax(p, dim=1).numpy()
             df_pred = pd.DataFrame(data=train_pred, index=short_codes, columns=['pred'])
@@ -233,8 +235,8 @@ class UniDEC(nn.Module):
             train_acc = accuracy_score(train_labels, train_pred)
             train_nmi = normalized_mutual_info_score(train_labels, train_pred, average_method='geometric')
             train_f_1 = f1_score(train_labels, train_pred, average='macro')
-            print("#Epoch %3d: acc: %.4f, nmi: %.4f, f_1: %.4f, loss: %.4f at %s" % (
-                epoch + 1, train_acc, train_nmi, train_f_1, train_loss, str(datetime.datetime.now())))
+            print("#Epoch %3d: acc: %.4f, nmi: %.4f, f_1: %.4f, loss: %.4f, semi_loss: %.4f, at %s" % (
+                epoch + 1, train_acc, train_nmi, train_f_1, train_loss, semi_train_loss, str(datetime.datetime.now())))
             if epoch == 0:
                 train_pred_last = train_pred
             else:
