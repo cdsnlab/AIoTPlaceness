@@ -115,7 +115,7 @@ class UniDEC(nn.Module):
 
     def target_distribution(self, q):
         p = q ** 2 / torch.sum(q, dim=0)
-        p = p / (2 * torch.sum(p, dim=1, keepdim=True))
+        p = p / (torch.sum(p, dim=1, keepdim=True))
         return p
 
     def update_z(self, input, batch_size):
