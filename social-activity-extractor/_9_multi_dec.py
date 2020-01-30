@@ -32,6 +32,7 @@ def main():
     parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
     # learning
     parser.add_argument('-lr', type=float, default=1e-02, help='initial learning rate')
+    parser.add_argument('-kappa', type=float, default=0.1, help='lr adjust rate')
     parser.add_argument('-tol', type=float, default=1e-03, help='tolerance for early stopping')
     parser.add_argument('-trade_off', type=float, default=1e-04, help='trade_off value for semi-supervised learning')
     parser.add_argument('-epochs', type=int, default=100, help='number of epochs for train')
@@ -115,7 +116,7 @@ def train_multidec(args):
                                 n_clusters=n_clusters)
 
             mdec.fit_predict(full_dataset, train_dataset, val_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
-                     save_path=os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix + "_mdec_" + str(fold_idx)) + ".pt", tol=args.tol)
+                     save_path=os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix + "_mdec_" + str(fold_idx)) + ".pt", tol=args.tol, kappa=args.kappa)
             acc_list.append(mdec.acc)
             nmi_list.append(mdec.nmi)
             f_1_list.append(mdec.f_1)

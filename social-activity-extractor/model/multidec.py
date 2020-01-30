@@ -290,7 +290,7 @@ class MultiDEC(nn.Module):
         text_z = torch.cat(text_z, dim=0)
         return image_z, text_z
 
-    def fit_predict(self, X, train_dataset, test_dataset, lr=0.001, batch_size=256, num_epochs=10, update_time=1, save_path=None, tol=1e-3):
+    def fit_predict(self, X, train_dataset, test_dataset, lr=0.001, batch_size=256, num_epochs=10, update_time=1, save_path=None, tol=1e-3, kappa=0.1):
         X_num = len(X)
         X_num_batch = int(math.ceil(1.0 * len(X) / batch_size))
         train_num = len(train_dataset)
@@ -367,7 +367,7 @@ class MultiDEC(nn.Module):
 
             p, _, _ = self.target_distribution(q, r)
 
-            adjust_learning_rate(lr/10, optimizer)
+            adjust_learning_rate(lr * kappa, optimizer)
 
             for batch_idx in range(X_num_batch):
                 # clustering phase
