@@ -248,7 +248,7 @@ class UniDEC(nn.Module):
                     break
 
         self.eval()
-        test_labels = test_dataset[:][2]
+        test_labels = test_dataset[:][2].squeeze(dim=0)
         test_z = self.update_z(test_dataset, batch_size)
         z = torch.cat([z, test_z], dim=0)
 
