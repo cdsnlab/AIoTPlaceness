@@ -56,15 +56,15 @@ def process_dataset_images(src_path, dist_path):
         image_path = row['0']
         shortcode = row['shortcode']
         try:
-            image = img_transform(pil_loader(image_path))
+            image_tensor = img_transform(pil_loader(image_path))
             torch.cuda.empty_cache()
             with torch.no_grad():
-                image_data = torch.from_numpy(image).type(torch.FloatTensor).to(device)
-            out = net(image_data)
+                image_var = Variable(image_tesnor).to(device)
+            out = net(image_var)
             features = out.detach().cpu().numpy()
             with open(os.path.join(dist_path, shortcode + '.p'), 'wb') as f:
                 cPickle.dump(features, f)
-            del image_data, image, out, features
+            del image_tensor, image_var, out, features
             f.close()
         except OSError as e:
             print(e)
