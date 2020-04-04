@@ -59,12 +59,12 @@ def process_dataset_images(src_path, dist_path):
             image = img_transform(pil_loader(image_path))
             torch.cuda.empty_cache()
             with torch.no_grad():
-                imgs = Variable(image).to(device)
-            out = net(imgs)
-            features = out.detach().cpu().numpy().astype('float16')
+                image_data = torch.from_numpy(image_data).type(torch.FloatTensor).to(device)
+            out = net(image_data)
+            features = out.detach().cpu().numpy()
             with open(os.path.join(dist_path, shortcode + '.p'), 'wb') as f:
                 cPickle.dump(features, f)
-            del imgs, image, out, features
+            del image_data, image, out, features
             f.close()
         except OSError as e:
             print(e)
