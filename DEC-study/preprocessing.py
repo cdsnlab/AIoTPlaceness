@@ -43,7 +43,7 @@ def process_dataset_images(src_path, dist_path):
     net = Net().to(device)
     net.eval()
     img_transform = transforms.Compose([
-        transforms.Scale(int(CONFIG.IMAGE_SIZE / CONFIG.CENTRAL_FRACTION)),
+        transforms.Resize(int(CONFIG.IMAGE_SIZE / CONFIG.CENTRAL_FRACTION)),
         transforms.CenterCrop(CONFIG.IMAGE_SIZE),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406],
@@ -63,8 +63,8 @@ def process_dataset_images(src_path, dist_path):
             torch.cuda.empty_cache()
             with torch.no_grad():
                 image_batch = image_batch.to(device)
-            out = net(image_batch)
-            features = out.squeeze(dim=0).detach().cpu().numpy()
+            out = net(image_batch).squeeze(dim=0)
+            features = out.detach().cpu().numpy()
             with open(os.path.join(dist_path, shortcode + '.p'), 'wb') as f:
                 cPickle.dump(features, f)
             del image_tensor, image_batch, out, features
