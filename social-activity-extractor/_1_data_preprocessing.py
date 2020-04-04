@@ -214,7 +214,7 @@ def pickle_to_corpus(target_pickle):
 def make_word2vec(target_corpus):
 	corpus_path = os.path.join(CONFIG.DATASET_PATH, target_corpus, 'corpus.txt')
 	sentences = word2vec.LineSentence(corpus_path) 
-	embedding_size = 100
+	embedding_size = 300
 	pad_value = 1.
 	print("embedding started")
 	embedding_model = Word2Vec(size=embedding_size, window=5, min_count=CONFIG.MIN_WORD_COUNT, workers=4, sg = 1, hs=0, negative=5, sample = 0.00001, iter = 100)
@@ -231,16 +231,16 @@ def make_word2vec(target_corpus):
 		idx2word[idx] = word
 		word2idx[word] = idx
 		word_vectors.append(embedding_model.wv[word])
-	
-	n_words = len(word2idx)
-	word2idx["<PAD>"] = n_words
-	idx2word[n_words] = "<PAD>"
-	pad_array = np.full(embedding_size, pad_value)
-	pad_array = pad_array / np.linalg.norm(pad_array, axis=0, ord=2, keepdims=True)
-	word_vectors.append(pad_array)
+
+	# n_words = len(word2idx)
+	# word2idx["<PAD>"] = n_words
+	# idx2word[n_words] = "<PAD>"
+	# pad_array = np.full(embedding_size, pad_value)
+	# pad_array = pad_array / np.linalg.norm(pad_array, axis=0, ord=2, keepdims=True)
+	# word_vectors.append(pad_array)
 	word_array = np.array(word_vectors, dtype=np.float32)
 	with open(os.path.join(CONFIG.DATASET_PATH, target_corpus, 'word_idx.json'), "w", encoding='utf-8') as f:
-		f.write(json.dumps([idx2word, word2idx]))
+		f.write(json.dumps([idx2word, word2idx], ensure_ascii=False))
 	f.close()
 	with open(os.path.join(CONFIG.DATASET_PATH, target_corpus, 'word_embedding.p'), 'wb') as f:
 		cPickle.dump(word_array, f)
