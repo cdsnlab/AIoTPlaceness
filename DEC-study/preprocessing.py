@@ -43,8 +43,8 @@ def process_dataset_images(src_path, dist_path):
     net = Net().to(device)
     net.eval()
     img_transform = transforms.Compose([
-        transforms.Scale(int(CONFIG.TARGET_SIZE / CONFIG.CENTRAL_FRACTION)),
-        transforms.CenterCrop(CONFIG.TARGET_SIZE),
+        transforms.Scale(int(CONFIG.IMAGE_SIZE / CONFIG.CENTRAL_FRACTION)),
+        transforms.CenterCrop(CONFIG.IMAGE_SIZE),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406],
                              std=[0.229, 0.224, 0.225])
