@@ -20,36 +20,26 @@ import torchvision.models as models
 from torch.autograd import Variable
 from torchvision.datasets.folder import pil_loader
 
-# class Net(nn.Module):
-#     def __init__(self):
-#         super(Net, self).__init__()
-#         self.model = models.resnet152(pretrained=True)
-#
-#         def save_output(module, input, output):
-#             self.buffer = output
-#         self.model.layer4.register_forward_hook(save_output)
-#
-#     def forward(self, x):
-#         self.model(x)
-#         return self.buffer
-
-class last_layer(nn.Module):
+class Net(nn.Module):
     def __init__(self):
-        super(last_layer, self).__init__()
+        super(Net, self).__init__()
+        self.model = models.resnet152(pretrained=True)
+
+        def save_output(module, input, output):
+            self.buffer = output
+        self.model.layer4.register_forward_hook(save_output)
 
     def forward(self, x):
-        return x
+        self.model(x)
+        return self.buffer
 
 def process_dataset_images(src_path, dist_path):
     cudnn.benchmark = True
     if torch.cuda.is_available():
         device = torch.device('cuda')
 
-    embedding_model = models.resnet152(pretrained=True)
-    embedding_model.avgpool = last_layer()
-    embedding_model.fc = last_layer()
-    embedding_model.to(device)
-    embedding_model.eval()
+    net = Net().to(device)
+    net.eval()
     img_transform = transforms.Compose([
         transforms.Resize(256),
         transforms.CenterCrop(224),
@@ -71,7 +61,7 @@ def process_dataset_images(src_path, dist_path):
             torch.cuda.empty_cache()
             with torch.no_grad():
                 image_batch = image_batch.to(device)
-            out = embedding_model(image_batch)
+            out = net(image_batch)
             features = out.detach().cpu().numpy()
             with open(os.path.join(dist_path, shortcode + '.p'), 'wb') as f:
                 cPickle.dump(features, f)
