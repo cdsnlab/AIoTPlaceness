@@ -56,7 +56,7 @@ def process_dataset_images(src_path, dist_path):
         image_path = row['0']
         shortcode = row['shortcode']
         try:
-            image_tensor = img_transform(pil_loader(image_path))\
+            image_tensor = img_transform(pil_loader(image_path))
             image_batch = image_tensor.unsqueeze(dim=0)
             torch.cuda.empty_cache()
             with torch.no_grad():
