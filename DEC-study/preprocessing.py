@@ -1,7 +1,7 @@
 
 import os
 
-from config import Config as CONFIG
+import config
 
 import sys
 import csv
@@ -19,6 +19,8 @@ from torchvision.utils import save_image
 import torchvision.models as models
 from torch.autograd import Variable
 from torchvision.datasets.folder import pil_loader
+
+CONFIG = config.Config
 
 class Net(nn.Module):
     def __init__(self):
