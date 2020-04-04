@@ -62,7 +62,7 @@ def process_dataset_images(src_path, dist_path):
             with torch.no_grad():
                 image_batch = image_batch.to(device)
             out = net(image_batch)
-            features = out.detach().cpu().numpy()
+            features = out.squeeze(dim=0).detach().cpu().numpy()
             with open(os.path.join(dist_path, shortcode + '.p'), 'wb') as f:
                 cPickle.dump(features, f)
             del image_tensor, image_batch, out, features
