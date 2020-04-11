@@ -3,6 +3,7 @@ import datetime
 import os
 
 from torch.utils.data import DataLoader
+from torch.utils.data.dataloader import default_collate
 
 import config
 from model.submodules import TextProcessor, Attention, Classifier
@@ -71,8 +72,10 @@ class DualNet(nn.Module):
         return answer
 
     def fit(self, train_dataset, test_dataset, lr=0.001, batch_size=128, num_epochs=10, save_path=None):
-        trainloader = DataLoader(train_dataset, batch_size=batch_size,
-                                                  shuffle=True)
+        trainloader = DataLoader(train_dataset,
+                                 batch_size=batch_size,
+                                 shuffle=True,
+                                 collate_fn=collate_fn)
         optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=lr)
         criterion = nn.NLLLoss().to(self.device)
         self.to(self.device)
@@ -298,7 +301,12 @@ class DDEC(nn.Module):
         w = w.data.numpy()
         count_percentage(y_pred)
         return short_codes, y_pred, y_confidence, p, w
-
+    
+def collate_fn(batch):
+    # put question lengths in descending order so that we can use packed sequences later
+    # self.short_codes[idx], image_tensor, text_tensor, !text_length!, self.label_data[idx]
+    batch.sort(key=lambda x: x[-2], reverse=True)
+    return default_collate(batch)
 
 def apply_attention(input, attention):
     """ Apply any number of attention maps over the input. """
