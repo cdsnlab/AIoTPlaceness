@@ -5,7 +5,7 @@
       <excludeFolder url="file://$MODULE_DIR$/social-activity-extractor/csv" />
       <excludeFolder url="file://$MODULE_DIR$/social-activity-extractor/data" />
     </content>
-    <orderEntry type="inheritedJdk" />
+    <orderEntry type="jdk" jdkName="Python 3.7 (social-activity-extractor) (2)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="TestRunnerService">
