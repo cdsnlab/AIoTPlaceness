@@ -71,7 +71,7 @@ class PretrainDataset(Dataset):
         return len(self.short_codes)
 
     def __getitem__(self, idx):
-        with open(os.path.join(self.image_dir, self.short_codes[idx]), "rb") as f:
+        with open(os.path.join(self.image_dir, self.short_codes[idx]) + '.p', "rb") as f:
             image_data = cPickle.load(f)
         image_tensor = torch.from_numpy(image_data).type(torch.FloatTensor)
         text_tensor = torch.from_numpy(self.text_data[idx][0]).type(torch.LongTensor)
