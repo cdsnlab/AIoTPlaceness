@@ -50,7 +50,7 @@ def load_pretrain_data(image_dir, token_to_index, df_text_data, df_train, df_tes
     return train_dataset, test_dataset
 
 def encode_text(word_list, sentence_len, token_to_index):
-    vec = np.zeros(sentence_len)
+    vec = torch.zeros(sentence_len).long()
     for i, token in enumerate(word_list):
         if i == sentence_len:
             break
@@ -74,7 +74,7 @@ class PretrainDataset(Dataset):
         with open(os.path.join(self.image_dir, self.short_codes[idx]) + '.p', "rb") as f:
             image_data = cPickle.load(f)
         image_tensor = torch.from_numpy(image_data).type(torch.FloatTensor)
-        text_tensor = torch.from_numpy(self.text_data[idx][0]).type(torch.LongTensor)
+        text_tensor = self.text_data[idx][0]
         text_length = self.text_data[idx][1]
         return self.short_codes[idx], image_tensor, text_tensor, text_length, self.label_data[idx]
 
