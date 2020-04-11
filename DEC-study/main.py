@@ -77,7 +77,7 @@ def pretrain_multidec(args):
     df_test = pd.read_csv("/4TBSSD/test_0_category_label.csv",
                           index_col=0,
                           encoding='utf-8-sig')
-    pretrain_dataset = load_pretrain_data(args.image_dir, word_idx[1], df_data, df_train, df_test, CONFIG)
+    train_dataset, test_dataset = load_pretrain_data(args.image_dir, word_idx[1], df_data, df_train, df_test, CONFIG)
     print("Loading dataset completed")
 
     dualnet = DualNet(device=device, pretrained_embedding=embedding_model, z_dim=args.z_dim)
@@ -87,7 +87,7 @@ def pretrain_multidec(args):
     for arg, value in vars(args).items():
         exp.param(arg, value)
     try:
-        dualnet.fit(pretrain_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
+        dualnet.fit(train_dataset,  test_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
                  save_path="/4TBSSD/CHECKPOINT/pretrain.pt")
         print("Finish!!!")
 

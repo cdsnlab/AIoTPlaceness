@@ -2,6 +2,8 @@ import collections
 import datetime
 import os
 
+from torch.utils.data import DataLoader
+
 import config
 from model.submodules import TextProcessor, Attention, Classifier
 from sklearn.metrics import normalized_mutual_info_score, f1_score, accuracy_score
@@ -68,8 +70,8 @@ class DualNet(nn.Module):
         answer = self.classifier(combined)
         return answer
 
-    def fit(self, train_dataset, lr=0.001, batch_size=128, num_epochs=10, save_path=None):
-        trainloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size,
+    def fit(self, train_dataset, test_dataset, lr=0.001, batch_size=128, num_epochs=10, save_path=None):
+        trainloader = DataLoader(train_dataset, batch_size=batch_size,
                                                   shuffle=True)
         optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=lr)
         criterion = nn.NLLLoss().to(self.device)
@@ -84,7 +86,7 @@ class DualNet(nn.Module):
             for batch_idx, input_batch in enumerate(trainloader):
                 image_batch = Variable(input_batch[1]).to(self.device)
                 text_batch = Variable(input_batch[2]).to(self.device)
-                text_len_batch = input_batch[3]
+                text_len_batch = Variable(input_batch[3]).to(self.device)
                 target_batch = Variable(input_batch[4]).to(self.device)
                 optimizer.zero_grad()
                 log_prob = self.forward(image_batch, text_batch, text_len_batch)

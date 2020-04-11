@@ -75,8 +75,8 @@ class PretrainDataset(Dataset):
             image_data = cPickle.load(f)
         image_tensor = torch.from_numpy(image_data).type(torch.FloatTensor)
         text_tensor = torch.from_numpy(self.text_data[idx][0]).type(torch.LongTensor)
-        text_lenth = self.text_data[idx][1]
-        return self.short_codes[idx], image_tensor, text_tensor, text_lenth, self.label_data[idx]
+        text_length = self.text_data[idx][1]
+        return self.short_codes[idx], image_tensor, text_tensor, text_length, self.label_data[idx]
 
 
 
