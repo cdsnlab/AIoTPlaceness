@@ -28,6 +28,7 @@ def main():
     parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
     # learning
     parser.add_argument('-lr', type=float, default=5e-04, help='initial learning rate')
+    parser.add_argument('-pretrain_epochs', type=int, default=100, help='number of epochs for train')
     parser.add_argument('-epochs', type=int, default=50, help='number of epochs for train')
     parser.add_argument('-batch_size', type=int, default=128, help='batch size for training')
     # data
@@ -88,8 +89,8 @@ def pretrain_multidec(args):
     for arg, value in vars(args).items():
         exp.param(arg, value)
     try:
-        dualnet.fit(train_dataset,  test_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
-                 save_path="/4TBSSD/CHECKPOINT/pretrain_0.pt")
+        dualnet.fit(train_dataset,  test_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.pretrain_epochs,
+                 save_path="/4TBSSD/CHECKPOINT/pretrain_" + str(args.z_dim) + "_0.pt")
         print("Finish!!!")
 
     finally:

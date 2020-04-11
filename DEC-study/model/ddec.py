@@ -77,6 +77,9 @@ class DualNet(nn.Module):
         z = self.fc(combined)
         return z
 
+    def save_model(self, path):
+        torch.save(self.state_dict(), path)
+
     def classify(self, z):
         log_prob = self.classifier(z)
         return log_prob
