@@ -29,7 +29,7 @@ class DualNet(nn.Module):
     [0]: https://arxiv.org/abs/1704.03162
     """
 
-    def __init__(self, device, pretrained_embedding, z_dim):
+    def __init__(self, device, pretrained_embedding, text_features, z_dim, n_classes):
         super(DualNet, self).__init__()
         self.device = device
         vision_features = CONFIG.OUTPUT_FEATURES
@@ -37,21 +37,27 @@ class DualNet(nn.Module):
 
         self.text = TextProcessor(
             pretrained_embedding=pretrained_embedding,
-            lstm_features=z_dim,
+            lstm_features=text_features,
             drop=0.5,
         )
         self.attention = Attention(
             v_features=vision_features,
-            q_features=z_dim,
+            q_features=text_features,
             mid_features=512,
             glimpses=2,
             drop=0.5,
         )
-        self.classifier = Classifier(
-            in_features=glimpses * vision_features + z_dim,
-            mid_features=1024,
-            out_features=CONFIG.N_CLASSES,
-            drop=0.5,
+
+        self.fc = nn.Sequential(
+            nn.Linear(glimpses * vision_features + text_features, 2048),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(2048, z_dim)
+        )
+        self.classifier = nn.Sequential(
+            nn.Linear(z_dim, n_classes),
+            nn.Sigmoid(),
+            nn.LogSoftmax(dim=1)
         )
 
         for m in self.modules():
@@ -68,8 +74,12 @@ class DualNet(nn.Module):
         v = apply_attention(v, a)
 
         combined = torch.cat([v, q], dim=1)
-        answer = self.classifier(combined)
-        return answer
+        z = self.fc(combined)
+        return z
+
+    def classify(self, z):
+        log_prob = self.classifier(z)
+        return log_prob
 
     def fit(self, train_dataset, test_dataset, lr=0.001, batch_size=128, num_epochs=10, save_path=None):
         trainloader = DataLoader(train_dataset,
@@ -79,9 +89,8 @@ class DualNet(nn.Module):
         optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=lr)
         criterion = nn.NLLLoss().to(self.device)
         self.to(self.device)
-
+        self.train()
         for epoch in range(num_epochs):
-            self.train()
             # train 1 epoch
             train_loss = 0.0
             train_pred = []
@@ -92,7 +101,8 @@ class DualNet(nn.Module):
                 text_len_batch = Variable(input_batch[3]).to(self.device)
                 target_batch = Variable(input_batch[4]).to(self.device)
                 optimizer.zero_grad()
-                log_prob = self.forward(image_batch, text_batch, text_len_batch)
+                z = self.forward(image_batch, text_batch, text_len_batch)
+                log_prob = self.classify(z)
                 loss = criterion(log_prob, target_batch)
                 loss.backward()
                 optimizer.step()

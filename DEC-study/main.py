@@ -37,6 +37,7 @@ def main():
     parser.add_argument('-split_rate', type=float, default=0.8, help='split rate between train and validation')
     # model
     parser.add_argument('-n_classes', type=int, default=12, help='desired num of cluster')
+    parser.add_argument('-text_features', type=int, default=1024, help='number of dimensions')
     parser.add_argument('-z_dim', type=int, default=1024, help='number of dimensions')
     # train
     parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
@@ -80,7 +81,7 @@ def pretrain_multidec(args):
     train_dataset, test_dataset = load_pretrain_data(args.image_dir, word_idx[1], df_data, df_train, df_test, CONFIG)
     print("Loading dataset completed")
 
-    dualnet = DualNet(device=device, pretrained_embedding=embedding_model, z_dim=args.z_dim)
+    dualnet = DualNet(device=device, pretrained_embedding=embedding_model, text_features=args.text_features, z_dim=args.z_dim, n_classes=args.n_classes)
     exp = Experiment("Dualnet_pretrain_ " + str(args.n_classes), capture_io=True)
     print(dualnet)
 
