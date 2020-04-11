@@ -82,14 +82,14 @@ def pretrain_multidec(args):
     print("Loading dataset completed")
 
     dualnet = DualNet(device=device, pretrained_embedding=embedding_model, text_features=args.text_features, z_dim=args.z_dim, n_classes=args.n_classes)
-    exp = Experiment("Dualnet_pretrain_ " + str(args.n_classes), capture_io=True)
+    exp = Experiment("Dualnet_pretrain_" + str(args.n_classes), capture_io=True)
     print(dualnet)
 
     for arg, value in vars(args).items():
         exp.param(arg, value)
     try:
         dualnet.fit(train_dataset,  test_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
-                 save_path="/4TBSSD/CHECKPOINT/pretrain.pt")
+                 save_path="/4TBSSD/CHECKPOINT/pretrain_0.pt")
         print("Finish!!!")
 
     finally:
