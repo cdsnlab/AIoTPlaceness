@@ -86,12 +86,16 @@ class DualNet(nn.Module):
                                  batch_size=batch_size,
                                  shuffle=True,
                                  collate_fn=collate_fn)
+        testloader = DataLoader(test_dataset,
+                                 batch_size=batch_size,
+                                 shuffle=False,
+                                 collate_fn=collate_fn)
         optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=lr)
         criterion = nn.NLLLoss().to(self.device)
         self.to(self.device)
-        self.train()
         for epoch in range(num_epochs):
             # train 1 epoch
+            self.train()
             train_loss = 0.0
             train_pred = []
             train_labels = []
@@ -117,8 +121,34 @@ class DualNet(nn.Module):
             train_f_1 = f1_score(train_labels, train_pred, average='macro', labels=np.unique(train_pred))
             print("#Epoch %3d: acc: %.4f, nmi: %.4f, f_1: %.4f, loss: %.4f at %s" % (
                 epoch + 1, train_acc, train_nmi, train_f_1, train_loss, str(datetime.datetime.now())))
+
+            self.eval()
+            test_loss = 0.0
+            test_pred = []
+            test_labels = []
+            for batch_idx, input_batch in enumerate(testloader):
+                image_batch = Variable(input_batch[1]).to(self.device)
+                text_batch = Variable(input_batch[2]).to(self.device)
+                text_len_batch = Variable(input_batch[3]).to(self.device)
+                target_batch = Variable(input_batch[4]).to(self.device)
+                z = self.forward(image_batch, text_batch, text_len_batch)
+                log_prob = self.classify(z)
+                loss = criterion(log_prob, target_batch)
+                test_loss = test_loss + loss.data
+                pred_batch = torch.argmax(log_prob, dim=1).cpu().numpy()
+                test_pred.extend(pred_batch)
+                test_labels.extend(target_batch.cpu().numpy())
+                del image_batch, text_batch, text_len_batch, target_batch, log_prob, loss
+            test_loss = test_loss / len(testloader)
+            test_acc = accuracy_score(test_labels, test_pred)
+            test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')
+            test_f_1 = f1_score(test_labels, test_pred, average='macro', labels=np.unique(test_pred))
+            print("#Epoch %3d: acc: %.4f, nmi: %.4f, f_1: %.4f, loss: %.4f at %s" % (
+                epoch + 1, test_acc, test_nmi, test_f_1, test_loss, str(datetime.datetime.now())))
         if save_path:
             self.save_model(save_path)
+
+
 
 class DDEC(nn.Module):
     def __init__(self, device, pretrained_model, n_classes=10, z_dim=1024, alpha=1.):
