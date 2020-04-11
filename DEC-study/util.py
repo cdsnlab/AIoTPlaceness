@@ -56,7 +56,7 @@ def encode_text(word_list, sentence_len, token_to_index):
             break
         index = token_to_index.get(token, 0)
         vec[i] = index
-    return vec, len(word_list)
+    return vec, min(len(word_list), sentence_len)
 
 class PretrainDataset(Dataset):
     def __init__(self, image_dir, token_to_index, short_codes, text_data, label_data, CONFIG):
