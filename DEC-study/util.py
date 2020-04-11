@@ -39,7 +39,6 @@ def load_pretrain_data(image_dir, token_to_index, df_text_data, df_train, df_tes
             train_text_data.append(encode_text(word_list, CONFIG.MAX_SENTENCE_LEN, token_to_index))
         elif index in test_index:
             test_short_codes.append(index)
-            test_text_data.append(np.array(df_text_data.loc[index]['caption']))
             test_label_data.append(df_test.loc[index][0])
             word_list = df_text_data.loc[index]['caption'].split()
             test_text_data.append(encode_text(word_list, CONFIG.MAX_SENTENCE_LEN, token_to_index))
