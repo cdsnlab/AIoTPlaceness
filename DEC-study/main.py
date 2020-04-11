@@ -38,7 +38,7 @@ def main():
     # model
     parser.add_argument('-n_classes', type=int, default=12, help='desired num of cluster')
     parser.add_argument('-text_features', type=int, default=1024, help='number of dimensions')
-    parser.add_argument('-z_dim', type=int, default=1024, help='number of dimensions')
+    parser.add_argument('-z_dim', type=int, default=10, help='number of dimensions')
     # train
     parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
     parser.add_argument('-gpu', type=str, default='cuda', help='gpu number')
