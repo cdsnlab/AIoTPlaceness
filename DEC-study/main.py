@@ -29,7 +29,7 @@ def main():
     # learning
     parser.add_argument('-lr', type=float, default=5e-04, help='initial learning rate')
     parser.add_argument('-epochs', type=int, default=50, help='number of epochs for train')
-    parser.add_argument('-batch_size', type=int, default=64, help='batch size for training')
+    parser.add_argument('-batch_size', type=int, default=128, help='batch size for training')
     # data
     parser.add_argument('-image_dir', type=str, default='/4TBSSD/IMAGE_EMBEDDED_SUBWAY_DATA', help='directory of embedded images')
     parser.add_argument('-data_csv', type=str, default='/4TBSSD/posts.csv', help='file name of target data csv')
@@ -64,7 +64,7 @@ def pretrain_multidec(args):
     device = torch.device(args.gpu)
 
     print("Loading dataset...")
-    df_data = pd.read_csv(args.text_csv, index_col=0, header=None, encoding='utf-8')
+    df_data = pd.read_csv(args.data_csv, index_col=0, header=None, encoding='utf-8')
     df_data.columns = ["caption", "path_to_image"]
     df_data.index.name = "shortcode"
     with open(os.path.join(args.text_embedding_dir, 'word_embedding.p'), "rb") as f:
