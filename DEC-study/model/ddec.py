@@ -162,16 +162,20 @@ class DualNet(nn.Module):
 
 
 class DDEC(nn.Module):
-    def __init__(self, device, pretrained_model, n_classes, z_dim, alpha=1.):
+    def __init__(self, device, pretrained_model, n_classes, z_dim, use_prior=False, alpha=1.):
         super(self.__class__, self).__init__()
         self.device = device
         self.dualnet = pretrained_model
         self.mu = Parameter(torch.Tensor(n_classes, z_dim))
-        self.softmax = nn.Softmax(dim=1)
         self.n_classes = n_classes
         self.z_dim = z_dim
+        self.use_prior = use_prior
+        if use_prior:
+            self.prior = torch.zeros(n_classes).float()
         self.alpha = alpha
-        self.tau = 1
+        self.acc = 0.
+        self.nmi = 0.
+        self.f_1 = 0.
 
     def save_model(self, path):
         torch.save(self.state_dict(), path)

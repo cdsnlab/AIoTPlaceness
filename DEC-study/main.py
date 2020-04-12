@@ -40,6 +40,7 @@ def main():
     parser.add_argument('-n_classes', type=int, default=12, help='desired num of cluster')
     parser.add_argument('-text_features', type=int, default=1024, help='number of dimensions')
     parser.add_argument('-z_dim', type=int, default=10, help='number of dimensions')
+    parser.add_argument('-use_prior', action='store_true', default=False, help='use prior knowledge')
     # train
     parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
     parser.add_argument('-gpu', type=str, default='cuda', help='gpu number')
@@ -120,7 +121,7 @@ def train_ddec(args):
     dualnet = DualNet(device=device, pretrained_embedding=embedding_model, text_features=args.text_features,
                       z_dim=args.z_dim, n_classes=args.n_classes)
     dualnet.load_model("/4TBSSD/CHECKPOINT/pretrain_" + str(args.z_dim) + "_0.pt")
-    ddec = DDEC(device=device, pretrained_model=dualnet, n_classes=args.n_classes, z_dim=args.z_dim)
+    ddec = DDEC(device=device, pretrained_model=dualnet, n_classes=args.n_classes, z_dim=args.z_dim, use_prior=args.use_prior)
     exp = Experiment("Dualnet_train_" + str(args.z_dim), capture_io=True)
     print(ddec)
 
