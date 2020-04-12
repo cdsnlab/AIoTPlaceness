@@ -355,7 +355,7 @@ class DDEC(nn.Module):
             train_loss = train_loss / full_num
             semi_train_loss = semi_train_loss / train_num
 
-            train_pred = torch.argmax(p, dim=1).numpy()
+            train_pred = torch.argmax(p, dim=1).detach().numpy()
             df_pred = pd.DataFrame(data=train_pred, index=short_codes, columns=['pred'])
             df_pred = df_pred.loc[df_train.index]
             train_pred = df_pred['pred']
@@ -392,7 +392,7 @@ class DDEC(nn.Module):
 
         q = self.soft_assignemt(z)
         test_p = self.target_distribution(q)
-        test_pred = torch.argmax(test_p, dim=1).numpy()[full_num:]
+        test_pred = torch.argmax(test_p, dim=1).detach().numpy()[full_num:]
         test_acc = accuracy_score(test_labels, test_pred)
         test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')
         test_f_1 = f1_score(test_labels, test_pred, average='macro')
