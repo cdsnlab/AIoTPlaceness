@@ -88,7 +88,6 @@ def load_data(image_dir, token_to_index, df_text_data, df_train, df_test, CONFIG
     test_short_codes = []
     test_text_data = []
     test_label_data = []
-    df_text_data = df_text_data.loc[train_index]
     pbar = tqdm(total=df_text_data.shape[0])
     for index, row in df_text_data.iterrows():
         word_list = df_text_data.loc[index]['caption'].split()
