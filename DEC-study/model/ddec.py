@@ -271,7 +271,7 @@ class DDEC(nn.Module):
             image_batch = Variable(input_batch[1]).to(self.device)
             text_batch = Variable(input_batch[2]).to(self.device)
             text_len_batch = Variable(input_batch[3]).to(self.device)
-            train_labels = train_labels + input_batch[4].data
+            train_labels = train_labels + input_batch[4].tolist()
             _z = self.forward(image_batch, text_batch, text_len_batch)
             train_z.append(_z.data.cpu())
             del image_batch, text_batch, text_len_batch, _z
