@@ -278,7 +278,7 @@ class DDEC(nn.Module):
         train_z = torch.cat(train_z, dim=0)
 
         cluster_means = torch.zeros((self.n_classes, self.z_dim))
-        num_clusters = torch.zeros(self.z_dim)
+        num_clusters = torch.zeros(self.n_classes)
         print(train_z.size())
         print(cluster_means.size())
         print(num_clusters.size())
@@ -287,7 +287,7 @@ class DDEC(nn.Module):
             num_clusters[label] = num_clusters[label] + 1
         print(cluster_means)
         print(num_clusters)
-        cluster_means = cluster_means / num_clusters.unsqueeze(dim=0)
+        cluster_means = cluster_means / num_clusters.unsqueeze(dim=-1)
         print(cluster_means)
         self.mu.data.copy_(cluster_means)
         # if self.use_prior:
