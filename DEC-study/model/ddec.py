@@ -317,7 +317,7 @@ class DDEC(nn.Module):
                 image_batch = Variable(input_batch[1]).to(self.device)
                 text_batch = Variable(input_batch[2]).to(self.device)
                 text_len_batch = Variable(input_batch[3]).to(self.device)
-                target_batch = Variable(input_batch[4]).to(self.device)
+                target_batch = Variable(input_batch[4])
                 optimizer.zero_grad()
                 _z = self.forward(image_batch, text_batch, text_len_batch)
                 qbatch = self.soft_assignemt(_z.cpu())
