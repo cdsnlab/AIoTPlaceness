@@ -2,6 +2,7 @@ import collections
 import datetime
 import os
 
+import pandas as pd
 from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import default_collate
 
@@ -198,6 +199,10 @@ class DDEC(nn.Module):
         loss = F.kl_div(q.log(), p, reduction='batchmean') + F.kl_div(u.log(), h, reduction='batchmean')
         return loss
 
+    def semi_loss_function(self, label_batch, q_batch):
+        semi_loss = F.nll_loss(q_batch.log(), label_batch)
+        return semi_loss
+
     def target_distribution(self, q):
         p = q ** 2 / torch.sum(q, dim=0)
         p = p / torch.sum(p, dim=1, keepdim=True)
@@ -232,9 +237,9 @@ class DDEC(nn.Module):
     #     z = torch.cat(z, dim=0)
     #     return z
 
-    def fit(self, X, train_dataset, test_dataset, lr=0.001, batch_size=256, num_epochs=10, update_time=1, save_path=None, tol=1e-3, kappa=0.1):
-        X_num = len(X)
-        X_num_batch = int(math.ceil(1.0 * len(X) / batch_size))
+    def fit(self, full_dataset, train_dataset, test_dataset, lr=0.001, batch_size=256, num_epochs=10, update_time=1, save_path=None, tol=1e-3, kappa=0.1):
+        full_num = len(full_dataset)
+        full_num_batch = int(math.ceil(1.0 * len(full_dataset) / batch_size))
         train_num = len(train_dataset)
         train_num_batch = int(math.ceil(1.0 * len(train_dataset) / batch_size))
         '''X: tensor data'''
@@ -243,7 +248,7 @@ class DDEC(nn.Module):
         optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=lr, momentum=0.9)
 
         print("Extracting initial features at %s" % (str(datetime.datetime.now())))
-        full_loader = DataLoader(train_dataset,
+        full_loader = DataLoader(full_dataset,
                                  batch_size=batch_size,
                                  shuffle=False,
                                  collate_fn=collate_fn)
@@ -251,141 +256,148 @@ class DDEC(nn.Module):
                                  batch_size=batch_size,
                                  shuffle=False,
                                  collate_fn=collate_fn)
-        z = []
+        test_loader = DataLoader(test_dataset,
+                                 batch_size=batch_size,
+                                 shuffle=False,
+                                 collate_fn=collate_fn)
+        #z = []
         short_codes = []
         for batch_idx, input_batch in enumerate(full_loader):
-            short_codes = short_codes + list(input_batch[0])
-            image_batch = Variable(input_batch[1]).to(self.device)
-            text_batch = Variable(input_batch[2]).to(self.device)
-            text_len_batch = Variable(input_batch[3]).to(self.device)
-            _z = self.forward(image_batch, text_batch, text_len_batch)
-            z.append(_z.data.cpu())
-            del image_batch, text_batch, text_len_batch, _z
-        z = torch.cat(z, dim=0)
+            short_codes = short_codes.extend(list(input_batch[0]))
+            # image_batch = Variable(input_batch[1]).to(self.device)
+            # text_batch = Variable(input_batch[2]).to(self.device)
+            # text_len_batch = Variable(input_batch[3]).to(self.device)
+            # _z = self.forward(image_batch, text_batch, text_len_batch)
+            # z.append(_z.data.cpu())
+            # del image_batch, text_batch, text_len_batch, _z
+        #z = torch.cat(z, dim=0)
 
         train_z = []
         train_short_codes = []
         train_labels = []
-        for batch_idx, input_batch in enumerate(full_loader):
-            train_short_codes = train_short_codes + list(input_batch[0])
+        for batch_idx, input_batch in enumerate(train_loader):
+            train_short_codes = train_short_codes.extend(list(input_batch[0]))
             image_batch = Variable(input_batch[1]).to(self.device)
             text_batch = Variable(input_batch[2]).to(self.device)
             text_len_batch = Variable(input_batch[3]).to(self.device)
-            train_labels = train_labels + input_batch[4].tolist()
+            train_labels = train_labels.extend(input_batch[4].tolist())
             _z = self.forward(image_batch, text_batch, text_len_batch)
             train_z.append(_z.data.cpu())
             del image_batch, text_batch, text_len_batch, _z
         train_z = torch.cat(train_z, dim=0)
+        df_train = pd.DataFrame(data=train_labels, index=train_short_codes, columns=['label'])
 
         cluster_means = torch.zeros((self.n_classes, self.z_dim))
         num_clusters = torch.zeros(self.n_classes)
-        print(train_z.size())
-        print(cluster_means.size())
-        print(num_clusters.size())
         for i, label in enumerate(train_labels):
-            cluster_means[label] = cluster_means[label] + z[i]
+            cluster_means[label] = cluster_means[label] + train_z[i]
             num_clusters[label] = num_clusters[label] + 1
-        print(cluster_means)
-        print(num_clusters)
         cluster_means = cluster_means / num_clusters.unsqueeze(dim=-1)
-        print(cluster_means)
         self.mu.data.copy_(cluster_means)
-        # if self.use_prior:
-        #     for label in train_labels:
-        #         self.prior[label] = self.prior[label] + 1
-        #     self.prior = self.prior / len(train_labels)
-        # for epoch in range(num_epochs):
-        #     # update the target distribution p
-        #     self.train()
-        #     # train 1 epoch
-        #     train_loss = 0.0
-        #     semi_train_loss = 0.0
-        #     adjust_learning_rate(lr, optimizer)
-        #     for batch_idx in range(train_num_batch):
-        #         # semi-supervised phase
-        #         image_batch = train_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, train_num)][1]
-        #         text_batch = train_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, train_num)][2]
-        #         label_batch = train_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, train_num)][3].squeeze(dim=0)
-        #
-        #         optimizer.zero_grad()
-        #         image_inputs = Variable(image_batch).to(self.device)
-        #         text_inputs = Variable(text_batch).to(self.device)
-        #         label_inputs = Variable(label_batch)
-        #
-        #         _image_z, _text_z = self.forward(image_inputs, text_inputs)
-        #         qbatch, rbatch = self.soft_assignemt(_image_z.cpu(), _text_z.cpu())
-        #         semi_loss = self.semi_loss_function(label_inputs, qbatch, rbatch)
-        #         semi_train_loss += semi_loss.data * len(label_inputs)
-        #         semi_loss.backward()
-        #         optimizer.step()
-        #
-        #         del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
-        #     image_z, text_z = self.update_z(X, batch_size)
-        #     q, r = self.soft_assignemt(image_z, text_z)
-        #
-        #     p, _, _ = self.target_distribution(q, r)
-        #
-        #     adjust_learning_rate(lr * kappa, optimizer)
-        #
-        #     for batch_idx in range(X_num_batch):
-        #         # clustering phase
-        #         image_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)][1]
-        #         text_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)][2]
-        #         pbatch = p[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)]
-        #
-        #         image_inputs = Variable(image_batch).to(self.device)
-        #         text_inputs = Variable(text_batch).to(self.device)
-        #         p_inputs = Variable(pbatch)
-        #
-        #         _image_z, _text_z = self.forward(image_inputs, text_inputs)
-        #         qbatch, rbatch = self.soft_assignemt(_image_z.cpu(), _text_z.cpu())
-        #         loss = self.loss_function(p_inputs, qbatch, rbatch)
-        #         train_loss += loss.data * len(p_inputs)
-        #         optimizer.zero_grad()
-        #         loss.backward()
-        #         optimizer.step()
-        #
-        #         del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
-        #     train_loss = train_loss / X_num
-        #     semi_train_loss = semi_train_loss / train_num
-        #
-        #     train_pred = torch.argmax(p, dim=1).numpy()
-        #     df_pred = pd.DataFrame(data=train_pred, index=short_codes, columns=['pred'])
-        #     df_pred = df_pred.loc[df_train.index]
-        #     train_pred = df_pred['pred']
-        #     train_acc = accuracy_score(train_labels, train_pred)
-        #     train_nmi = normalized_mutual_info_score(train_labels, train_pred, average_method='geometric')
-        #     train_f_1 = f1_score(train_labels, train_pred, average='macro')
-        #     print("#Epoch %3d: acc: %.4f, nmi: %.4f, f_1: %.4f, loss: %.4f, semi_loss: %.4f at %s" % (
-        #         epoch + 1, train_acc, train_nmi, train_f_1, train_loss, semi_train_loss, str(datetime.datetime.now())))
-        #     if epoch == 0:
-        #         train_pred_last = train_pred
-        #     else:
-        #         delta_label = np.sum(train_pred != train_pred_last).astype(np.float32) / len(train_pred)
-        #         train_pred_last = train_pred
-        #         if delta_label < tol:
-        #             print('delta_label ', delta_label, '< tol ', tol)
-        #             print("Reach tolerance threshold. Stopping training.")
-        #             break
-        #
-        # self.eval()
-        # test_labels = test_dataset[:][3].squeeze(dim=0)
-        # test_z = self.update_z(test_dataset, batch_size)
-        # z = torch.cat([z, test_z], dim=0)
-        #
-        # q = self.soft_assignemt(z)
-        # test_p = self.target_distribution(q)
-        # test_pred = torch.argmax(test_p, dim=1).numpy()[X_num:]
-        # test_acc = accuracy_score(test_labels, test_pred)
-        # test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')
-        # test_f_1 = f1_score(test_labels, test_pred, average='macro')
-        # print("#Test acc: %.4f, Test nmi: %.4f, Test f_1: %.4f" % (
-        #     test_acc, test_nmi, test_f_1))
-        # self.acc = test_acc
-        # self.nmi = test_nmi
-        # self.f_1 = test_f_1
-        # if save_path:
-        #     self.save_model(save_path)
+
+        if self.use_prior:
+            for label in train_labels:
+                self.prior[label] = self.prior[label] + 1
+            self.prior = self.prior / len(train_labels)
+
+        for epoch in range(num_epochs):
+            # update the target distribution p
+            self.train()
+            # train 1 epoch
+            train_loss = 0.0
+            semi_train_loss = 0.0
+            adjust_learning_rate(lr, optimizer)
+            for batch_idx, input_batch in enumerate(train_loader):
+                # semi-supervised phase
+                image_batch = Variable(input_batch[1]).to(self.device)
+                text_batch = Variable(input_batch[2]).to(self.device)
+                text_len_batch = Variable(input_batch[3]).to(self.device)
+                target_batch = Variable(input_batch[4]).to(self.device)
+                optimizer.zero_grad()
+                _z = self.forward(image_batch, text_batch, text_len_batch)
+                qbatch = self.soft_assignemt(_z.cpu())
+                semi_loss = self.semi_loss_function(target_batch, qbatch)
+                semi_train_loss += semi_loss.data * len(target_batch)
+                semi_loss.backward()
+                optimizer.step()
+                del image_batch, text_batch, text_len_batch, target_batch, _z
+
+            z = self.update_z(full_loader)
+            q = self.soft_assignemt(z)
+
+            p = self.target_distribution(q)
+
+            adjust_learning_rate(lr * kappa, optimizer)
+
+            for batch_idx, input_batch in enumerate(full_loader):
+                # clustering phase
+                image_batch = Variable(input_batch[1]).to(self.device)
+                text_batch = Variable(input_batch[2]).to(self.device)
+                text_len_batch = Variable(input_batch[3]).to(self.device)
+                pbatch = p[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)]
+
+                p_inputs = Variable(pbatch)
+
+                _z = self.forward(image_batch, text_batch, text_len_batch)
+                qbatch = self.soft_assignemt(_z.cpu())
+                loss = self.loss_function(p_inputs, qbatch)
+                train_loss += loss.data * len(p_inputs)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+                del image_batch, text_batch, text_len_batch, _z
+            train_loss = train_loss / full_num
+            semi_train_loss = semi_train_loss / train_num
+
+            train_pred = torch.argmax(p, dim=1).numpy()
+            df_pred = pd.DataFrame(data=train_pred, index=short_codes, columns=['pred'])
+            df_pred = df_pred.loc[df_train.index]
+            train_pred = df_pred['pred']
+            train_acc = accuracy_score(train_labels, train_pred)
+            train_nmi = normalized_mutual_info_score(train_labels, train_pred, average_method='geometric')
+            train_f_1 = f1_score(train_labels, train_pred, average='macro')
+            print("#Epoch %3d: acc: %.4f, nmi: %.4f, f_1: %.4f, loss: %.4f, semi_loss: %.4f at %s" % (
+                epoch + 1, train_acc, train_nmi, train_f_1, train_loss, semi_train_loss, str(datetime.datetime.now())))
+            if epoch == 0:
+                train_pred_last = train_pred
+            else:
+                delta_label = np.sum(train_pred != train_pred_last).astype(np.float32) / len(train_pred)
+                train_pred_last = train_pred
+                if delta_label < tol:
+                    print('delta_label ', delta_label, '< tol ', tol)
+                    print("Reach tolerance threshold. Stopping training.")
+                    break
+
+        self.eval()
+        test_z = []
+        test_short_codes = []
+        test_labels = []
+        for batch_idx, input_batch in enumerate(test_loader):
+            test_short_codes = test_short_codes.extend(list(input_batch[0]))
+            image_batch = Variable(input_batch[1]).to(self.device)
+            text_batch = Variable(input_batch[2]).to(self.device)
+            text_len_batch = Variable(input_batch[3]).to(self.device)
+            test_labels = test_labels.extend(input_batch[4].tolist())
+            _z = self.forward(image_batch, text_batch, text_len_batch)
+            test_z.append(_z.data.cpu())
+            del image_batch, text_batch, text_len_batch, _z
+        test_z = torch.cat(test_z, dim=0)
+        z = torch.cat([z, test_z], dim=0)
+
+        q = self.soft_assignemt(z)
+        test_p = self.target_distribution(q)
+        test_pred = torch.argmax(test_p, dim=1).numpy()[full_num:]
+        test_acc = accuracy_score(test_labels, test_pred)
+        test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')
+        test_f_1 = f1_score(test_labels, test_pred, average='macro')
+        print("#Test acc: %.4f, Test nmi: %.4f, Test f_1: %.4f" % (
+            test_acc, test_nmi, test_f_1))
+        self.acc = test_acc
+        self.nmi = test_nmi
+        self.f_1 = test_f_1
+        if save_path:
+            self.save_model(save_path)
     
 def collate_fn(batch):
     # put question lengths in descending order so that we can use packed sequences later
@@ -411,3 +423,7 @@ def count_percentage(cluster_labels):
     sorted_count = sorted(count.items(), key=lambda x: x[0], reverse=False)
     for cluster in sorted_count:
         print("cluster {} : {:.2%}".format(str(cluster[0]), cluster[1] / len(cluster_labels)))
+
+def adjust_learning_rate(lr, optimizer):
+    for param_group in optimizer.param_groups:
+        param_group["lr"] = lr
