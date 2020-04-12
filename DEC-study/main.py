@@ -83,7 +83,7 @@ def pretrain_multidec(args):
     print("Loading dataset completed")
 
     dualnet = DualNet(device=device, pretrained_embedding=embedding_model, text_features=args.text_features, z_dim=args.z_dim, n_classes=args.n_classes)
-    exp = Experiment("Dualnet_pretrain_" + str(args.n_classes), capture_io=True)
+    exp = Experiment("Dualnet_pretrain_" + str(args.z_dim), capture_io=True)
     print(dualnet)
 
     for arg, value in vars(args).items():
