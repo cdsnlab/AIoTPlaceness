@@ -298,6 +298,7 @@ class DDEC(nn.Module):
             num_clusters[label] = num_clusters[label] + 1
         cluster_means = cluster_means / num_clusters.unsqueeze(dim=-1)
         self.mu.data.copy_(cluster_means)
+        self.mu.data = self.mu.cpu()
 
         if self.use_prior:
             for label in train_labels:
