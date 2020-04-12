@@ -203,22 +203,34 @@ class DDEC(nn.Module):
         p = p / torch.sum(p, dim=1, keepdim=True)
         return p
 
-    def update_z(self, input, batch_size):
-        input_num = len(input)
-        input_num_batch = int(math.ceil(1.0 * len(input) / batch_size))
+    def update_z(self, loader):
         z = []
-        for batch_idx in range(input_num_batch):
-            image_batch = input[batch_idx * batch_size: min((batch_idx + 1) * batch_size, input_num)][1]
-            text_batch = input[batch_idx * batch_size: min((batch_idx + 1) * batch_size, input_num)][2]
-            text_len_batch = input[batch_idx * batch_size: min((batch_idx + 1) * batch_size, input_num)][3]
-            image_inputs = Variable(image_batch).to(self.device)
-            text_inputs = Variable(text_batch).to(self.device)
-            text_len_inputs = Variable(text_len_batch).to(self.device)
-            _z = self.forward(image_inputs, text_inputs, text_len_inputs)
+        for batch_idx, input_batch in enumerate(loader):
+            image_batch = Variable(input_batch[1]).to(self.device)
+            text_batch = Variable(input_batch[2]).to(self.device)
+            text_len_batch = Variable(input_batch[3]).to(self.device)
+            _z = self.forward(image_batch, text_batch, text_len_batch)
             z.append(_z.data.cpu())
-            del image_batch, text_batch, image_inputs, text_inputs, text_len_inputs, _z
+            del image_batch, text_batch, text_len_batch, _z
         z = torch.cat(z, dim=0)
         return z
+
+    # def update_z(self, input, batch_size):
+    #     input_num = len(input)
+    #     input_num_batch = int(math.ceil(1.0 * len(input) / batch_size))
+    #     z = []
+    #     for batch_idx in range(input_num_batch):
+    #         image_batch = input[batch_idx * batch_size: min((batch_idx + 1) * batch_size, input_num)][1]
+    #         text_batch = input[batch_idx * batch_size: min((batch_idx + 1) * batch_size, input_num)][2]
+    #         text_len_batch = input[batch_idx * batch_size: min((batch_idx + 1) * batch_size, input_num)][3]
+    #         image_inputs = Variable(image_batch).to(self.device)
+    #         text_inputs = Variable(text_batch).to(self.device)
+    #         text_len_inputs = Variable(text_len_batch).to(self.device)
+    #         _z = self.forward(image_inputs, text_inputs, text_len_inputs)
+    #         z.append(_z.data.cpu())
+    #         del image_batch, text_batch, image_inputs, text_inputs, text_len_inputs, _z
+    #     z = torch.cat(z, dim=0)
+    #     return z
 
     def fit(self, X, train_dataset, test_dataset, lr=0.001, batch_size=256, num_epochs=10, update_time=1, save_path=None, tol=1e-3, kappa=0.1):
         X_num = len(X)
@@ -231,8 +243,16 @@ class DDEC(nn.Module):
         optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=lr, momentum=0.9)
 
         print("Extracting initial features at %s" % (str(datetime.datetime.now())))
-        z = self.update_z(X, batch_size)
-        train_z = self.update_z(train_dataset, batch_size)
+        full_loader = DataLoader(train_dataset,
+                                 batch_size=batch_size,
+                                 shuffle=False,
+                                 collate_fn=collate_fn)
+        train_loader = DataLoader(train_dataset,
+                                 batch_size=batch_size,
+                                 shuffle=False,
+                                 collate_fn=collate_fn)
+        z = self.update_z(full_loader)
+        train_z = self.update_z(train_loader)
 
         short_codes = X[:][0]
         train_short_codes = train_dataset[:][0]

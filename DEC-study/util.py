@@ -127,16 +127,8 @@ class UnlabeledDataset(Dataset):
         return len(self.short_codes)
 
     def __getitem__(self, idx):
-        if type(self.short_codes[idx]) is list:
-            image_list = []
-            for short_code in self.short_codes[idx]:
-                with open(os.path.join(self.image_dir, short_code) + '.p', "rb") as f:
-                    image_data = cPickle.load(f)
-                image_list.append(image_data)
-            image_data = np.array(image_list)
-        else:
-            with open(os.path.join(self.image_dir, self.short_codes[idx]) + '.p', "rb") as f:
-                image_data = cPickle.load(f)
+        with open(os.path.join(self.image_dir, self.short_codes[idx]) + '.p', "rb") as f:
+            image_data = cPickle.load(f)
         image_tensor = torch.from_numpy(image_data).type(torch.FloatTensor)
         text_tensor = self.text_data[idx][0]
         text_length = self.text_data[idx][1]
