@@ -92,7 +92,8 @@ def load_data(image_dir, token_to_index, df_text_data, df_train, df_test, CONFIG
     pbar = tqdm(total=df_text_data.shape[0])
     for index, row in df_text_data.iterrows():
         word_list = df_text_data.loc[index]['caption'].split()
-        temp = encode_text(word_list, CONFIG.MAX_SENTENCE_LEN, token_to_index)
+        # temp = encode_text(word_list, CONFIG.MAX_SENTENCE_LEN, token_to_index)
+        temp = ([0], 1)
         if index in train_index:
             full_short_codes.append(index)
             full_text_data.append(temp)
@@ -126,8 +127,16 @@ class UnlabeledDataset(Dataset):
         return len(self.short_codes)
 
     def __getitem__(self, idx):
-        with open(os.path.join(self.image_dir, self.short_codes[idx]) + '.p', "rb") as f:
-            image_data = cPickle.load(f)
+        if type(self.short_codes[idx]) is list:
+            image_list = []
+            for short_code in self.short_codes[idx]:
+                with open(os.path.join(self.image_dir, short_code) + '.p', "rb") as f:
+                    image_data = cPickle.load(f)
+                image_list.append(image_data)
+            image_data = np.array(image_list)
+        else:
+            with open(os.path.join(self.image_dir, self.short_codes[idx]) + '.p', "rb") as f:
+                image_data = cPickle.load(f)
         image_tensor = torch.from_numpy(image_data).type(torch.FloatTensor)
         text_tensor = self.text_data[idx][0]
         text_length = self.text_data[idx][1]
