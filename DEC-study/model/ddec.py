@@ -251,14 +251,34 @@ class DDEC(nn.Module):
                                  batch_size=batch_size,
                                  shuffle=False,
                                  collate_fn=collate_fn)
-        z = self.update_z(full_loader)
-        train_z = self.update_z(train_loader)
+        z = []
+        short_codes = []
+        for batch_idx, input_batch in enumerate(full_loader):
+            short_codes = short_codes + input_batch[0]
+            image_batch = Variable(input_batch[1]).to(self.device)
+            text_batch = Variable(input_batch[2]).to(self.device)
+            text_len_batch = Variable(input_batch[3]).to(self.device)
+            _z = self.forward(image_batch, text_batch, text_len_batch)
+            z.append(_z.data.cpu())
+            del image_batch, text_batch, text_len_batch, _z
+        z = torch.cat(z, dim=0)
 
-        short_codes = X[:][0]
-        train_short_codes = train_dataset[:][0]
-        train_labels = train_dataset[:][3].squeeze(dim=0).data.cpu().numpy()
+        train_z = []
+        train_short_codes = []
+        train_labels = []
+        for batch_idx, input_batch in enumerate(full_loader):
+            train_short_codes = train_short_codes + input_batch[0]
+            image_batch = Variable(input_batch[1]).to(self.device)
+            text_batch = Variable(input_batch[2]).to(self.device)
+            text_len_batch = Variable(input_batch[3]).to(self.device)
+            train_labels.append(input_batch[4])
+            _z = self.forward(image_batch, text_batch, text_len_batch)
+            train_z.append(_z.data.cpu())
+            del image_batch, text_batch, text_len_batch, _z
+        train_z = torch.cat(train_z, dim=0)
+
         cluster_means = torch.zeros((self.n_classes, self.z_dim))
-
+        print(train_labels)
         for label in train_labels:
             print(label)
         self.mu.data.copy_(cluster_means)
