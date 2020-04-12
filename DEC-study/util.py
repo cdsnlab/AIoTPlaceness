@@ -88,12 +88,11 @@ def load_data(image_dir, token_to_index, df_text_data, df_train, df_test, CONFIG
     test_short_codes = []
     test_text_data = []
     test_label_data = []
-
+    df_text_data = df_text_data.loc[train_index]
     pbar = tqdm(total=df_text_data.shape[0])
     for index, row in df_text_data.iterrows():
         word_list = df_text_data.loc[index]['caption'].split()
-        # temp = encode_text(word_list, CONFIG.MAX_SENTENCE_LEN, token_to_index)
-        temp = (torch.zeros(257).long(), 1)
+        temp = encode_text(word_list, CONFIG.MAX_SENTENCE_LEN, token_to_index)
         if index in train_index:
             full_short_codes.append(index)
             full_text_data.append(temp)
