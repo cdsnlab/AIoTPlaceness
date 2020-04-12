@@ -168,6 +168,7 @@ class DDEC(nn.Module):
         self.mu = Parameter(torch.Tensor(n_classes, z_dim))
         self.softmax = nn.Softmax(dim=1)
         self.n_classes = n_classes
+        self.z_dim = z_dim
         self.alpha = alpha
         self.tau = 1
 
@@ -209,7 +210,7 @@ class DDEC(nn.Module):
         for batch_idx in range(input_num_batch):
             image_batch = input[batch_idx * batch_size: min((batch_idx + 1) * batch_size, input_num)][1]
             text_batch = input[batch_idx * batch_size: min((batch_idx + 1) * batch_size, input_num)][2]
-            text_len_batch = input[batch_idx * batch_size: min((batch_idx + 1) * batch_size, input_num)][2]
+            text_len_batch = input[batch_idx * batch_size: min((batch_idx + 1) * batch_size, input_num)][3]
             image_inputs = Variable(image_batch).to(self.device)
             text_inputs = Variable(text_batch).to(self.device)
             text_len_inputs = Variable(text_len_batch).to(self.device)
@@ -230,130 +231,113 @@ class DDEC(nn.Module):
         optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=lr, momentum=0.9)
 
         print("Extracting initial features at %s" % (str(datetime.datetime.now())))
-        image_z, text_z = self.update_z(X, batch_size)
-        train_image_z, train_text_z = self.update_z(train_dataset, batch_size)
+        z = self.update_z(X, batch_size)
+        train_z = self.update_z(train_dataset, batch_size)
 
         short_codes = X[:][0]
         train_short_codes = train_dataset[:][0]
         train_labels = train_dataset[:][3].squeeze(dim=0).data.cpu().numpy()
+        cluster_means = torch.zeros((self.n_classes, self.z_dim))
 
-        image_cluster_centers = np.zeros_like(image_kmeans.cluster_centers_)
-        text_cluster_centers = np.zeros_like(text_kmeans.cluster_centers_)
-        for i in range(self.n_clusters):
-            image_cluster_centers[i] = image_kmeans.cluster_centers_[image_ind[i]]
-            text_cluster_centers[i] = text_kmeans.cluster_centers_[text_ind[i]]
-        self.image_encoder.mu.data.copy_(torch.Tensor(image_cluster_centers))
-        self.image_encoder.mu.data = self.image_encoder.mu.cpu()
-        self.text_encoder.mu.data.copy_(torch.Tensor(text_cluster_centers))
-        self.text_encoder.mu.data = self.text_encoder.mu.cpu()
-        if self.use_prior:
-            for label in train_labels:
-                self.prior[label] = self.prior[label] + 1
-            self.prior = self.prior / len(train_labels)
-        for epoch in range(num_epochs):
-            # update the target distribution p
-            self.train()
-            # train 1 epoch
-            train_loss = 0.0
-            semi_train_loss = 0.0
-            adjust_learning_rate(lr, optimizer)
-            for batch_idx in range(train_num_batch):
-                # semi-supervised phase
-                image_batch = train_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, train_num)][1]
-                text_batch = train_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, train_num)][2]
-                label_batch = train_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, train_num)][3].squeeze(dim=0)
-
-                optimizer.zero_grad()
-                image_inputs = Variable(image_batch).to(self.device)
-                text_inputs = Variable(text_batch).to(self.device)
-                label_inputs = Variable(label_batch)
-
-                _image_z, _text_z = self.forward(image_inputs, text_inputs)
-                qbatch, rbatch = self.soft_assignemt(_image_z.cpu(), _text_z.cpu())
-                semi_loss = self.semi_loss_function(label_inputs, qbatch, rbatch)
-                semi_train_loss += semi_loss.data * len(label_inputs)
-                semi_loss.backward()
-                optimizer.step()
-
-                del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
-            image_z, text_z = self.update_z(X, batch_size)
-            q, r = self.soft_assignemt(image_z, text_z)
-
-            p, _, _ = self.target_distribution(q, r)
-
-            adjust_learning_rate(lr * kappa, optimizer)
-
-            for batch_idx in range(X_num_batch):
-                # clustering phase
-                image_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)][1]
-                text_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)][2]
-                pbatch = p[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)]
-
-                image_inputs = Variable(image_batch).to(self.device)
-                text_inputs = Variable(text_batch).to(self.device)
-                p_inputs = Variable(pbatch)
-
-                _image_z, _text_z = self.forward(image_inputs, text_inputs)
-                qbatch, rbatch = self.soft_assignemt(_image_z.cpu(), _text_z.cpu())
-                loss = self.loss_function(p_inputs, qbatch, rbatch)
-                train_loss += loss.data * len(p_inputs)
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-
-                del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
-            train_loss = train_loss / X_num
-            semi_train_loss = semi_train_loss / train_num
-
-            train_pred = torch.argmax(p, dim=1).numpy()
-            df_pred = pd.DataFrame(data=train_pred, index=short_codes, columns=['pred'])
-            df_pred = df_pred.loc[df_train.index]
-            train_pred = df_pred['pred']
-            train_acc = accuracy_score(train_labels, train_pred)
-            train_nmi = normalized_mutual_info_score(train_labels, train_pred, average_method='geometric')
-            train_f_1 = f1_score(train_labels, train_pred, average='macro')
-            print("#Epoch %3d: acc: %.4f, nmi: %.4f, f_1: %.4f, loss: %.4f, semi_loss: %.4f at %s" % (
-                epoch + 1, train_acc, train_nmi, train_f_1, train_loss, semi_train_loss, str(datetime.datetime.now())))
-            if epoch == 0:
-                train_pred_last = train_pred
-            else:
-                delta_label = np.sum(train_pred != train_pred_last).astype(np.float32) / len(train_pred)
-                train_pred_last = train_pred
-                if delta_label < tol:
-                    print('delta_label ', delta_label, '< tol ', tol)
-                    print("Reach tolerance threshold. Stopping training.")
-                    break
-
-        self.eval()
-        test_labels = test_dataset[:][3].squeeze(dim=0)
-        test_image_z, test_text_z = self.update_z(test_dataset, batch_size)
-        image_z = torch.cat([image_z, test_image_z], dim=0)
-        text_z = torch.cat([text_z, test_text_z], dim=0)
-
-        q, r = self.soft_assignemt(image_z, text_z)
-        test_p, test_p_image, test_p_text = self.target_distribution(q, r)
-        test_pred = torch.argmax(test_p, dim=1).numpy()[X_num:]
-        test_acc = accuracy_score(test_labels, test_pred)
-
-        test_short_codes = test_dataset[:][0]
-        test_short_codes = np.concatenate([short_codes, test_short_codes],axis=0)
-        df_test = pd.DataFrame(data=torch.argmax(test_p, dim=1).numpy(), index=test_short_codes, columns=['labels'])
-        df_test.to_csv('mdec_label.csv', encoding='utf-8-sig')
-        df_test_p = pd.DataFrame(data=test_p.data.numpy(), index=test_short_codes)
-        df_test_p.to_csv('mdec_p.csv', encoding='utf-8-sig')
-        df_test_p_image = pd.DataFrame(data=test_p_image.data.numpy(), index=test_short_codes)
-        df_test_p_image.to_csv('mdec_p_image.csv', encoding='utf-8-sig')
-        df_test_p_text = pd.DataFrame(data=test_p_text.data.numpy(), index=test_short_codes)
-        df_test_p_text.to_csv('mdec_p_text.csv', encoding='utf-8-sig')
-        test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')
-        test_f_1 = f1_score(test_labels, test_pred, average='macro')
-        print("#Test acc: %.4f, Test nmi: %.4f, Test f_1: %.4f" % (
-            test_acc, test_nmi, test_f_1))
-        self.acc = test_acc
-        self.nmi = test_nmi
-        self.f_1 = test_f_1
-        if save_path:
-            self.save_model(save_path)
+        for label in train_labels:
+            print(label)
+        self.mu.data.copy_(cluster_means)
+        # if self.use_prior:
+        #     for label in train_labels:
+        #         self.prior[label] = self.prior[label] + 1
+        #     self.prior = self.prior / len(train_labels)
+        # for epoch in range(num_epochs):
+        #     # update the target distribution p
+        #     self.train()
+        #     # train 1 epoch
+        #     train_loss = 0.0
+        #     semi_train_loss = 0.0
+        #     adjust_learning_rate(lr, optimizer)
+        #     for batch_idx in range(train_num_batch):
+        #         # semi-supervised phase
+        #         image_batch = train_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, train_num)][1]
+        #         text_batch = train_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, train_num)][2]
+        #         label_batch = train_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, train_num)][3].squeeze(dim=0)
+        #
+        #         optimizer.zero_grad()
+        #         image_inputs = Variable(image_batch).to(self.device)
+        #         text_inputs = Variable(text_batch).to(self.device)
+        #         label_inputs = Variable(label_batch)
+        #
+        #         _image_z, _text_z = self.forward(image_inputs, text_inputs)
+        #         qbatch, rbatch = self.soft_assignemt(_image_z.cpu(), _text_z.cpu())
+        #         semi_loss = self.semi_loss_function(label_inputs, qbatch, rbatch)
+        #         semi_train_loss += semi_loss.data * len(label_inputs)
+        #         semi_loss.backward()
+        #         optimizer.step()
+        #
+        #         del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
+        #     image_z, text_z = self.update_z(X, batch_size)
+        #     q, r = self.soft_assignemt(image_z, text_z)
+        #
+        #     p, _, _ = self.target_distribution(q, r)
+        #
+        #     adjust_learning_rate(lr * kappa, optimizer)
+        #
+        #     for batch_idx in range(X_num_batch):
+        #         # clustering phase
+        #         image_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)][1]
+        #         text_batch = X[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)][2]
+        #         pbatch = p[batch_idx * batch_size: min((batch_idx + 1) * batch_size, X_num)]
+        #
+        #         image_inputs = Variable(image_batch).to(self.device)
+        #         text_inputs = Variable(text_batch).to(self.device)
+        #         p_inputs = Variable(pbatch)
+        #
+        #         _image_z, _text_z = self.forward(image_inputs, text_inputs)
+        #         qbatch, rbatch = self.soft_assignemt(_image_z.cpu(), _text_z.cpu())
+        #         loss = self.loss_function(p_inputs, qbatch, rbatch)
+        #         train_loss += loss.data * len(p_inputs)
+        #         optimizer.zero_grad()
+        #         loss.backward()
+        #         optimizer.step()
+        #
+        #         del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
+        #     train_loss = train_loss / X_num
+        #     semi_train_loss = semi_train_loss / train_num
+        #
+        #     train_pred = torch.argmax(p, dim=1).numpy()
+        #     df_pred = pd.DataFrame(data=train_pred, index=short_codes, columns=['pred'])
+        #     df_pred = df_pred.loc[df_train.index]
+        #     train_pred = df_pred['pred']
+        #     train_acc = accuracy_score(train_labels, train_pred)
+        #     train_nmi = normalized_mutual_info_score(train_labels, train_pred, average_method='geometric')
+        #     train_f_1 = f1_score(train_labels, train_pred, average='macro')
+        #     print("#Epoch %3d: acc: %.4f, nmi: %.4f, f_1: %.4f, loss: %.4f, semi_loss: %.4f at %s" % (
+        #         epoch + 1, train_acc, train_nmi, train_f_1, train_loss, semi_train_loss, str(datetime.datetime.now())))
+        #     if epoch == 0:
+        #         train_pred_last = train_pred
+        #     else:
+        #         delta_label = np.sum(train_pred != train_pred_last).astype(np.float32) / len(train_pred)
+        #         train_pred_last = train_pred
+        #         if delta_label < tol:
+        #             print('delta_label ', delta_label, '< tol ', tol)
+        #             print("Reach tolerance threshold. Stopping training.")
+        #             break
+        #
+        # self.eval()
+        # test_labels = test_dataset[:][3].squeeze(dim=0)
+        # test_z = self.update_z(test_dataset, batch_size)
+        # z = torch.cat([z, test_z], dim=0)
+        #
+        # q = self.soft_assignemt(z)
+        # test_p = self.target_distribution(q)
+        # test_pred = torch.argmax(test_p, dim=1).numpy()[X_num:]
+        # test_acc = accuracy_score(test_labels, test_pred)
+        # test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')
+        # test_f_1 = f1_score(test_labels, test_pred, average='macro')
+        # print("#Test acc: %.4f, Test nmi: %.4f, Test f_1: %.4f" % (
+        #     test_acc, test_nmi, test_f_1))
+        # self.acc = test_acc
+        # self.nmi = test_nmi
+        # self.f_1 = test_f_1
+        # if save_path:
+        #     self.save_model(save_path)
     
 def collate_fn(batch):
     # put question lengths in descending order so that we can use packed sequences later
