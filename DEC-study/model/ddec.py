@@ -254,7 +254,7 @@ class DDEC(nn.Module):
         z = []
         short_codes = []
         for batch_idx, input_batch in enumerate(full_loader):
-            short_codes = short_codes + input_batch[0]
+            short_codes = short_codes + list(input_batch[0])
             image_batch = Variable(input_batch[1]).to(self.device)
             text_batch = Variable(input_batch[2]).to(self.device)
             text_len_batch = Variable(input_batch[3]).to(self.device)
@@ -267,11 +267,11 @@ class DDEC(nn.Module):
         train_short_codes = []
         train_labels = []
         for batch_idx, input_batch in enumerate(full_loader):
-            train_short_codes = train_short_codes + input_batch[0]
+            train_short_codes = train_short_codes + list(input_batch[0])
             image_batch = Variable(input_batch[1]).to(self.device)
             text_batch = Variable(input_batch[2]).to(self.device)
             text_len_batch = Variable(input_batch[3]).to(self.device)
-            train_labels.append(input_batch[4])
+            train_labels = train_labels + input_batch[4].data
             _z = self.forward(image_batch, text_batch, text_len_batch)
             train_z.append(_z.data.cpu())
             del image_batch, text_batch, text_len_batch, _z
