@@ -12,7 +12,7 @@ import os
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from util import load_pretrain_data
+from util import load_pretrain_data, load_data
 from model.ddec import DualNet, DDEC
 
 CONFIG = config.Config
@@ -51,18 +51,18 @@ def main():
     if args.noti:
         slacknoti("underkoo start using")
     if args.mode == 'pretrain':
-        pretrain_multidec(args)
+        pretrain_ddec(args)
     elif args.mode == 'train':
-        train_multidec(args)
+        train_ddec(args)
     elif args.mode == 'eval':
-        eval_multidec(args)
+        eval_ddec(args)
     else:
         print('print select correct mode')
     if args.noti:
         slacknoti("underkoo end using")
 
-def pretrain_multidec(args):
-    print("Training multidec")
+def pretrain_ddec(args):
+    print("Pretraining...")
     device = torch.device(args.gpu)
 
     print("Loading dataset...")
@@ -97,30 +97,45 @@ def pretrain_multidec(args):
         exp.end()
 
 
-def train_multidec(args):
-    print("Training multidec")
+def train_ddec(args):
+    print("Training...")
     device = torch.device(args.gpu)
-    print("Loading dataset...")
-    full_dataset = load_data(args, CONFIG)
-    print("Loading dataset completed")
-    # full_loader = DataLoader(full_dataset, batch_size=args.batch_size, shuffle=False)
 
-    ddec = DDEC(device=device, n_classes=args.n_classes)
-    exp = Experiment("SocialDEC " + str(args.latent_dim) + '_' + str(args.n_clusters), capture_io=True)
+    print("Loading dataset...")
+    df_data = pd.read_csv(args.data_csv, index_col=0, header=None, encoding='utf-8')
+    df_data.columns = ["caption", "path_to_image"]
+    df_data.index.name = "shortcode"
+    with open(os.path.join(args.text_embedding_dir, 'word_embedding.p'), "rb") as f:
+        embedding_model = cPickle.load(f)
+    with open(os.path.join(args.text_embedding_dir, 'word_idx.json'), "r", encoding='utf-8') as f:
+        word_idx = json.load(f)
+    df_train = pd.read_csv("/4TBSSD/train_0_category_label.csv",
+                           index_col=0,
+                           encoding='utf-8-sig')
+    df_test = pd.read_csv("/4TBSSD/test_0_category_label.csv",
+                          index_col=0,
+                          encoding='utf-8-sig')
+    full_dataset, train_dataset, test_dataset = load_data(args.image_dir, word_idx[1], df_data, df_train, df_test, CONFIG)
+    print("Loading dataset completed")
+    dualnet = DualNet(device=device, pretrained_embedding=embedding_model, text_features=args.text_features,
+                      z_dim=args.z_dim, n_classes=args.n_classes)
+    dualnet.load_model("/4TBSSD/CHECKPOINT/pretrain_" + str(args.z_dim) + "_0.pt")
+    ddec = DDEC(device=device, pretrained_model=dualnet, n_classes=args.n_classes, z_dim=args.z_dim)
+    exp = Experiment("Dualnet_train_" + str(args.z_dim), capture_io=True)
     print(ddec)
 
     for arg, value in vars(args).items():
         exp.param(arg, value)
     try:
-        ddec.fit(full_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
-                 save_path=CONFIG.CHECKPOINT_PATH)
+        ddec.fit(full_dataset, train_dataset,  test_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
+                 save_path="/4TBSSD/CHECKPOINT/train_" + str(args.z_dim) + "_0.pt")
         print("Finish!!!")
 
     finally:
         exp.end()
 
 
-def eval_multidec(args):
+def eval_ddec(args):
     print("Evaluate socialdec")
     device = torch.device(args.gpu)
     print("Loading dataset...")
