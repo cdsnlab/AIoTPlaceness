@@ -197,6 +197,11 @@ class DDEC(nn.Module):
         q = q / torch.sum(q, dim=1, keepdim=True)
         return q
 
+    def target_distribution(self, q):
+        p = q ** 2 / torch.sum(q, dim=0)
+        p = p / torch.sum(p, dim=1, keepdim=True)
+        return p
+
     def loss_function(self, p, q):
         h = torch.mean(p, dim=0, keepdim=True)
         u = torch.full_like(h, fill_value=1 / h.size()[1])
@@ -207,22 +212,17 @@ class DDEC(nn.Module):
         semi_loss = F.nll_loss(q_batch.log(), label_batch)
         return semi_loss
 
-    def target_distribution(self, q):
-        p = q ** 2 / torch.sum(q, dim=0)
-        p = p / torch.sum(p, dim=1, keepdim=True)
-        return p
-
-    def update_z(self, loader):
-        z = []
-        for batch_idx, input_batch in enumerate(loader):
-            image_batch = Variable(input_batch[1]).to(self.device)
-            text_batch = Variable(input_batch[2]).to(self.device)
-            text_len_batch = Variable(input_batch[3]).to(self.device)
-            _z = self.forward(image_batch, text_batch, text_len_batch)
-            z.append(_z)
-            del image_batch, text_batch, text_len_batch, _z
-        z = torch.cat(z, dim=0)
-        return z
+    # def update_z(self, loader):
+    #     z = []
+    #     for batch_idx, input_batch in enumerate(loader):
+    #         image_batch = Variable(input_batch[1]).to(self.device)
+    #         text_batch = Variable(input_batch[2]).to(self.device)
+    #         text_len_batch = Variable(input_batch[3]).to(self.device)
+    #         _z = self.forward(image_batch, text_batch, text_len_batch)
+    #         z.append(_z)
+    #         del image_batch, text_batch, text_len_batch, _z
+    #     z = torch.cat(z, dim=0)
+    #     return z
 
     # def update_z(self, input, batch_size):
     #     input_num = len(input)
@@ -327,9 +327,22 @@ class DDEC(nn.Module):
                 optimizer.step()
                 del image_batch, text_batch, text_len_batch, target_batch, _z
 
-            z = self.update_z(full_loader)
-            q = self.soft_assignemt(z)
+            # update p considering short memory
+            q = []
+            for batch_idx, input_batch in enumerate(full_loader):
+                # clustering phase
+                image_batch = Variable(input_batch[1]).to(self.device)
+                text_batch = Variable(input_batch[2]).to(self.device)
+                text_len_batch = Variable(input_batch[3]).to(self.device)
 
+                _z = self.forward(image_batch, text_batch, text_len_batch)
+                _q = 1.0 / (1.0 + torch.sum((_z.unsqueeze(1) - self.mu) ** 2, dim=2) / self.alpha)
+                _q = _q ** (self.alpha + 1.0) / 2.0
+                q.append(_q.data.cpu())
+                del image_batch, text_batch, text_len_batch, _z, _q
+
+            q = torch.cat(q, dim=0)
+            q = q / torch.sum(q, dim=1, keepdim=True)
             p = self.target_distribution(q)
 
             adjust_learning_rate(lr * kappa, optimizer)
