@@ -319,7 +319,7 @@ class DDEC(nn.Module):
             train_loss = 0.0
             semi_train_loss = 0.0
             adjust_learning_rate(lr, optimizer)
-            print("\nEpoch %d at %s" % (epoch, str(datetime.datetime.now())))
+            print("Epoch %d at %s" % (epoch, str(datetime.datetime.now())))
             for batch_idx, input_batch in enumerate(tqdm(train_loader, desc="Semi supervised learning", total=len(train_loader))):
                 # semi-supervised phase
                 image_batch = Variable(input_batch[1]).to(self.device)
@@ -383,7 +383,7 @@ class DDEC(nn.Module):
             train_acc = accuracy_score(train_labels, train_pred)
             train_nmi = normalized_mutual_info_score(train_labels, train_pred, average_method='geometric')
             train_f_1 = f1_score(train_labels, train_pred, average='macro')
-            print("\n#Epoch %3d: acc: %.4f, nmi: %.4f, f_1: %.4f, loss: %.4f, semi_loss: %.4f at %s" % (
+            print("#Epoch %3d: acc: %.4f, nmi: %.4f, f_1: %.4f, loss: %.4f, semi_loss: %.4f at %s" % (
                 epoch + 1, train_acc, train_nmi, train_f_1, train_loss, semi_train_loss, str(datetime.datetime.now())))
             if epoch == 0:
                 train_pred_last = train_pred
@@ -397,7 +397,7 @@ class DDEC(nn.Module):
 
         self.eval()
 
-        print("\nTesting at %s" % (str(datetime.datetime.now())))
+        print("Testing at %s" % (str(datetime.datetime.now())))
         # update p considering short memory
         test_q = []
         for batch_idx, input_batch in enumerate(tqdm(full_loader, desc="Calcaulating q-values", total=len(full_loader))):
@@ -434,7 +434,7 @@ class DDEC(nn.Module):
         test_acc = accuracy_score(test_labels, test_pred)
         test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')
         test_f_1 = f1_score(test_labels, test_pred, average='macro')
-        print("\n#Test acc: %.4f, Test nmi: %.4f, Test f_1: %.4f" % (
+        print("#Test acc: %.4f, Test nmi: %.4f, Test f_1: %.4f" % (
             test_acc, test_nmi, test_f_1))
         self.acc = test_acc
         self.nmi = test_nmi
