@@ -363,8 +363,8 @@ class DDEC(nn.Module):
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-
                 del image_batch, text_batch, text_len_batch, _z
+
             train_loss = train_loss / full_num
             semi_train_loss = semi_train_loss / train_num
 
@@ -388,7 +388,21 @@ class DDEC(nn.Module):
                     break
 
         self.eval()
-        test_z = []
+
+        # update p considering short memory
+        test_q = []
+        for batch_idx, input_batch in enumerate(full_loader):
+            # clustering phase
+            image_batch = Variable(input_batch[1]).to(self.device)
+            text_batch = Variable(input_batch[2]).to(self.device)
+            text_len_batch = Variable(input_batch[3]).to(self.device)
+
+            _z = self.forward(image_batch, text_batch, text_len_batch)
+            _q = 1.0 / (1.0 + torch.sum((_z.unsqueeze(1) - self.mu) ** 2, dim=2) / self.alpha)
+            _q = _q ** (self.alpha + 1.0) / 2.0
+            test_q.append(_q.data.cpu())
+            del image_batch, text_batch, text_len_batch, _z, _q
+
         test_short_codes = []
         test_labels = []
         for batch_idx, input_batch in enumerate(test_loader):
@@ -398,13 +412,15 @@ class DDEC(nn.Module):
             text_len_batch = Variable(input_batch[3]).to(self.device)
             test_labels.extend(input_batch[4].tolist())
             _z = self.forward(image_batch, text_batch, text_len_batch)
-            test_z.append(_z.data.cpu())
+            _q = 1.0 / (1.0 + torch.sum((_z.unsqueeze(1) - self.mu) ** 2, dim=2) / self.alpha)
+            _q = _q ** (self.alpha + 1.0) / 2.0
+            test_q.append(_q.data.cpu())
             del image_batch, text_batch, text_len_batch, _z
-        test_z = torch.cat(test_z, dim=0)
-        z = torch.cat([z, test_z], dim=0)
 
-        q = self.soft_assignemt(z)
-        test_p = self.target_distribution(q)
+        test_q = torch.cat(test_q, dim=0)
+        test_q = test_q / torch.sum(test_q, dim=1, keepdim=True)
+
+        test_p = self.target_distribution(test_q)
         test_pred = torch.argmax(test_p, dim=1).detach().numpy()[full_num:]
         test_acc = accuracy_score(test_labels, test_pred)
         test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')
