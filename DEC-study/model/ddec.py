@@ -337,8 +337,7 @@ class DDEC(nn.Module):
 
             # update p considering short memory
             q = []
-            print("\nUpdating p-value at %s" % (str(datetime.datetime.now())))
-            for batch_idx, input_batch in enumerate(tqdm(full_loader, total=len(full_loader))):
+            for batch_idx, input_batch in enumerate(tqdm(full_loader, desc="Updating p-value", total=len(full_loader))):
                 # clustering phase
                 image_batch = Variable(input_batch[1]).to(self.device)
                 text_batch = Variable(input_batch[2]).to(self.device)
@@ -356,8 +355,7 @@ class DDEC(nn.Module):
 
             adjust_learning_rate(lr * kappa, optimizer)
 
-            print("\nUnsupervised learning at %s" % (str(datetime.datetime.now())))
-            for batch_idx, input_batch in enumerate(tqdm(full_loader, total=len(full_loader))):
+            for batch_idx, input_batch in enumerate(tqdm(full_loader, desc="Unsupervised learning", total=len(full_loader))):
                 # clustering phase
                 image_batch = Variable(input_batch[1]).to(self.device)
                 text_batch = Variable(input_batch[2]).to(self.device)
@@ -399,11 +397,10 @@ class DDEC(nn.Module):
 
         self.eval()
 
-        print("\n\nTesting at %s" % (str(datetime.datetime.now())))
+        print("\nTesting at %s" % (str(datetime.datetime.now())))
         # update p considering short memory
         test_q = []
-        print("\nCalcaulating q-values at %s" % (str(datetime.datetime.now())))
-        for batch_idx, input_batch in enumerate(tqdm(full_loader, total=len(full_loader))):
+        for batch_idx, input_batch in enumerate(tqdm(full_loader, desc="Calcaulating q-values", total=len(full_loader))):
             # clustering phase
             image_batch = Variable(input_batch[1]).to(self.device)
             text_batch = Variable(input_batch[2]).to(self.device)
@@ -417,8 +414,7 @@ class DDEC(nn.Module):
 
         test_short_codes = []
         test_labels = []
-        print("\nUpdating p-value at %s" % (str(datetime.datetime.now())))
-        for batch_idx, input_batch in enumerate(tqdm(test_loader, total=len(test_loader))):
+        for batch_idx, input_batch in enumerate(tqdm(test_loader, dessc="Updating p-value", total=len(test_loader))):
             test_short_codes.extend(list(input_batch[0]))
             image_batch = Variable(input_batch[1]).to(self.device)
             text_batch = Variable(input_batch[2]).to(self.device)
