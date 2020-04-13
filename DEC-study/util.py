@@ -117,7 +117,7 @@ def load_data(image_dir, token_to_index, df_text_data, df_train, df_test, sample
     full_dataset = UnlabeledDataset(image_dir, token_to_index, full_short_codes, full_text_data, CONFIG)
     train_dataset = LabeledDataset(image_dir, token_to_index, train_short_codes, train_text_data, train_label_data, CONFIG)
     test_dataset = LabeledDataset(image_dir, token_to_index, test_short_codes, test_text_data, test_label_data, CONFIG)
-    return full_dataset, train_dataset, test_dataset, full_short_codes, (train_short_codes, train_label_data), (test_short_codes, test_label_data)
+    return full_dataset, train_dataset, test_dataset
 
 class UnlabeledDataset(Dataset):
     def __init__(self, image_dir, token_to_index, short_codes, text_data, CONFIG):

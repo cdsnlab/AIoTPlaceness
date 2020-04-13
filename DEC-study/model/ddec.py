@@ -242,11 +242,9 @@ class DDEC(nn.Module):
     #     z = torch.cat(z, dim=0)
     #     return z
 
-    def fit(self, full_dataset, train_dataset, test_dataset, full_short_codes, train_data, test_data, lr=0.001, batch_size=256, num_epochs=10, update_time=1, save_path=None, tol=1e-3, kappa=0.1):
+    def fit(self, full_dataset, train_dataset, test_dataset, lr=0.001, batch_size=256, num_epochs=10, update_time=1, save_path=None, tol=1e-3, kappa=0.1):
         full_num = len(full_dataset)
-        full_num_batch = int(math.ceil(1.0 * len(full_dataset) / batch_size))
         train_num = len(train_dataset)
-        train_num_batch = int(math.ceil(1.0 * len(train_dataset) / batch_size))
         '''X: tensor data'''
         print("Training at %s" % (str(datetime.datetime.now())))
         self.to(self.device)
@@ -271,14 +269,19 @@ class DDEC(nn.Module):
                                  pin_memory=True,
                                  num_workers=CONFIG.DATA_WORKERS,
                                  collate_fn=collate_fn)
-        #z = []
+        short_codes = []
+        for batch_idx, input_batch in enumerate(tqdm(full_loader, desc="Extracting short codes", total=len(full_loader))):
+            short_codes.extend(list(input_batch[0]))
 
         train_z = []
-        train_short_codes, train_labels = train_data
+        train_short_codes = []
+        train_labels = []
         for batch_idx, input_batch in enumerate(tqdm(train_loader, desc="Extracting initial cluster means", total=len(train_loader))):
+            train_short_codes.extend(list(input_batch[0]))
             image_batch = Variable(input_batch[1]).to(self.device)
             text_batch = Variable(input_batch[2]).to(self.device)
             text_len_batch = Variable(input_batch[3]).to(self.device)
+            train_labels.extend(input_batch[4].tolist())
             _z = self.forward(image_batch, text_batch, text_len_batch)
             train_z.append(_z.data.cpu())
             del image_batch, text_batch, text_len_batch, _z
@@ -364,7 +367,7 @@ class DDEC(nn.Module):
             semi_train_loss = semi_train_loss / train_num
 
             train_pred = torch.argmax(p, dim=1).detach().numpy()
-            df_pred = pd.DataFrame(data=train_pred, index=full_short_codes, columns=['pred'])
+            df_pred = pd.DataFrame(data=train_pred, index=short_codes, columns=['pred'])
             df_pred = df_pred.loc[df_train.index]
             train_pred = df_pred['pred']
             train_acc = accuracy_score(train_labels, train_pred)
@@ -399,8 +402,9 @@ class DDEC(nn.Module):
             test_q.append(_q.data.cpu())
             del image_batch, text_batch, text_len_batch, _z, _q
 
-        test_short_codes, test_labels = test_data
-        for batch_idx, input_batch in enumerate(tqdm(test_loader, desc="Updating p-value", total=len(test_loader))):
+        test_short_codes = []
+        test_labels = []
+        for batch_idx, input_batch in enumerate(tqdm(test_loader, dessc="Updating p-value", total=len(test_loader))):
             test_short_codes.extend(list(input_batch[0]))
             image_batch = Variable(input_batch[1]).to(self.device)
             text_batch = Variable(input_batch[2]).to(self.device)
