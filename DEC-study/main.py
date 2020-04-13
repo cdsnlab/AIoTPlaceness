@@ -123,8 +123,6 @@ def train_ddec(args):
                       z_dim=args.z_dim, n_classes=args.n_classes)
     dualnet.load_model("/4TBSSD/CHECKPOINT/pretrain_" + str(args.z_dim) + "_0.pt")
     ddec = DDEC(device=device, pretrained_model=dualnet, n_classes=args.n_classes, z_dim=args.z_dim, use_prior=args.use_prior)
-    ddec = ddec.to(device)
-    ddec = nn.DataParallel(ddec)
     exp = Experiment("Dualnet_train_" + str(args.z_dim), capture_io=True)
     print(ddec)
 

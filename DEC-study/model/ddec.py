@@ -248,6 +248,8 @@ class DDEC(nn.Module):
         train_num_batch = int(math.ceil(1.0 * len(train_dataset) / batch_size))
         '''X: tensor data'''
         print("=====Training DEC=======")
+        self.to(self.device)
+        self.dualnet = nn.DataParallel(self.dualnet)
         optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=lr, momentum=0.9)
 
         print("Extracting initial features at %s" % (str(datetime.datetime.now())))
