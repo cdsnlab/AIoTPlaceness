@@ -288,7 +288,7 @@ class DDEC(nn.Module):
         train_short_codes = []
         train_labels = []
         print("Extracting initial cluster means at %s" % (str(datetime.datetime.now())))
-        for batch_idx, input_batch in tqdm(enumerate(train_loader)):
+        for batch_idx, input_batch in enumerate(tqdm(train_loader)):
             train_short_codes.extend(list(input_batch[0]))
             image_batch = Variable(input_batch[1]).to(self.device)
             text_batch = Variable(input_batch[2]).to(self.device)
@@ -323,7 +323,7 @@ class DDEC(nn.Module):
             adjust_learning_rate(lr, optimizer)
             print("Epoch %d at %s" % (epoch, str(datetime.datetime.now())))
             print("Semi supervised learning at %s" % (str(datetime.datetime.now())))
-            for batch_idx, input_batch in tqdm(enumerate(train_loader)):
+            for batch_idx, input_batch in enumerate(tqdm(train_loader)):
                 # semi-supervised phase
                 image_batch = Variable(input_batch[1]).to(self.device)
                 text_batch = Variable(input_batch[2]).to(self.device)
@@ -341,7 +341,7 @@ class DDEC(nn.Module):
             # update p considering short memory
             q = []
             print("Updating p-value at %s" % (str(datetime.datetime.now())))
-            for batch_idx, input_batch in tqdm(enumerate(full_loader)):
+            for batch_idx, input_batch in enumerate(tqdm(full_loader)):
                 # clustering phase
                 image_batch = Variable(input_batch[1]).to(self.device)
                 text_batch = Variable(input_batch[2]).to(self.device)
@@ -360,7 +360,7 @@ class DDEC(nn.Module):
             adjust_learning_rate(lr * kappa, optimizer)
 
             print("Unsupervised learning at %s" % (str(datetime.datetime.now())))
-            for batch_idx, input_batch in tqdm(enumerate(full_loader)):
+            for batch_idx, input_batch in enumerate(tqdm(full_loader)):
                 # clustering phase
                 image_batch = Variable(input_batch[1]).to(self.device)
                 text_batch = Variable(input_batch[2]).to(self.device)
@@ -406,7 +406,7 @@ class DDEC(nn.Module):
         # update p considering short memory
         test_q = []
         print("Calcaulating q-values at %s" % (str(datetime.datetime.now())))
-        for batch_idx, input_batch in enumerate(full_loader):
+        for batch_idx, input_batch in enumerate(tqdm(full_loader)):
             # clustering phase
             image_batch = Variable(input_batch[1]).to(self.device)
             text_batch = Variable(input_batch[2]).to(self.device)
@@ -421,7 +421,7 @@ class DDEC(nn.Module):
         test_short_codes = []
         test_labels = []
         print("Updating p-value at %s" % (str(datetime.datetime.now())))
-        for batch_idx, input_batch in tqdm(enumerate(test_loader)):
+        for batch_idx, input_batch in enumerate(tqdm(test_loader)):
             test_short_codes.extend(list(input_batch[0]))
             image_batch = Variable(input_batch[1]).to(self.device)
             text_batch = Variable(input_batch[2]).to(self.device)
