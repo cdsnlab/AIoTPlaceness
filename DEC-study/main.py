@@ -117,7 +117,7 @@ def train_ddec(args):
     df_test = pd.read_csv("/4TBSSD/test_0_category_label.csv",
                           index_col=0,
                           encoding='utf-8-sig')
-    full_dataset, train_dataset, test_dataset = load_data(args.image_dir, word_idx[1], df_data, df_train, df_test, args.sample, CONFIG)
+    full_dataset, train_dataset, test_dataset, full_short_codes, train_data, test_data = load_data(args.image_dir, word_idx[1], df_data, df_train, df_test, args.sample, CONFIG)
     print("Loading dataset completed")
     dualnet = DualNet(device=device, pretrained_embedding=embedding_model, text_features=args.text_features,
                       z_dim=args.z_dim, n_classes=args.n_classes)
@@ -129,7 +129,7 @@ def train_ddec(args):
     for arg, value in vars(args).items():
         exp.param(arg, value)
     try:
-        ddec.fit(full_dataset, train_dataset,  test_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
+        ddec.fit(full_dataset, train_dataset,  test_dataset, full_short_codes, train_data, test_data, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
                  save_path="/4TBSSD/CHECKPOINT/train_" + str(args.z_dim) + "_0.pt")
         print("Finish!!!")
 
