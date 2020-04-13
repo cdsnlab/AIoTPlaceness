@@ -5,6 +5,7 @@ import os
 import pandas as pd
 from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import default_collate
+from tqdm import tqdm
 
 import config
 from model.submodules import TextProcessor, Attention, Classifier
@@ -252,7 +253,6 @@ class DDEC(nn.Module):
         self.dualnet = nn.DataParallel(self.dualnet)
         optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=lr, momentum=0.9)
 
-        print("Extracting initial features at %s" % (str(datetime.datetime.now())))
         full_loader = DataLoader(full_dataset,
                                  batch_size=batch_size,
                                  shuffle=False,
@@ -273,7 +273,8 @@ class DDEC(nn.Module):
                                  collate_fn=collate_fn)
         #z = []
         short_codes = []
-        for batch_idx, input_batch in enumerate(full_loader):
+        print("Extracting short codes at %s" % (str(datetime.datetime.now())))
+        for batch_idx, input_batch in tqdm(enumerate(full_loader)):
             short_codes.extend(list(input_batch[0]))
             # image_batch = Variable(input_batch[1]).to(self.device)
             # text_batch = Variable(input_batch[2]).to(self.device)
@@ -286,7 +287,8 @@ class DDEC(nn.Module):
         train_z = []
         train_short_codes = []
         train_labels = []
-        for batch_idx, input_batch in enumerate(train_loader):
+        print("Extracting initial cluster means at %s" % (str(datetime.datetime.now())))
+        for batch_idx, input_batch in tqdm(enumerate(train_loader)):
             train_short_codes.extend(list(input_batch[0]))
             image_batch = Variable(input_batch[1]).to(self.device)
             text_batch = Variable(input_batch[2]).to(self.device)
@@ -319,7 +321,9 @@ class DDEC(nn.Module):
             train_loss = 0.0
             semi_train_loss = 0.0
             adjust_learning_rate(lr, optimizer)
-            for batch_idx, input_batch in enumerate(train_loader):
+            print("Epoch %d at %s" % (epoch, str(datetime.datetime.now())))
+            print("Semi supervised learning at %s" % (str(datetime.datetime.now())))
+            for batch_idx, input_batch in tqdm(enumerate(train_loader)):
                 # semi-supervised phase
                 image_batch = Variable(input_batch[1]).to(self.device)
                 text_batch = Variable(input_batch[2]).to(self.device)
@@ -336,7 +340,8 @@ class DDEC(nn.Module):
 
             # update p considering short memory
             q = []
-            for batch_idx, input_batch in enumerate(full_loader):
+            print("Updating p-value at %s" % (str(datetime.datetime.now())))
+            for batch_idx, input_batch in tqdm(enumerate(full_loader)):
                 # clustering phase
                 image_batch = Variable(input_batch[1]).to(self.device)
                 text_batch = Variable(input_batch[2]).to(self.device)
@@ -354,7 +359,8 @@ class DDEC(nn.Module):
 
             adjust_learning_rate(lr * kappa, optimizer)
 
-            for batch_idx, input_batch in enumerate(full_loader):
+            print("Unsupervised learning at %s" % (str(datetime.datetime.now())))
+            for batch_idx, input_batch in tqdm(enumerate(full_loader)):
                 # clustering phase
                 image_batch = Variable(input_batch[1]).to(self.device)
                 text_batch = Variable(input_batch[2]).to(self.device)
@@ -396,8 +402,10 @@ class DDEC(nn.Module):
 
         self.eval()
 
+        print("Testing at %s" % (str(datetime.datetime.now())))
         # update p considering short memory
         test_q = []
+        print("Calcaulating q-values at %s" % (str(datetime.datetime.now())))
         for batch_idx, input_batch in enumerate(full_loader):
             # clustering phase
             image_batch = Variable(input_batch[1]).to(self.device)
@@ -412,7 +420,8 @@ class DDEC(nn.Module):
 
         test_short_codes = []
         test_labels = []
-        for batch_idx, input_batch in enumerate(test_loader):
+        print("Updating p-value at %s" % (str(datetime.datetime.now())))
+        for batch_idx, input_batch in tqdm(enumerate(test_loader)):
             test_short_codes.extend(list(input_batch[0]))
             image_batch = Variable(input_batch[1]).to(self.device)
             text_batch = Variable(input_batch[2]).to(self.device)
