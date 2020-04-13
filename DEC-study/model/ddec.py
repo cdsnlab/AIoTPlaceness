@@ -273,7 +273,7 @@ class DDEC(nn.Module):
                                  collate_fn=collate_fn)
         #z = []
         short_codes = []
-        print("Extracting short codes at %s" % (str(datetime.datetime.now())))
+        print("\nExtracting short codes at %s" % (str(datetime.datetime.now())))
         for batch_idx, input_batch in tqdm(enumerate(full_loader)):
             short_codes.extend(list(input_batch[0]))
             # image_batch = Variable(input_batch[1]).to(self.device)
@@ -287,7 +287,7 @@ class DDEC(nn.Module):
         train_z = []
         train_short_codes = []
         train_labels = []
-        print("Extracting initial cluster means at %s" % (str(datetime.datetime.now())))
+        print("\nExtracting initial cluster means at %s" % (str(datetime.datetime.now())))
         for batch_idx, input_batch in enumerate(tqdm(train_loader)):
             train_short_codes.extend(list(input_batch[0]))
             image_batch = Variable(input_batch[1]).to(self.device)
@@ -321,8 +321,8 @@ class DDEC(nn.Module):
             train_loss = 0.0
             semi_train_loss = 0.0
             adjust_learning_rate(lr, optimizer)
-            print("Epoch %d at %s" % (epoch, str(datetime.datetime.now())))
-            print("Semi supervised learning at %s" % (str(datetime.datetime.now())))
+            print("\n\nEpoch %d at %s" % (epoch, str(datetime.datetime.now())))
+            print("\nSemi supervised learning at %s" % (str(datetime.datetime.now())))
             for batch_idx, input_batch in enumerate(tqdm(train_loader)):
                 # semi-supervised phase
                 image_batch = Variable(input_batch[1]).to(self.device)
@@ -340,7 +340,7 @@ class DDEC(nn.Module):
 
             # update p considering short memory
             q = []
-            print("Updating p-value at %s" % (str(datetime.datetime.now())))
+            print("\nUpdating p-value at %s" % (str(datetime.datetime.now())))
             for batch_idx, input_batch in enumerate(tqdm(full_loader)):
                 # clustering phase
                 image_batch = Variable(input_batch[1]).to(self.device)
@@ -359,7 +359,7 @@ class DDEC(nn.Module):
 
             adjust_learning_rate(lr * kappa, optimizer)
 
-            print("Unsupervised learning at %s" % (str(datetime.datetime.now())))
+            print("\nUnsupervised learning at %s" % (str(datetime.datetime.now())))
             for batch_idx, input_batch in enumerate(tqdm(full_loader)):
                 # clustering phase
                 image_batch = Variable(input_batch[1]).to(self.device)
@@ -388,7 +388,7 @@ class DDEC(nn.Module):
             train_acc = accuracy_score(train_labels, train_pred)
             train_nmi = normalized_mutual_info_score(train_labels, train_pred, average_method='geometric')
             train_f_1 = f1_score(train_labels, train_pred, average='macro')
-            print("#Epoch %3d: acc: %.4f, nmi: %.4f, f_1: %.4f, loss: %.4f, semi_loss: %.4f at %s" % (
+            print("\n#Epoch %3d: acc: %.4f, nmi: %.4f, f_1: %.4f, loss: %.4f, semi_loss: %.4f at %s" % (
                 epoch + 1, train_acc, train_nmi, train_f_1, train_loss, semi_train_loss, str(datetime.datetime.now())))
             if epoch == 0:
                 train_pred_last = train_pred
@@ -402,10 +402,10 @@ class DDEC(nn.Module):
 
         self.eval()
 
-        print("Testing at %s" % (str(datetime.datetime.now())))
+        print("\n\nTesting at %s" % (str(datetime.datetime.now())))
         # update p considering short memory
         test_q = []
-        print("Calcaulating q-values at %s" % (str(datetime.datetime.now())))
+        print("\nCalcaulating q-values at %s" % (str(datetime.datetime.now())))
         for batch_idx, input_batch in enumerate(tqdm(full_loader)):
             # clustering phase
             image_batch = Variable(input_batch[1]).to(self.device)
@@ -420,7 +420,7 @@ class DDEC(nn.Module):
 
         test_short_codes = []
         test_labels = []
-        print("Updating p-value at %s" % (str(datetime.datetime.now())))
+        print("\nUpdating p-value at %s" % (str(datetime.datetime.now())))
         for batch_idx, input_batch in enumerate(tqdm(test_loader)):
             test_short_codes.extend(list(input_batch[0]))
             image_batch = Variable(input_batch[1]).to(self.device)
@@ -441,7 +441,7 @@ class DDEC(nn.Module):
         test_acc = accuracy_score(test_labels, test_pred)
         test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')
         test_f_1 = f1_score(test_labels, test_pred, average='macro')
-        print("#Test acc: %.4f, Test nmi: %.4f, Test f_1: %.4f" % (
+        print("\n#Test acc: %.4f, Test nmi: %.4f, Test f_1: %.4f" % (
             test_acc, test_nmi, test_f_1))
         self.acc = test_acc
         self.nmi = test_nmi
