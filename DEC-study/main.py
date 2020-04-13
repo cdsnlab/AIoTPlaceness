@@ -44,6 +44,7 @@ def main():
     # train
     parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
     parser.add_argument('-gpu', type=str, default='cuda', help='gpu number')
+    parser.add_argument('-sample', type=int, default=None, help='sample train data')
     # option
     parser.add_argument('-mode', type=str, default='pretrain', help='pretrain, train, eval')
 
@@ -80,7 +81,7 @@ def pretrain_ddec(args):
     df_test = pd.read_csv("/4TBSSD/test_0_category_label.csv",
                           index_col=0,
                           encoding='utf-8-sig')
-    train_dataset, test_dataset = load_pretrain_data(args.image_dir, word_idx[1], df_data, df_train, df_test, CONFIG)
+    train_dataset, test_dataset = load_pretrain_data(args.image_dir, word_idx[1], df_data, df_train, df_test, args.sample, CONFIG)
     print("Loading dataset completed")
 
     dualnet = DualNet(device=device, pretrained_embedding=embedding_model, text_features=args.text_features, z_dim=args.z_dim, n_classes=args.n_classes)
@@ -122,6 +123,8 @@ def train_ddec(args):
                       z_dim=args.z_dim, n_classes=args.n_classes)
     dualnet.load_model("/4TBSSD/CHECKPOINT/pretrain_" + str(args.z_dim) + "_0.pt")
     ddec = DDEC(device=device, pretrained_model=dualnet, n_classes=args.n_classes, z_dim=args.z_dim, use_prior=args.use_prior)
+    ddec = DDEC.to(device)
+    ddec = nn.DataParallel(ddec)
     exp = Experiment("Dualnet_train_" + str(args.z_dim), capture_io=True)
     print(ddec)
 

@@ -247,7 +247,6 @@ class DDEC(nn.Module):
         train_num = len(train_dataset)
         train_num_batch = int(math.ceil(1.0 * len(train_dataset) / batch_size))
         '''X: tensor data'''
-        self.to(self.device)
         print("=====Training DEC=======")
         optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=lr, momentum=0.9)
 
@@ -255,14 +254,20 @@ class DDEC(nn.Module):
         full_loader = DataLoader(full_dataset,
                                  batch_size=batch_size,
                                  shuffle=False,
+                                 pin_memory=True,
+                                 num_workers=CONFIG.DATA_WORKERS,
                                  collate_fn=collate_fn)
         train_loader = DataLoader(train_dataset,
                                  batch_size=batch_size,
                                  shuffle=False,
+                                 pin_memory=True,
+                                 num_workers=CONFIG.DATA_WORKERS,
                                  collate_fn=collate_fn)
         test_loader = DataLoader(test_dataset,
                                  batch_size=batch_size,
                                  shuffle=False,
+                                 pin_memory=True,
+                                 num_workers=CONFIG.DATA_WORKERS,
                                  collate_fn=collate_fn)
         #z = []
         short_codes = []

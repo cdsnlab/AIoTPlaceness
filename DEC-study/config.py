@@ -14,4 +14,5 @@ class Config:
     MIN_WORD_COUNT = 5
     N_CLASSES = 12
     SVG_PATH = './svg'
+    DATA_WORKERS = 8 # cause error in python 3.6
     RESULT_PATH = './result'

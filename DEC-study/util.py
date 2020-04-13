@@ -77,7 +77,7 @@ class LabeledDataset(Dataset):
         text_length = self.text_data[idx][1]
         return self.short_codes[idx], image_tensor, text_tensor, text_length, self.label_data[idx]
 
-def load_data(image_dir, token_to_index, df_text_data, df_train, df_test, CONFIG):
+def load_data(image_dir, token_to_index, df_text_data, df_train, df_test, sample, CONFIG):
     full_short_codes = []
     full_text_data = []
     train_index = set(df_train.index)
@@ -88,11 +88,12 @@ def load_data(image_dir, token_to_index, df_text_data, df_train, df_test, CONFIG
     test_short_codes = []
     test_text_data = []
     test_label_data = []
-    # labeled_index = train_index.union(test_index)
-    # df_sampled_data = df_text_data.loc[df_text_data.index.difference(labeled_index)].sample(n=10000)
-    # df_labeled_data = df_text_data.loc[labeled_index]
-    # df_text_data = pd.concat([df_sampled_data, df_labeled_data])
-    # df_text_data = df_text_data.sample(frac=1)
+    if sample is not None:
+        labeled_index = train_index.union(test_index)
+        df_sampled_data = df_text_data.loc[df_text_data.index.difference(labeled_index)].sample(n=sample)
+        df_labeled_data = df_text_data.loc[labeled_index]
+        df_text_data = pd.concat([df_sampled_data, df_labeled_data])
+        df_text_data = df_text_data.sample(frac=1)
     pbar = tqdm(total=df_text_data.shape[0])
     for index, row in df_text_data.iterrows():
         word_list = df_text_data.loc[index]['caption'].split()
