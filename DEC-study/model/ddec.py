@@ -404,7 +404,7 @@ class DDEC(nn.Module):
 
         test_short_codes = []
         test_labels = []
-        for batch_idx, input_batch in enumerate(tqdm(test_loader, dessc="Updating p-value", total=len(test_loader))):
+        for batch_idx, input_batch in enumerate(tqdm(test_loader, desc="Updating p-value", total=len(test_loader))):
             test_short_codes.extend(list(input_batch[0]))
             image_batch = Variable(input_batch[1]).to(self.device)
             text_batch = Variable(input_batch[2]).to(self.device)
