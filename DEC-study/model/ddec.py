@@ -219,7 +219,7 @@ class DDEC(nn.Module):
             text_batch = Variable(input_batch[2]).to(self.device)
             text_len_batch = Variable(input_batch[3]).to(self.device)
             _z = self.forward(image_batch, text_batch, text_len_batch)
-            z.append(_z.data.cpu())
+            z.append(_z)
             del image_batch, text_batch, text_len_batch, _z
         z = torch.cat(z, dim=0)
         return z
@@ -298,7 +298,7 @@ class DDEC(nn.Module):
             num_clusters[label] = num_clusters[label] + 1
         cluster_means = cluster_means / num_clusters.unsqueeze(dim=-1)
         self.mu.data.copy_(cluster_means)
-        self.mu.data = self.mu.cpu()
+        # self.mu.data = self.mu.cpu()
 
         if self.use_prior:
             for label in train_labels:
@@ -317,10 +317,10 @@ class DDEC(nn.Module):
                 image_batch = Variable(input_batch[1]).to(self.device)
                 text_batch = Variable(input_batch[2]).to(self.device)
                 text_len_batch = Variable(input_batch[3]).to(self.device)
-                target_batch = Variable(input_batch[4])
+                target_batch = Variable(input_batch[4]).to(self.device)
                 optimizer.zero_grad()
                 _z = self.forward(image_batch, text_batch, text_len_batch)
-                qbatch = self.soft_assignemt(_z.cpu())
+                qbatch = self.soft_assignemt(_z)
                 semi_loss = self.semi_loss_function(target_batch, qbatch)
                 semi_train_loss += semi_loss.data * len(target_batch)
                 semi_loss.backward()
@@ -341,10 +341,10 @@ class DDEC(nn.Module):
                 text_len_batch = Variable(input_batch[3]).to(self.device)
                 pbatch = p[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)]
 
-                p_inputs = Variable(pbatch)
+                p_inputs = Variable(pbatch).to(self.device)
 
                 _z = self.forward(image_batch, text_batch, text_len_batch)
-                qbatch = self.soft_assignemt(_z.cpu())
+                qbatch = self.soft_assignemt(_z)
                 loss = self.loss_function(p_inputs, qbatch)
                 train_loss += loss.data * len(p_inputs)
                 optimizer.zero_grad()
