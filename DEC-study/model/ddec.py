@@ -248,7 +248,7 @@ class DDEC(nn.Module):
         train_num = len(train_dataset)
         train_num_batch = int(math.ceil(1.0 * len(train_dataset) / batch_size))
         '''X: tensor data'''
-        print("=====Training DEC=======")
+        print("Training at %s" % (str(datetime.datetime.now())))
         self.to(self.device)
         self.dualnet = nn.DataParallel(self.dualnet)
         optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=lr, momentum=0.9)
@@ -273,8 +273,7 @@ class DDEC(nn.Module):
                                  collate_fn=collate_fn)
         #z = []
         short_codes = []
-        print("\nExtracting short codes at %s" % (str(datetime.datetime.now())))
-        for batch_idx, input_batch in enumerate(tqdm(full_loader, total=len(full_loader))):
+        for batch_idx, input_batch in enumerate(tqdm(full_loader, desc="Extracting short codes", total=len(full_loader))):
             short_codes.extend(list(input_batch[0]))
             # image_batch = Variable(input_batch[1]).to(self.device)
             # text_batch = Variable(input_batch[2]).to(self.device)
@@ -287,8 +286,7 @@ class DDEC(nn.Module):
         train_z = []
         train_short_codes = []
         train_labels = []
-        print("\nExtracting initial cluster means at %s" % (str(datetime.datetime.now())))
-        for batch_idx, input_batch in enumerate(tqdm(train_loader, total=len(train_loader))):
+        for batch_idx, input_batch in enumerate(tqdm(train_loader, desc="Extracting initial cluster means", total=len(train_loader))):
             train_short_codes.extend(list(input_batch[0]))
             image_batch = Variable(input_batch[1]).to(self.device)
             text_batch = Variable(input_batch[2]).to(self.device)
@@ -321,9 +319,8 @@ class DDEC(nn.Module):
             train_loss = 0.0
             semi_train_loss = 0.0
             adjust_learning_rate(lr, optimizer)
-            print("\n\nEpoch %d at %s" % (epoch, str(datetime.datetime.now())))
-            print("\nSemi supervised learning at %s" % (str(datetime.datetime.now())))
-            for batch_idx, input_batch in enumerate(tqdm(train_loader, total=len(train_loader))):
+            print("\nEpoch %d at %s" % (epoch, str(datetime.datetime.now())))
+            for batch_idx, input_batch in enumerate(tqdm(train_loader, desc="Semi supervised learning", total=len(train_loader))):
                 # semi-supervised phase
                 image_batch = Variable(input_batch[1]).to(self.device)
                 text_batch = Variable(input_batch[2]).to(self.device)
