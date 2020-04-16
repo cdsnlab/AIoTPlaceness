@@ -308,7 +308,7 @@ class DDEC(nn.Module):
             # train 1 epoch
             train_loss = 0.0
             semi_train_loss = 0.0
-            adjust_learning_rate(lr, optimizer)
+            #adjust_learning_rate(lr, optimizer)
             print("Epoch %d at %s" % (epoch, str(datetime.datetime.now())))
             for batch_idx, input_batch in enumerate(tqdm(train_loader, desc="Semi supervised learning", total=len(train_loader))):
                 # semi-supervised phase
@@ -343,7 +343,7 @@ class DDEC(nn.Module):
             q = q / torch.sum(q, dim=1, keepdim=True)
             p = self.target_distribution(q)
 
-            adjust_learning_rate(lr * kappa, optimizer)
+            #adjust_learning_rate(lr * kappa, optimizer)
 
             for batch_idx, input_batch in enumerate(tqdm(full_loader, desc="Unsupervised learning", total=len(full_loader))):
                 # clustering phase
