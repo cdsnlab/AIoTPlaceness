@@ -94,15 +94,16 @@ class DualNet(nn.Module):
         return log_prob
 
     def fit(self, train_dataset, test_dataset, lr=0.001, batch_size=128, num_epochs=10, save_path=None):
-        trainloader = DataLoader(train_dataset,
+        train_loader = DataLoader(train_dataset,
                                  batch_size=batch_size,
                                  shuffle=True,
                                  collate_fn=collate_fn)
-        testloader = DataLoader(test_dataset,
+        test_loader = DataLoader(test_dataset,
                                  batch_size=batch_size,
                                  shuffle=False,
                                  collate_fn=collate_fn)
-        optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=lr)
+        # optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=lr)
+        optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=lr, momentum=0.9)
         criterion = nn.NLLLoss().to(self.device)
         self.to(self.device)
         for epoch in range(num_epochs):
@@ -111,7 +112,7 @@ class DualNet(nn.Module):
             train_loss = 0.0
             train_pred = []
             train_labels = []
-            for batch_idx, input_batch in enumerate(trainloader):
+            for batch_idx, input_batch in enumerate(tqdm(train_loader, desc="pretraining each epoch", total=len(train_loader))):
                 image_batch = Variable(input_batch[1]).to(self.device)
                 text_batch = Variable(input_batch[2]).to(self.device)
                 text_len_batch = Variable(input_batch[3]).to(self.device)
@@ -127,7 +128,7 @@ class DualNet(nn.Module):
                 train_pred.extend(pred_batch)
                 train_labels.extend(target_batch.cpu().numpy())
                 del image_batch, text_batch, text_len_batch, target_batch, log_prob, loss
-            train_loss = train_loss / len(trainloader)
+            train_loss = train_loss / len(train_loader)
             train_acc = accuracy_score(train_labels, train_pred)
             train_nmi = normalized_mutual_info_score(train_labels, train_pred, average_method='geometric')
             train_f_1 = f1_score(train_labels, train_pred, average='macro', labels=np.unique(train_pred))
@@ -138,7 +139,7 @@ class DualNet(nn.Module):
             test_loss = 0.0
             test_pred = []
             test_labels = []
-            for batch_idx, input_batch in enumerate(testloader):
+            for batch_idx, input_batch in enumerate(tqdm(test_loader, desc="testing each epoch", total=len(test_loader))):
                 image_batch = Variable(input_batch[1]).to(self.device)
                 text_batch = Variable(input_batch[2]).to(self.device)
                 text_len_batch = Variable(input_batch[3]).to(self.device)
@@ -151,7 +152,7 @@ class DualNet(nn.Module):
                 test_pred.extend(pred_batch)
                 test_labels.extend(target_batch.cpu().numpy())
                 del image_batch, text_batch, text_len_batch, target_batch, log_prob, loss
-            test_loss = test_loss / len(testloader)
+            test_loss = test_loss / len(test_loader)
             test_acc = accuracy_score(test_labels, test_pred)
             test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')
             test_f_1 = f1_score(test_labels, test_pred, average='macro', labels=np.unique(test_pred))
