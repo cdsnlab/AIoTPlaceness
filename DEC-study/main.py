@@ -28,6 +28,8 @@ def main():
     parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
     # learning
     parser.add_argument('-lr', type=float, default=1e-02, help='initial learning rate')
+    parser.add_argument('-kappa', type=float, default=0.1, help='lr adjust rate')
+    parser.add_argument('-tol', type=float, default=1e-03, help='tolerance for early stopping')
     parser.add_argument('-pretrain_epochs', type=int, default=100, help='number of epochs for train')
     parser.add_argument('-epochs', type=int, default=50, help='number of epochs for train')
     parser.add_argument('-batch_size', type=int, default=128, help='batch size for training')
@@ -91,7 +93,7 @@ def pretrain_ddec(args):
     for arg, value in vars(args).items():
         exp.param(arg, value)
     try:
-        dualnet.fit(train_dataset,  test_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.pretrain_epochs,
+        dualnet.fit(train_dataset,  test_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.pretrain_epochs, tol=args.tol, kappa=args.kappa,
                  save_path="/4TBSSD/CHECKPOINT/pretrain_" + str(args.z_dim) + "_0.pt")
         print("Finish!!!")
 
