@@ -93,7 +93,7 @@ def pretrain_ddec(args):
     for arg, value in vars(args).items():
         exp.param(arg, value)
     try:
-        dualnet.fit(train_dataset,  test_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.pretrain_epochs, tol=args.tol, kappa=args.kappa,
+        dualnet.fit(train_dataset,  test_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.pretrain_epochs,
                  save_path="/4TBSSD/CHECKPOINT/pretrain_" + str(args.z_dim) + "_0.pt")
         print("Finish!!!")
 
@@ -131,7 +131,7 @@ def train_ddec(args):
     for arg, value in vars(args).items():
         exp.param(arg, value)
     try:
-        ddec.fit(full_dataset, train_dataset,  test_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
+        ddec.fit(full_dataset, train_dataset,  test_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs, tol=args.tol, kappa=args.kappa,
                  save_path="/4TBSSD/CHECKPOINT/train_" + str(args.z_dim) + "_0.pt")
         print("Finish!!!")
 
