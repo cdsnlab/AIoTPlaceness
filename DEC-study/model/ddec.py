@@ -107,6 +107,7 @@ class DualNet(nn.Module):
         criterion = nn.NLLLoss().to(self.device)
         self.to(self.device)
         for epoch in range(num_epochs):
+            print("Epoch %d at %s" % (epoch, str(datetime.datetime.now())))
             # train 1 epoch
             self.train()
             train_loss = 0.0
@@ -132,7 +133,7 @@ class DualNet(nn.Module):
             train_acc = accuracy_score(train_labels, train_pred)
             train_nmi = normalized_mutual_info_score(train_labels, train_pred, average_method='geometric')
             train_f_1 = f1_score(train_labels, train_pred, average='macro', labels=np.unique(train_pred))
-            print("#Train Epoch %3d: acc: %.4f, nmi: %.4f, f_1: %.4f, loss: %.4f at %s" % (
+            print("\n#Train Epoch %3d: acc: %.4f, nmi: %.4f, f_1: %.4f, loss: %.4f at %s" % (
                 epoch + 1, train_acc, train_nmi, train_f_1, train_loss, str(datetime.datetime.now())))
 
             self.eval()
@@ -156,7 +157,7 @@ class DualNet(nn.Module):
             test_acc = accuracy_score(test_labels, test_pred)
             test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')
             test_f_1 = f1_score(test_labels, test_pred, average='macro', labels=np.unique(test_pred))
-            print("#Test Epoch %3d: acc: %.4f, nmi: %.4f, f_1: %.4f, loss: %.4f at %s" % (
+            print("\n#Test Epoch %3d: acc: %.4f, nmi: %.4f, f_1: %.4f, loss: %.4f at %s" % (
                 epoch + 1, test_acc, test_nmi, test_f_1, test_loss, str(datetime.datetime.now())))
         if save_path:
             self.save_model(save_path)
