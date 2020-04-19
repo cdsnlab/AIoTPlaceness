@@ -251,7 +251,7 @@ class DDEC(nn.Module):
         print("Training at %s" % (str(datetime.datetime.now())))
         self.to(self.device)
         self.dualnet = nn.DataParallel(self.dualnet)
-        optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=lr, momentum=0.9)
+        optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=args.lr, momentum=0.9)
 
         full_loader = DataLoader(full_dataset,
                                  batch_size=args.batch_size,
