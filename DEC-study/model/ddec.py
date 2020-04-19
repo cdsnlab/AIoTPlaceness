@@ -244,7 +244,7 @@ class DDEC(nn.Module):
     #     z = torch.cat(z, dim=0)
     #     return z
 
-    def fit(self, full_dataset, train_dataset, test_dataset, lr=0.001, batch_size=256, num_epochs=10, update_time=1, save_path=None, tol=1e-3, kappa=0.1):
+    def fit(self, full_dataset, train_dataset, test_dataset, args, save_path=None):
         full_num = len(full_dataset)
         train_num = len(train_dataset)
         '''X: tensor data'''
@@ -254,19 +254,19 @@ class DDEC(nn.Module):
         optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=lr, momentum=0.9)
 
         full_loader = DataLoader(full_dataset,
-                                 batch_size=batch_size,
+                                 batch_size=args.batch_size,
                                  shuffle=False,
                                  pin_memory=True,
                                  num_workers=CONFIG.DATA_WORKERS,
                                  collate_fn=collate_fn)
         train_loader = DataLoader(train_dataset,
-                                 batch_size=batch_size,
+                                 batch_size=args.batch_size,
                                  shuffle=False,
                                  pin_memory=True,
                                  num_workers=CONFIG.DATA_WORKERS,
                                  collate_fn=collate_fn)
         test_loader = DataLoader(test_dataset,
-                                 batch_size=batch_size,
+                                 batch_size=args.batch_size,
                                  shuffle=False,
                                  pin_memory=True,
                                  num_workers=CONFIG.DATA_WORKERS,
@@ -304,28 +304,30 @@ class DDEC(nn.Module):
                 self.prior[label] = self.prior[label] + 1
             self.prior = self.prior / len(train_labels)
 
-        for epoch in range(num_epochs):
+        for epoch in range(args.epochs):
             # update the target distribution p
             self.train()
             # train 1 epoch
             train_loss = 0.0
             semi_train_loss = 0.0
-            adjust_learning_rate(lr, optimizer)
+            adjust_learning_rate(args.lr, optimizer)
             print("Epoch %d at %s" % (epoch, str(datetime.datetime.now())))
-            for batch_idx, input_batch in enumerate(tqdm(train_loader, desc="Semi supervised learning", total=len(train_loader))):
-                # semi-supervised phase
-                image_batch = Variable(input_batch[1]).to(self.device)
-                text_batch = Variable(input_batch[2]).to(self.device)
-                text_len_batch = Variable(input_batch[3]).to(self.device)
-                target_batch = Variable(input_batch[4]).to(self.device)
-                optimizer.zero_grad()
-                _z = self.forward(image_batch, text_batch, text_len_batch)
-                qbatch = self.soft_assignemt(_z)
-                semi_loss = self.semi_loss_function(target_batch, qbatch)
-                semi_train_loss += semi_loss.data * len(target_batch)
-                semi_loss.backward()
-                optimizer.step()
-                del image_batch, text_batch, text_len_batch, target_batch, _z
+
+            if not args.skip_semi:
+                for batch_idx, input_batch in enumerate(tqdm(train_loader, desc="Semi supervised learning", total=len(train_loader))):
+                    # semi-supervised phase
+                    image_batch = Variable(input_batch[1]).to(self.device)
+                    text_batch = Variable(input_batch[2]).to(self.device)
+                    text_len_batch = Variable(input_batch[3]).to(self.device)
+                    target_batch = Variable(input_batch[4]).to(self.device)
+                    optimizer.zero_grad()
+                    _z = self.forward(image_batch, text_batch, text_len_batch)
+                    qbatch = self.soft_assignemt(_z)
+                    semi_loss = self.semi_loss_function(target_batch, qbatch)
+                    semi_train_loss += semi_loss.data * len(target_batch)
+                    semi_loss.backward()
+                    optimizer.step()
+                    del image_batch, text_batch, text_len_batch, target_batch, _z
 
             # update p considering short memory
             q = []
@@ -345,14 +347,14 @@ class DDEC(nn.Module):
             q = q / torch.sum(q, dim=1, keepdim=True)
             p = self.target_distribution(q)
 
-            adjust_learning_rate(lr * kappa, optimizer)
+            adjust_learning_rate(args.lr * args.kappa, optimizer)
 
             for batch_idx, input_batch in enumerate(tqdm(full_loader, desc="Unsupervised learning", total=len(full_loader))):
                 # clustering phase
                 image_batch = Variable(input_batch[1]).to(self.device)
                 text_batch = Variable(input_batch[2]).to(self.device)
                 text_len_batch = Variable(input_batch[3]).to(self.device)
-                pbatch = p[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)]
+                pbatch = p[batch_idx * args.batch_size: min((batch_idx + 1) * args.batch_size, full_num)]
 
                 p_inputs = Variable(pbatch).to(self.device)
 
@@ -382,8 +384,8 @@ class DDEC(nn.Module):
             else:
                 delta_label = np.sum(train_pred != train_pred_last).astype(np.float32) / len(train_pred)
                 train_pred_last = train_pred
-                if delta_label < tol:
-                    print('delta_label ', delta_label, '< tol ', tol)
+                if delta_label < args.tol:
+                    print('delta_label ', delta_label, '< tol ', args.tol)
                     print("Reach tolerance threshold. Stopping training.")
                     break
 

@@ -47,6 +47,8 @@ def main():
     parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
     parser.add_argument('-gpu', type=str, default='cuda', help='gpu number')
     parser.add_argument('-sample', type=int, default=None, help='sample train data')
+    parser.add_argument('-skip_semi', action='store_true', default=False, help='whether skip semi-supervised learning')
+
     # option
     parser.add_argument('-mode', type=str, default='pretrain', help='pretrain, train, eval')
 
@@ -131,7 +133,7 @@ def train_ddec(args):
     for arg, value in vars(args).items():
         exp.param(arg, value)
     try:
-        ddec.fit(full_dataset, train_dataset,  test_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs, tol=args.tol, kappa=args.kappa,
+        ddec.fit(full_dataset, train_dataset,  test_dataset, args=args,
                  save_path="/4TBSSD/CHECKPOINT/train_" + str(args.z_dim) + "_0.pt")
         print("Finish!!!")
 
