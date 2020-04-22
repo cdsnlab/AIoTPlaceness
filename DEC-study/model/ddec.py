@@ -31,9 +31,8 @@ class DualNet(nn.Module):
     [0]: https://arxiv.org/abs/1704.03162
     """
 
-    def __init__(self, device, pretrained_embedding, text_features, z_dim, n_classes):
+    def __init__(self, pretrained_embedding, text_features, z_dim, n_classes):
         super(DualNet, self).__init__()
-        self.device = device
         vision_features = CONFIG.OUTPUT_FEATURES
         glimpses = 2
 
@@ -93,20 +92,21 @@ class DualNet(nn.Module):
         log_prob = self.classifier(z)
         return log_prob
 
-    def fit(self, train_dataset, test_dataset, lr=0.001, batch_size=128, num_epochs=10, save_path=None):
+    def fit(self, train_dataset, test_dataset, args, save_path=None):
+        device = torch.device(args.gpu)
         train_loader = DataLoader(train_dataset,
-                                 batch_size=batch_size,
+                                 batch_size=args.batch_size,
                                  shuffle=True,
                                  collate_fn=collate_fn)
         test_loader = DataLoader(test_dataset,
-                                 batch_size=batch_size,
+                                 batch_size=args.batch_size,
                                  shuffle=False,
                                  collate_fn=collate_fn)
         # optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=lr)
-        optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=lr, momentum=0.9)
-        criterion = nn.NLLLoss().to(self.device)
-        self.to(self.device)
-        for epoch in range(num_epochs):
+        optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=args.lr, momentum=0.9)
+        criterion = nn.NLLLoss().to(device)
+        self.to(device)
+        for epoch in range(args.pretrain_epochs):
             print("Epoch %d at %s" % (epoch, str(datetime.datetime.now())))
             # train 1 epoch
             self.train()
@@ -114,10 +114,10 @@ class DualNet(nn.Module):
             train_pred = []
             train_labels = []
             for batch_idx, input_batch in enumerate(tqdm(train_loader, desc="pretraining each epoch", total=len(train_loader))):
-                image_batch = Variable(input_batch[1]).to(self.device)
-                text_batch = Variable(input_batch[2]).to(self.device)
-                text_len_batch = Variable(input_batch[3]).to(self.device)
-                target_batch = Variable(input_batch[4]).to(self.device)
+                image_batch = Variable(input_batch[1]).to(device)
+                text_batch = Variable(input_batch[2]).to(device)
+                text_len_batch = Variable(input_batch[3]).to(device)
+                target_batch = Variable(input_batch[4]).to(device)
                 optimizer.zero_grad()
                 z = self.forward(image_batch, text_batch, text_len_batch)
                 log_prob = self.classify(z)
@@ -141,10 +141,10 @@ class DualNet(nn.Module):
             test_pred = []
             test_labels = []
             for batch_idx, input_batch in enumerate(tqdm(test_loader, desc="testing each epoch", total=len(test_loader))):
-                image_batch = Variable(input_batch[1]).to(self.device)
-                text_batch = Variable(input_batch[2]).to(self.device)
-                text_len_batch = Variable(input_batch[3]).to(self.device)
-                target_batch = Variable(input_batch[4]).to(self.device)
+                image_batch = Variable(input_batch[1]).to(device)
+                text_batch = Variable(input_batch[2]).to(device)
+                text_len_batch = Variable(input_batch[3]).to(device)
+                target_batch = Variable(input_batch[4]).to(device)
                 z = self.forward(image_batch, text_batch, text_len_batch)
                 log_prob = self.classify(z)
                 loss = criterion(log_prob, target_batch)
@@ -165,9 +165,8 @@ class DualNet(nn.Module):
 
 
 class DDEC(nn.Module):
-    def __init__(self, device, pretrained_model, n_classes, z_dim, use_prior=False, alpha=1.):
+    def __init__(self, pretrained_model, n_classes, z_dim, use_prior=False, alpha=1.):
         super(self.__class__, self).__init__()
-        self.device = device
         self.dualnet = pretrained_model
         self.mu = Parameter(torch.Tensor(n_classes, z_dim))
         self.n_classes = n_classes
@@ -218,9 +217,9 @@ class DDEC(nn.Module):
     # def update_z(self, loader):
     #     z = []
     #     for batch_idx, input_batch in enumerate(loader):
-    #         image_batch = Variable(input_batch[1]).to(self.device)
-    #         text_batch = Variable(input_batch[2]).to(self.device)
-    #         text_len_batch = Variable(input_batch[3]).to(self.device)
+    #         image_batch = Variable(input_batch[1]).to(device)
+    #         text_batch = Variable(input_batch[2]).to(device)
+    #         text_len_batch = Variable(input_batch[3]).to(device)
     #         _z = self.forward(image_batch, text_batch, text_len_batch)
     #         z.append(_z)
     #         del image_batch, text_batch, text_len_batch, _z
@@ -235,9 +234,9 @@ class DDEC(nn.Module):
     #         image_batch = input[batch_idx * batch_size: min((batch_idx + 1) * batch_size, input_num)][1]
     #         text_batch = input[batch_idx * batch_size: min((batch_idx + 1) * batch_size, input_num)][2]
     #         text_len_batch = input[batch_idx * batch_size: min((batch_idx + 1) * batch_size, input_num)][3]
-    #         image_inputs = Variable(image_batch).to(self.device)
-    #         text_inputs = Variable(text_batch).to(self.device)
-    #         text_len_inputs = Variable(text_len_batch).to(self.device)
+    #         image_inputs = Variable(image_batch).to(device)
+    #         text_inputs = Variable(text_batch).to(device)
+    #         text_len_inputs = Variable(text_len_batch).to(device)
     #         _z = self.forward(image_inputs, text_inputs, text_len_inputs)
     #         z.append(_z.data.cpu())
     #         del image_batch, text_batch, image_inputs, text_inputs, text_len_inputs, _z
@@ -249,27 +248,22 @@ class DDEC(nn.Module):
         train_num = len(train_dataset)
         '''X: tensor data'''
         print("Training at %s" % (str(datetime.datetime.now())))
-        self.to(self.device)
-        self.dualnet = nn.DataParallel(self.dualnet)
+        device = torch.device(args.gpu)
+        self.to(device)
+        # self.dualnet = nn.DataParallel(self.dualnet)
         optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=args.lr, momentum=0.9)
 
         full_loader = DataLoader(full_dataset,
                                  batch_size=args.batch_size,
                                  shuffle=False,
-                                 pin_memory=True,
-                                 num_workers=CONFIG.DATA_WORKERS,
                                  collate_fn=collate_fn)
         train_loader = DataLoader(train_dataset,
                                  batch_size=args.batch_size,
                                  shuffle=False,
-                                 pin_memory=True,
-                                 num_workers=CONFIG.DATA_WORKERS,
                                  collate_fn=collate_fn)
         test_loader = DataLoader(test_dataset,
                                  batch_size=args.batch_size,
                                  shuffle=False,
-                                 pin_memory=True,
-                                 num_workers=CONFIG.DATA_WORKERS,
                                  collate_fn=collate_fn)
         short_codes = []
         for batch_idx, input_batch in enumerate(tqdm(full_loader, desc="Extracting short codes", total=len(full_loader))):
@@ -280,9 +274,9 @@ class DDEC(nn.Module):
         train_labels = []
         for batch_idx, input_batch in enumerate(tqdm(train_loader, desc="Extracting initial cluster means", total=len(train_loader))):
             train_short_codes.extend(list(input_batch[0]))
-            image_batch = Variable(input_batch[1]).to(self.device)
-            text_batch = Variable(input_batch[2]).to(self.device)
-            text_len_batch = Variable(input_batch[3]).to(self.device)
+            image_batch = Variable(input_batch[1]).to(device)
+            text_batch = Variable(input_batch[2]).to(device)
+            text_len_batch = Variable(input_batch[3]).to(device)
             train_labels.extend(input_batch[4].tolist())
             _z = self.forward(image_batch, text_batch, text_len_batch)
             train_z.append(_z.data.cpu())
@@ -316,10 +310,10 @@ class DDEC(nn.Module):
             if not args.skip_semi:
                 for batch_idx, input_batch in enumerate(tqdm(train_loader, desc="Semi supervised learning", total=len(train_loader))):
                     # semi-supervised phase
-                    image_batch = Variable(input_batch[1]).to(self.device)
-                    text_batch = Variable(input_batch[2]).to(self.device)
-                    text_len_batch = Variable(input_batch[3]).to(self.device)
-                    target_batch = Variable(input_batch[4]).to(self.device)
+                    image_batch = Variable(input_batch[1]).to(device)
+                    text_batch = Variable(input_batch[2]).to(device)
+                    text_len_batch = Variable(input_batch[3]).to(device)
+                    target_batch = Variable(input_batch[4]).to(device)
                     optimizer.zero_grad()
                     _z = self.forward(image_batch, text_batch, text_len_batch)
                     qbatch = self.soft_assignemt(_z)
@@ -333,9 +327,9 @@ class DDEC(nn.Module):
             q = []
             for batch_idx, input_batch in enumerate(tqdm(full_loader, desc="Updating p-value", total=len(full_loader))):
                 # clustering phase
-                image_batch = Variable(input_batch[1]).to(self.device)
-                text_batch = Variable(input_batch[2]).to(self.device)
-                text_len_batch = Variable(input_batch[3]).to(self.device)
+                image_batch = Variable(input_batch[1]).to(device)
+                text_batch = Variable(input_batch[2]).to(device)
+                text_len_batch = Variable(input_batch[3]).to(device)
 
                 _z = self.forward(image_batch, text_batch, text_len_batch)
                 _q = 1.0 / (1.0 + torch.sum((_z.unsqueeze(1) - self.mu) ** 2, dim=2) / self.alpha)
@@ -351,12 +345,12 @@ class DDEC(nn.Module):
 
             for batch_idx, input_batch in enumerate(tqdm(full_loader, desc="Unsupervised learning", total=len(full_loader))):
                 # clustering phase
-                image_batch = Variable(input_batch[1]).to(self.device)
-                text_batch = Variable(input_batch[2]).to(self.device)
-                text_len_batch = Variable(input_batch[3]).to(self.device)
+                image_batch = Variable(input_batch[1]).to(device)
+                text_batch = Variable(input_batch[2]).to(device)
+                text_len_batch = Variable(input_batch[3]).to(device)
                 pbatch = p[batch_idx * args.batch_size: min((batch_idx + 1) * args.batch_size, full_num)]
 
-                p_inputs = Variable(pbatch).to(self.device)
+                p_inputs = Variable(pbatch).to(device)
 
                 _z = self.forward(image_batch, text_batch, text_len_batch)
                 qbatch = self.soft_assignemt(_z)
@@ -396,9 +390,9 @@ class DDEC(nn.Module):
         test_q = []
         for batch_idx, input_batch in enumerate(tqdm(full_loader, desc="Calcaulating q-values", total=len(full_loader))):
             # clustering phase
-            image_batch = Variable(input_batch[1]).to(self.device)
-            text_batch = Variable(input_batch[2]).to(self.device)
-            text_len_batch = Variable(input_batch[3]).to(self.device)
+            image_batch = Variable(input_batch[1]).to(device)
+            text_batch = Variable(input_batch[2]).to(device)
+            text_len_batch = Variable(input_batch[3]).to(device)
 
             _z = self.forward(image_batch, text_batch, text_len_batch)
             _q = 1.0 / (1.0 + torch.sum((_z.unsqueeze(1) - self.mu) ** 2, dim=2) / self.alpha)
@@ -410,9 +404,9 @@ class DDEC(nn.Module):
         test_labels = []
         for batch_idx, input_batch in enumerate(tqdm(test_loader, desc="Updating p-value", total=len(test_loader))):
             test_short_codes.extend(list(input_batch[0]))
-            image_batch = Variable(input_batch[1]).to(self.device)
-            text_batch = Variable(input_batch[2]).to(self.device)
-            text_len_batch = Variable(input_batch[3]).to(self.device)
+            image_batch = Variable(input_batch[1]).to(device)
+            text_batch = Variable(input_batch[2]).to(device)
+            text_len_batch = Variable(input_batch[3]).to(device)
             test_labels.extend(input_batch[4].tolist())
             _z = self.forward(image_batch, text_batch, text_len_batch)
             _q = 1.0 / (1.0 + torch.sum((_z.unsqueeze(1) - self.mu) ** 2, dim=2) / self.alpha)

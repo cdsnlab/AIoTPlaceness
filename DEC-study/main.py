@@ -69,7 +69,6 @@ def main():
 
 def pretrain_ddec(args):
     print("Pretraining...")
-    device = torch.device(args.gpu)
 
     print("Loading dataset...")
     df_data = pd.read_csv(args.data_csv, index_col=0, header=None, encoding='utf-8')
@@ -88,14 +87,14 @@ def pretrain_ddec(args):
     train_dataset, test_dataset = load_pretrain_data(args.image_dir, word_idx[1], df_data, df_train, df_test, CONFIG)
     print("Loading dataset completed")
 
-    dualnet = DualNet(device=device, pretrained_embedding=embedding_model, text_features=args.text_features, z_dim=args.z_dim, n_classes=args.n_classes)
+    dualnet = DualNet(pretrained_embedding=embedding_model, text_features=args.text_features, z_dim=args.z_dim, n_classes=args.n_classes)
     exp = Experiment("Dualnet_pretrain_" + str(args.z_dim), capture_io=True)
     print(dualnet)
 
     for arg, value in vars(args).items():
         exp.param(arg, value)
     try:
-        dualnet.fit(train_dataset,  test_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.pretrain_epochs,
+        dualnet.fit(train_dataset,  test_dataset, args=args,
                  save_path="/4TBSSD/CHECKPOINT/pretrain_" + str(args.z_dim) + "_0.pt")
         print("Finish!!!")
 
@@ -126,7 +125,7 @@ def train_ddec(args):
     dualnet = DualNet(device=device, pretrained_embedding=embedding_model, text_features=args.text_features,
                       z_dim=args.z_dim, n_classes=args.n_classes)
     dualnet.load_model("/4TBSSD/CHECKPOINT/pretrain_" + str(args.z_dim) + "_0.pt")
-    ddec = DDEC(device=device, pretrained_model=dualnet, n_classes=args.n_classes, z_dim=args.z_dim, use_prior=args.use_prior)
+    ddec = DDEC(pretrained_model=dualnet, n_classes=args.n_classes, z_dim=args.z_dim, use_prior=args.use_prior)
     exp = Experiment("Dualnet_train_" + str(args.z_dim), capture_io=True)
     print(ddec)
 
