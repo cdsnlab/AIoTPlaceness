@@ -102,8 +102,10 @@ class DualNet(nn.Module):
                                  batch_size=args.batch_size,
                                  shuffle=False,
                                  collate_fn=collate_fn)
-        # optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=lr)
-        optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=args.lr, momentum=0.9)
+        if args.optimizer == 'adam':
+            optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=args.lr)
+        elif args.optimizer == 'sgd':
+            optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=args.lr, momentum=0.9)
         criterion = nn.NLLLoss().to(device)
         self.to(device)
         for epoch in range(args.pretrain_epochs):
@@ -251,7 +253,10 @@ class DDEC(nn.Module):
         device = torch.device(args.gpu)
         self.to(device)
         # self.dualnet = nn.DataParallel(self.dualnet)
-        optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=args.lr, momentum=0.9)
+        if args.optimizer == 'adam':
+            optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=args.lr)
+        elif args.optimizer == 'sgd':
+            optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=args.lr, momentum=0.9)
 
         full_loader = DataLoader(full_dataset,
                                  batch_size=args.batch_size,

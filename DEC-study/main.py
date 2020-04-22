@@ -48,6 +48,8 @@ def main():
     parser.add_argument('-gpu', type=str, default='cuda', help='gpu number')
     parser.add_argument('-sample', type=int, default=None, help='sample train data')
     parser.add_argument('-skip_semi', action='store_true', default=False, help='whether skip semi-supervised learning')
+    parser.add_argument('-resume', action='store_true', default=False, help='whether resume training')
+    parser.add_argument('-optimizer', type=str, default='sgd', help='optimizer to train')
 
     # option
     parser.add_argument('-mode', type=str, default='pretrain', help='pretrain, train, eval')
@@ -88,6 +90,9 @@ def pretrain_ddec(args):
     print("Loading dataset completed")
 
     dualnet = DualNet(pretrained_embedding=embedding_model, text_features=args.text_features, z_dim=args.z_dim, n_classes=args.n_classes)
+    if args.resume:
+        print("loading model...")
+        dualnet.load_model("/4TBSSD/CHECKPOINT/pretrain_" + str(args.z_dim) + "_0.pt")
     exp = Experiment("Dualnet_pretrain_" + str(args.z_dim), capture_io=True)
     print(dualnet)
 
@@ -126,6 +131,9 @@ def train_ddec(args):
                       z_dim=args.z_dim, n_classes=args.n_classes)
     dualnet.load_model("/4TBSSD/CHECKPOINT/pretrain_" + str(args.z_dim) + "_0.pt")
     ddec = DDEC(pretrained_model=dualnet, n_classes=args.n_classes, z_dim=args.z_dim, use_prior=args.use_prior)
+    if args.resume:
+        print("loading model...")
+        ddec.load_model("/4TBSSD/CHECKPOINT/train_" + str(args.z_dim) + "_0.pt")
     exp = Experiment("Dualnet_train_" + str(args.z_dim), capture_io=True)
     print(ddec)
 
