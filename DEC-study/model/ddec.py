@@ -376,7 +376,7 @@ class DDEC(nn.Module):
             train_acc = accuracy_score(train_labels, train_pred)
             train_nmi = normalized_mutual_info_score(train_labels, train_pred, average_method='geometric')
             train_f_1 = f1_score(train_labels, train_pred, average='macro')
-            print("\n#Epoch %3d: acc: %.4f, nmi: %.4f, f_1: %.4f, loss: %.4f, semi_loss: %.4f at %s" % (
+            print("\n#Train Epoch %3d: acc: %.4f, nmi: %.4f, f_1: %.4f, loss: %.4f, semi_loss: %.4f at %s" % (
                 epoch + 1, train_acc, train_nmi, train_f_1, train_loss, semi_train_loss, str(datetime.datetime.now())))
             if epoch == 0:
                 train_pred_last = train_pred
@@ -388,50 +388,48 @@ class DDEC(nn.Module):
                     print("Reach tolerance threshold. Stopping training.")
                     break
 
-        self.eval()
+            self.eval()
+            # update p considering short memory
+            test_q = []
+            for batch_idx, input_batch in enumerate(tqdm(full_loader, desc="Calcaulating q-values", total=len(full_loader))):
+                # clustering phase
+                image_batch = Variable(input_batch[1]).to(device)
+                text_batch = Variable(input_batch[2]).to(device)
+                text_len_batch = Variable(input_batch[3]).to(device)
 
-        print("Testing at %s" % (str(datetime.datetime.now())))
-        # update p considering short memory
-        test_q = []
-        for batch_idx, input_batch in enumerate(tqdm(full_loader, desc="Calcaulating q-values", total=len(full_loader))):
-            # clustering phase
-            image_batch = Variable(input_batch[1]).to(device)
-            text_batch = Variable(input_batch[2]).to(device)
-            text_len_batch = Variable(input_batch[3]).to(device)
+                _z = self.forward(image_batch, text_batch, text_len_batch)
+                _q = 1.0 / (1.0 + torch.sum((_z.unsqueeze(1) - self.mu) ** 2, dim=2) / self.alpha)
+                _q = _q ** (self.alpha + 1.0) / 2.0
+                test_q.append(_q.data.cpu())
+                del image_batch, text_batch, text_len_batch, _z, _q
 
-            _z = self.forward(image_batch, text_batch, text_len_batch)
-            _q = 1.0 / (1.0 + torch.sum((_z.unsqueeze(1) - self.mu) ** 2, dim=2) / self.alpha)
-            _q = _q ** (self.alpha + 1.0) / 2.0
-            test_q.append(_q.data.cpu())
-            del image_batch, text_batch, text_len_batch, _z, _q
+            test_short_codes = []
+            test_labels = []
+            for batch_idx, input_batch in enumerate(tqdm(test_loader, desc="Updating p-value", total=len(test_loader))):
+                test_short_codes.extend(list(input_batch[0]))
+                image_batch = Variable(input_batch[1]).to(device)
+                text_batch = Variable(input_batch[2]).to(device)
+                text_len_batch = Variable(input_batch[3]).to(device)
+                test_labels.extend(input_batch[4].tolist())
+                _z = self.forward(image_batch, text_batch, text_len_batch)
+                _q = 1.0 / (1.0 + torch.sum((_z.unsqueeze(1) - self.mu) ** 2, dim=2) / self.alpha)
+                _q = _q ** (self.alpha + 1.0) / 2.0
+                test_q.append(_q.data.cpu())
+                del image_batch, text_batch, text_len_batch, _z
 
-        test_short_codes = []
-        test_labels = []
-        for batch_idx, input_batch in enumerate(tqdm(test_loader, desc="Updating p-value", total=len(test_loader))):
-            test_short_codes.extend(list(input_batch[0]))
-            image_batch = Variable(input_batch[1]).to(device)
-            text_batch = Variable(input_batch[2]).to(device)
-            text_len_batch = Variable(input_batch[3]).to(device)
-            test_labels.extend(input_batch[4].tolist())
-            _z = self.forward(image_batch, text_batch, text_len_batch)
-            _q = 1.0 / (1.0 + torch.sum((_z.unsqueeze(1) - self.mu) ** 2, dim=2) / self.alpha)
-            _q = _q ** (self.alpha + 1.0) / 2.0
-            test_q.append(_q.data.cpu())
-            del image_batch, text_batch, text_len_batch, _z
+            test_q = torch.cat(test_q, dim=0)
+            test_q = test_q / torch.sum(test_q, dim=1, keepdim=True)
 
-        test_q = torch.cat(test_q, dim=0)
-        test_q = test_q / torch.sum(test_q, dim=1, keepdim=True)
-
-        test_p = self.target_distribution(test_q)
-        test_pred = torch.argmax(test_p, dim=1).detach().numpy()[full_num:]
-        test_acc = accuracy_score(test_labels, test_pred)
-        test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')
-        test_f_1 = f1_score(test_labels, test_pred, average='macro')
-        print("\n#Test acc: %.4f, Test nmi: %.4f, Test f_1: %.4f" % (
-            test_acc, test_nmi, test_f_1))
-        self.acc = test_acc
-        self.nmi = test_nmi
-        self.f_1 = test_f_1
+            test_p = self.target_distribution(test_q)
+            test_pred = torch.argmax(test_p, dim=1).detach().numpy()[full_num:]
+            test_acc = accuracy_score(test_labels, test_pred)
+            test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')
+            test_f_1 = f1_score(test_labels, test_pred, average='macro')
+            print("\n#Test Epoch %3d: acc: %.4f, Test nmi: %.4f, Test f_1: %.4f at %s" % (
+                epoch + 1, test_acc, test_nmi, test_f_1, str(datetime.datetime.now())))
+            self.acc = test_acc
+            self.nmi = test_nmi
+            self.f_1 = test_f_1
         if save_path:
             self.save_model(save_path)
     
