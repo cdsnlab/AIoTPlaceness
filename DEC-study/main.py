@@ -35,7 +35,9 @@ def main():
     parser.add_argument('-batch_size', type=int, default=128, help='batch size for training')
     # data
     parser.add_argument('-image_dir', type=str, default='/4TBSSD/IMAGE_EMBEDDED_SUBWAY_DATA', help='directory of embedded images')
-    parser.add_argument('-data_csv', type=str, default='/4TBSSD/posts.csv', help='file name of target data csv')
+    parser.add_argument('-raw_text_csv', type=str, default='/4TBSSD/posts.csv', help='file name of target data csv')
+    parser.add_argument('-image_csv', type=str, default='/4TBSSD/sampled_plus_labeled_scaled_pca_normalized_image_encoded_seoul_subway.csv', help='file name of target data csv')
+    parser.add_argument('-text_csv', type=str, default='/4TBSSD/sampled_plus_labeled_scaled_text_doc2vec_seoul_subway.csv', help='file name of target data csv')
     parser.add_argument('-text_embedding_dir', type=str, default='/4TBSSD/TEXT_EMBEDDED_SUBWAY_DATA', help='directory to text embedding')
     parser.add_argument('-split_rate', type=float, default=0.8, help='split rate between train and validation')
     # model
@@ -73,20 +75,11 @@ def pretrain_ddec(args):
     print("Pretraining...")
 
     print("Loading dataset...")
-    df_data = pd.read_csv(args.data_csv, index_col=0, header=None, encoding='utf-8')
-    df_data.columns = ["caption", "path_to_image"]
-    df_data.index.name = "shortcode"
     with open(os.path.join(args.text_embedding_dir, 'word_embedding.p'), "rb") as f:
         embedding_model = cPickle.load(f)
     with open(os.path.join(args.text_embedding_dir, 'word_idx.json'), "r", encoding='utf-8') as f:
         word_idx = json.load(f)
-    df_train = pd.read_csv("/4TBSSD/train_0_category_label.csv",
-                           index_col=0,
-                           encoding='utf-8-sig')
-    df_test = pd.read_csv("/4TBSSD/test_0_category_label.csv",
-                          index_col=0,
-                          encoding='utf-8-sig')
-    train_dataset, test_dataset = load_pretrain_data(args.image_dir, word_idx[1], df_data, df_train, df_test, CONFIG)
+    train_dataset, test_dataset = load_pretrain_data(args.image_dir, word_idx[1], args, CONFIG)
     print("Loading dataset completed")
 
     dualnet = DualNet(pretrained_embedding=embedding_model, text_features=args.text_features, z_dim=args.z_dim, n_classes=args.n_classes)
@@ -112,20 +105,11 @@ def train_ddec(args):
     device = torch.device(args.gpu)
 
     print("Loading dataset...")
-    df_data = pd.read_csv(args.data_csv, index_col=0, header=None, encoding='utf-8')
-    df_data.columns = ["caption", "path_to_image"]
-    df_data.index.name = "shortcode"
     with open(os.path.join(args.text_embedding_dir, 'word_embedding.p'), "rb") as f:
         embedding_model = cPickle.load(f)
     with open(os.path.join(args.text_embedding_dir, 'word_idx.json'), "r", encoding='utf-8') as f:
         word_idx = json.load(f)
-    df_train = pd.read_csv("/4TBSSD/train_0_category_label.csv",
-                           index_col=0,
-                           encoding='utf-8-sig')
-    df_test = pd.read_csv("/4TBSSD/test_0_category_label.csv",
-                          index_col=0,
-                          encoding='utf-8-sig')
-    full_dataset, train_dataset, test_dataset = load_data(args.image_dir, word_idx[1], df_data, df_train, df_test, args.sample, CONFIG)
+    full_dataset, train_dataset, test_dataset = load_data(args.image_dir, word_idx[1], args, CONFIG)
     print("Loading dataset completed")
     dualnet = DualNet(pretrained_embedding=embedding_model, text_features=args.text_features,
                       z_dim=args.z_dim, n_classes=args.n_classes)

@@ -56,9 +56,23 @@ class DualNet(nn.Module):
             nn.Linear(2048, z_dim),
             nn.Tanh()
         )
-        self.classifier = nn.Sequential(
-            nn.Linear(z_dim, n_classes),
-            nn.LogSoftmax(dim=1)
+        self.image_decoder = nn.Sequential(
+            nn.Linear(z_dim, 2000),
+            nn.ReLU(),
+            nn.Linear(2000, 500),
+            nn.ReLU(),
+            nn.Linear(500, 500),
+            nn.ReLU(),
+            nn.Linear(500, 300)
+        )
+        self.text_decoder = nn.Sequential(
+            nn.Linear(z_dim, 2000),
+            nn.ReLU(),
+            nn.Linear(2000, 500),
+            nn.ReLU(),
+            nn.Linear(500, 500),
+            nn.ReLU(),
+            nn.Linear(500, 300)
         )
 
         for m in self.modules():
@@ -88,9 +102,10 @@ class DualNet(nn.Module):
         model_dict.update(pretrained_dict)
         self.load_state_dict(model_dict)
 
-    def classify(self, z):
-        log_prob = self.classifier(z)
-        return log_prob
+    def decoder(self, z):
+        decoded_image = self.image_decoder(z)
+        decoded_text = self.text_decoder(z)
+        return decoded_image, decoded_text
 
     def fit(self, train_dataset, test_dataset, args, save_path=None):
         device = torch.device(args.gpu)
@@ -106,61 +121,50 @@ class DualNet(nn.Module):
             optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=args.lr)
         elif args.optimizer == 'sgd':
             optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=args.lr, momentum=0.9)
-        criterion = nn.NLLLoss().to(device)
+        criterion = nn.MSELoss().to(device)
         self.to(device)
         for epoch in range(args.pretrain_epochs):
             print("Epoch %d at %s" % (epoch, str(datetime.datetime.now())))
             # train 1 epoch
             self.train()
             train_loss = 0.0
-            train_pred = []
-            train_labels = []
             for batch_idx, input_batch in enumerate(tqdm(train_loader, desc="pretraining each epoch", total=len(train_loader))):
                 image_batch = Variable(input_batch[1]).to(device)
                 text_batch = Variable(input_batch[2]).to(device)
                 text_len_batch = Variable(input_batch[3]).to(device)
-                target_batch = Variable(input_batch[4]).to(device)
+                target_image_batch = Variable(input_batch[4]).to(device)
+                target_text_batch = Variable(input_batch[5]).to(device)
                 optimizer.zero_grad()
                 z = self.forward(image_batch, text_batch, text_len_batch)
-                log_prob = self.classify(z)
-                loss = criterion(log_prob, target_batch)
-                loss.backward()
+                decoded_image, decoded_text = self.decoder(z)
+                image_loss = criterion(decoded_image, target_image_batch)
+                image_loss.backward()
+                text_loss = criterion(decoded_image, target_text_batch)
+                text_loss.backward()
                 optimizer.step()
-                train_loss = train_loss + loss.data
-                pred_batch = torch.argmax(log_prob, dim=1).cpu().numpy()
-                train_pred.extend(pred_batch)
-                train_labels.extend(target_batch.cpu().numpy())
-                del image_batch, text_batch, text_len_batch, target_batch, log_prob, loss
-            train_loss = train_loss / len(train_loader)
-            train_acc = accuracy_score(train_labels, train_pred)
-            train_nmi = normalized_mutual_info_score(train_labels, train_pred, average_method='geometric')
-            train_f_1 = f1_score(train_labels, train_pred, average='macro', labels=np.unique(train_pred))
-            print("\n#Train Epoch %3d: acc: %.4f, nmi: %.4f, f_1: %.4f, loss: %.4f at %s" % (
-                epoch + 1, train_acc, train_nmi, train_f_1, train_loss, str(datetime.datetime.now())))
+                train_loss = train_loss + image_loss.data + text_loss.data
+                del image_batch, text_batch, text_len_batch, target_image_batch, target_text_batch, decoded_image, decoded_text, image_loss, text_loss
+            print("\n#Train Epoch %3d: loss: %.4f at %s" % (
+                epoch + 1, train_loss, str(datetime.datetime.now())))
 
             self.eval()
             test_loss = 0.0
-            test_pred = []
-            test_labels = []
             for batch_idx, input_batch in enumerate(tqdm(test_loader, desc="testing each epoch", total=len(test_loader))):
                 image_batch = Variable(input_batch[1]).to(device)
                 text_batch = Variable(input_batch[2]).to(device)
                 text_len_batch = Variable(input_batch[3]).to(device)
-                target_batch = Variable(input_batch[4]).to(device)
+                target_image_batch = Variable(input_batch[4]).to(device)
+                target_text_batch = Variable(input_batch[5]).to(device)
+                optimizer.zero_grad()
                 z = self.forward(image_batch, text_batch, text_len_batch)
-                log_prob = self.classify(z)
-                loss = criterion(log_prob, target_batch)
-                test_loss = test_loss + loss.data
-                pred_batch = torch.argmax(log_prob, dim=1).cpu().numpy()
-                test_pred.extend(pred_batch)
-                test_labels.extend(target_batch.cpu().numpy())
-                del image_batch, text_batch, text_len_batch, target_batch, log_prob, loss
+                decoded_image, decoded_text = self.decoder(z)
+                image_loss = criterion(decoded_image, target_image_batch)
+                text_loss = criterion(decoded_image, target_text_batch)
+                train_loss = train_loss + image_loss.data + text_loss.data
+                del image_batch, text_batch, text_len_batch, target_image_batch, target_text_batch, decoded_image, decoded_text, image_loss, text_loss
             test_loss = test_loss / len(test_loader)
-            test_acc = accuracy_score(test_labels, test_pred)
-            test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')
-            test_f_1 = f1_score(test_labels, test_pred, average='macro', labels=np.unique(test_pred))
-            print("\n#Test Epoch %3d: acc: %.4f, nmi: %.4f, f_1: %.4f, loss: %.4f at %s" % (
-                epoch + 1, test_acc, test_nmi, test_f_1, test_loss, str(datetime.datetime.now())))
+            print("\n#Test Epoch %3d: loss: %.4f at %s" % (
+                epoch + 1, test_loss, str(datetime.datetime.now())))
         if save_path:
             self.save_model(save_path)
 
