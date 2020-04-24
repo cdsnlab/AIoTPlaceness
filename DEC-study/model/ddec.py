@@ -138,7 +138,7 @@ class DualNet(nn.Module):
                 z = self.forward(image_batch, text_batch, text_len_batch)
                 decoded_image, decoded_text = self.decoder(z)
                 image_loss = criterion(decoded_image, target_image_batch)
-                image_loss.backward()
+                image_loss.backward(retain_graph=True)
                 text_loss = criterion(decoded_image, target_text_batch)
                 text_loss.backward()
                 optimizer.step()
