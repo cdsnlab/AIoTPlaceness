@@ -30,8 +30,8 @@ def main():
     parser.add_argument('-lr', type=float, default=1e-02, help='initial learning rate')
     parser.add_argument('-kappa', type=float, default=0.1, help='lr adjust rate')
     parser.add_argument('-tol', type=float, default=1e-03, help='tolerance for early stopping')
-    parser.add_argument('-pretrain_epochs', type=int, default=200, help='number of epochs for train')
-    parser.add_argument('-epochs', type=int, default=100, help='number of epochs for train')
+    parser.add_argument('-pretrain_epochs', type=int, default=100, help='number of epochs for train')
+    parser.add_argument('-epochs', type=int, default=50, help='number of epochs for train')
     parser.add_argument('-batch_size', type=int, default=128, help='batch size for training')
     # data
     parser.add_argument('-image_dir', type=str, default='/4TBSSD/IMAGE_EMBEDDED_SUBWAY_DATA', help='directory of embedded images')

@@ -144,6 +144,7 @@ class DualNet(nn.Module):
                 optimizer.step()
                 train_loss = train_loss + image_loss.data + text_loss.data
                 del image_batch, text_batch, text_len_batch, target_image_batch, target_text_batch, decoded_image, decoded_text, image_loss, text_loss
+            train_loss = train_loss / len(train_loader)
             print("\n#Train Epoch %3d: loss: %.4f at %s" % (
                 epoch + 1, train_loss, str(datetime.datetime.now())))
 
@@ -160,7 +161,7 @@ class DualNet(nn.Module):
                 decoded_image, decoded_text = self.decoder(z)
                 image_loss = criterion(decoded_image, target_image_batch)
                 text_loss = criterion(decoded_image, target_text_batch)
-                train_loss = train_loss + image_loss.data + text_loss.data
+                test_loss = test_loss + image_loss.data + text_loss.data
                 del image_batch, text_batch, text_len_batch, target_image_batch, target_text_batch, decoded_image, decoded_text, image_loss, text_loss
             test_loss = test_loss / len(test_loader)
             print("\n#Test Epoch %3d: loss: %.4f at %s" % (
