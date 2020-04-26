@@ -61,8 +61,8 @@ def load_pretrain_data(image_dir, token_to_index, args, CONFIG):
 
         pbar.update(1)
     pbar.close()
-    train_dataset = LabeledDataset(image_dir, token_to_index, train_short_codes, train_raw_text, np.array(train_image_data), np.array(train_text_data), CONFIG)
-    test_dataset = LabeledDataset(image_dir, token_to_index, test_short_codes, test_raw_text, np.array(test_image_data), np.array(test_text_data), CONFIG)
+    train_dataset = AutoencodingDataset(image_dir, token_to_index, train_short_codes, train_raw_text, np.array(train_image_data), np.array(train_text_data), CONFIG)
+    test_dataset = AutoencodingDataset(image_dir, token_to_index, test_short_codes, test_raw_text, np.array(test_image_data), np.array(test_text_data), CONFIG)
     return train_dataset, test_dataset
 
 def encode_text(word_list, sentence_len, token_to_index):
@@ -74,7 +74,7 @@ def encode_text(word_list, sentence_len, token_to_index):
         vec[i] = index
     return vec, min(len(word_list), sentence_len)
 
-class LabeledDataset(Dataset):
+class AutoencodingDataset(Dataset):
     def __init__(self, image_dir, token_to_index, short_codes, raw_text, image_data, text_data, CONFIG):
         self.short_codes = short_codes
         self.raw_text = raw_text
@@ -150,6 +150,26 @@ def load_data(image_dir, token_to_index, args, CONFIG):
     train_dataset = LabeledDataset(image_dir, token_to_index, train_short_codes, train_raw_text, train_label_data, CONFIG)
     test_dataset = LabeledDataset(image_dir, token_to_index, test_short_codes, test_raw_text, test_label_data, CONFIG)
     return full_dataset, train_dataset, test_dataset
+
+class LabeledDataset(Dataset):
+    def __init__(self, image_dir, token_to_index, short_codes, raw_text, label_data, CONFIG):
+        self.short_codes = short_codes
+        self.raw_text = raw_text
+        self.CONFIG = CONFIG
+        self.image_dir = image_dir
+        self.label_data = label_data
+        self.token_to_index = token_to_index
+
+    def __len__(self):
+        return len(self.short_codes)
+
+    def __getitem__(self, idx):
+        with open(os.path.join(self.image_dir, self.short_codes[idx]) + '.p', "rb") as f:
+            image_data = cPickle.load(f)
+        image_tensor = torch.from_numpy(image_data).type(torch.FloatTensor)
+        text_tensor = self.raw_text[idx][0]
+        text_length = self.raw_text[idx][1]
+        return self.short_codes[idx], image_tensor, text_tensor, text_length, self.label_data[idx]
 
 class UnlabeledDataset(Dataset):
     def __init__(self, image_dir, token_to_index, short_codes, raw_text, CONFIG):
