@@ -3,6 +3,7 @@ import datetime
 import os
 
 import pandas as pd
+from sklearn.cluster import KMeans
 from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import default_collate
 from tqdm import tqdm
@@ -275,14 +276,22 @@ class DDEC(nn.Module):
                                  batch_size=args.batch_size,
                                  shuffle=False,
                                  collate_fn=collate_fn)
+        z = []
         short_codes = []
-        for batch_idx, input_batch in enumerate(tqdm(full_loader, desc="Extracting short codes", total=len(full_loader))):
+        for batch_idx, input_batch in enumerate(tqdm(full_loader, desc="Extracting z from full data", total=len(full_loader))):
             short_codes.extend(list(input_batch[0]))
+            image_batch = Variable(input_batch[1]).to(device)
+            text_batch = Variable(input_batch[2]).to(device)
+            text_len_batch = Variable(input_batch[3]).to(device)
+            _z = self.forward(image_batch, text_batch, text_len_batch)
+            z.append(_z.data.cpu())
+            del image_batch, text_batch, text_len_batch, _z
+        z = torch.cat(z, dim=0)
 
         train_z = []
         train_short_codes = []
         train_labels = []
-        for batch_idx, input_batch in enumerate(tqdm(train_loader, desc="Extracting initial cluster means", total=len(train_loader))):
+        for batch_idx, input_batch in enumerate(tqdm(train_loader, desc="Extracting z from train data", total=len(train_loader))):
             train_short_codes.extend(list(input_batch[0]))
             image_batch = Variable(input_batch[1]).to(device)
             text_batch = Variable(input_batch[2]).to(device)
@@ -292,15 +301,20 @@ class DDEC(nn.Module):
             train_z.append(_z.data.cpu())
             del image_batch, text_batch, text_len_batch, _z
         train_z = torch.cat(train_z, dim=0)
-        df_train = pd.DataFrame(data=train_labels, index=train_short_codes, columns=['label'])
 
-        cluster_means = torch.zeros((self.n_classes, self.z_dim))
-        num_clusters = torch.zeros(self.n_classes)
-        for i, label in enumerate(train_labels):
-            cluster_means[label] = cluster_means[label] + train_z[i]
-            num_clusters[label] = num_clusters[label] + 1
-        cluster_means = cluster_means / num_clusters.unsqueeze(dim=-1)
-        self.mu.data.copy_(cluster_means)
+        print("Initializing cluster centers with kmeans at %s" % (str(datetime.datetime.now())))
+        kmeans = KMeans(self.n_classes, n_init=20, random_state=42)
+        kmeans.fit(z.data.cpu().numpy())
+        train_pred = kmeans.predict(train_z.data.cpu().numpy())
+        print("kmeans completed at %s" % (str(datetime.datetime.now())))
+
+        df_train = pd.DataFrame(data=train_labels, index=train_short_codes, columns=['label'])
+        _, ind = align_cluster(train_labels, train_pred)
+
+        cluster_centers = np.zeros_like(kmeans.cluster_centers_)
+        for i in range(self.n_clusters):
+            cluster_centers[i] = kmeans.cluster_centers_[ind[i]]
+        self.mu.data.copy_(torch.Tensor(cluster_centers))
         # self.mu.data = self.mu.cpu()
 
         if self.use_prior:
@@ -466,3 +480,18 @@ def count_percentage(cluster_labels):
 def adjust_learning_rate(lr, optimizer):
     for param_group in optimizer.param_groups:
         param_group["lr"] = lr
+
+def align_cluster(label, cluster_id):
+    label = np.array(label)
+    cluster_id = np.array(cluster_id)
+    assert label.size == cluster_id.size
+    D = max(label.max(), cluster_id.max()) + 1
+    w = np.zeros((D, D), dtype=np.int64)
+    for i in range(label.size):
+        w[label[i], cluster_id[i]] += 1
+    print(pd.DataFrame(data=w, index=range(D), columns=range(D)))
+    from scipy.optimize import linear_sum_assignment
+    label_ind, cluster_ind = linear_sum_assignment(w.max() - w)
+    print(label_ind)
+    print(cluster_ind)
+    return label_ind, cluster_ind
