@@ -312,7 +312,7 @@ class DDEC(nn.Module):
         _, ind = align_cluster(train_labels, train_pred)
 
         cluster_centers = np.zeros_like(kmeans.cluster_centers_)
-        for i in range(self.n_clusters):
+        for i in range(self.n_classes):
             cluster_centers[i] = kmeans.cluster_centers_[ind[i]]
         self.mu.data.copy_(torch.Tensor(cluster_centers))
         # self.mu.data = self.mu.cpu()
