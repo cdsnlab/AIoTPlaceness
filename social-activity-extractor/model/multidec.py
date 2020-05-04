@@ -371,7 +371,7 @@ class MultiDEC(nn.Module):
             train_f_1 = f1_score(train_labels, train_pred, average='macro')
             print("#Train measure %3d: acc: %.4f, nmi: %.4f, f_1: %.4f" % (
                 epoch + 1, train_acc, train_nmi, train_f_1))
-            print("#Train loss %3d: unsup image: %.4f, unsup text: %.4f, super image: %.4f, super text: %.4f" % (
+            print("#Train loss %3d: unsup img: %.4f, unsup txt: %.4f, super img: %.4f, super txt: %.4f" % (
                 epoch + 1, train_unsupervised_image_loss, train_unsupervised_text_loss, train_supervised_image_loss, train_supervised_text_loss))
             if epoch == 0:
                 train_pred_last = train_pred
@@ -476,7 +476,7 @@ class MultiDEC(nn.Module):
             test_f_1 = f1_score(test_labels, test_pred, average='macro')
             print("#Test measure %3d: acc: %.4f, nmi: %.4f, f_1: %.4f" % (
                 epoch + 1, test_acc, test_nmi, test_f_1))
-            print("#Test loss %3d: unsup image: %.4f, unsup text: %.4f, super image: %.4f, super text: %.4f" % (
+            print("#Test loss %3d: unsup img: %.4f, unsup txt: %.4f, super img: %.4f, super txt: %.4f" % (
                 epoch + 1, test_unsupervised_image_loss, test_unsupervised_text_loss, test_supervised_image_loss, test_supervised_text_loss))
             self.acc = test_acc
             self.nmi = test_nmi
