@@ -276,6 +276,7 @@ class MultiDEC(nn.Module):
             for label in train_labels:
                 self.prior[label] = self.prior[label] + 1
             self.prior = self.prior / len(train_labels)
+        flag_end_training = False
         for epoch in range(num_epochs):
             print("Epoch %d at %s" % (epoch, str(datetime.datetime.now())))
             # update the target distribution p
@@ -381,7 +382,7 @@ class MultiDEC(nn.Module):
                 if delta_label < tol:
                     print('delta_label ', delta_label, '< tol ', tol)
                     print("Reach tolerance threshold. Stopping training.")
-                    break
+                    flag_end_training = True
 
             self.eval()
             test_unsupervised_image_loss = 0.0
@@ -481,6 +482,10 @@ class MultiDEC(nn.Module):
             self.acc = test_acc
             self.nmi = test_nmi
             self.f_1 = test_f_1
+
+            if flag_end_training:
+                break
+
         if save_path:
             self.save_model(save_path)
 
