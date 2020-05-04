@@ -384,6 +384,10 @@ class MultiDEC(nn.Module):
                     break
 
             self.eval()
+            test_unsupervised_image_loss = 0.0
+            test_unsupervised_text_loss = 0.0
+            test_supervised_image_loss = 0.0
+            test_supervised_text_loss = 0.0
             # update p considering short memory
             q = []
             r = []
@@ -407,11 +411,17 @@ class MultiDEC(nn.Module):
             for batch_idx in range(test_num_batch):
                 image_batch = test_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, test_num)][1]
                 text_batch = test_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, test_num)][2]
+                label_batch = test_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, test_num)][3].squeeze(dim=0)
 
                 image_inputs = Variable(image_batch).to(self.device)
                 text_inputs = Variable(text_batch).to(self.device)
+                label_inputs = Variable(label_batch).to(self.device)
 
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
+                qbatch, rbatch = self.soft_assignemt(_image_z, _text_z)
+                supervised_image_loss, supervised_text_loss = self.semi_loss_function(label_inputs, qbatch, rbatch)
+                test_supervised_image_loss += supervised_image_loss.data * len(label_inputs)
+                test_supervised_text_loss += supervised_text_loss.data * len(label_inputs)
                 _q = 1.0 / (1.0 + torch.sum((_image_z.unsqueeze(1) - self.image_encoder.mu) ** 2, dim=2) / self.alpha)
                 _q = _q ** (self.alpha + 1.0) / 2.0
                 q.append(_q.data.cpu())
@@ -419,12 +429,36 @@ class MultiDEC(nn.Module):
                 _r = _r ** (self.alpha + 1.0) / 2.0
                 r.append(_r.data.cpu())
 
-                del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r
+                del image_batch, text_batch, label_batch, image_inputs, text_inputs, label_inputs, _image_z, _text_z, _q, _r
             q = torch.cat(q, dim=0)
             q = q / torch.sum(q, dim=1, keepdim=True)
             r = torch.cat(r, dim=0)
             r = r / torch.sum(r, dim=1, keepdim=True)
             test_p, test_p_image, test_p_text = self.target_distribution(q, r)
+
+            for batch_idx in range(full_num_batch):
+                # clustering phase
+                image_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][1]
+                text_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][2]
+                pbatch = p[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)]
+
+                image_inputs = Variable(image_batch).to(self.device)
+                text_inputs = Variable(text_batch).to(self.device)
+                p_inputs = Variable(pbatch).to(self.device)
+
+                _image_z, _text_z = self.forward(image_inputs, text_inputs)
+                qbatch, rbatch = self.soft_assignemt(_image_z, _text_z)
+                unsupervised_image_loss, unsupervised_text_loss = self.loss_function(p_inputs, qbatch, rbatch)
+                test_unsupervised_image_loss += unsupervised_image_loss.data * len(p_inputs)
+                test_unsupervised_text_loss += unsupervised_text_loss.data * len(p_inputs)
+
+                del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
+            test_unsupervised_image_loss /= full_num
+            test_unsupervised_text_loss /= full_num
+            test_supervised_image_loss /= test_num
+            test_supervised_text_loss /= test_num
+
+
             test_pred = torch.argmax(test_p, dim=1).numpy()[full_num:]
             test_acc = accuracy_score(test_labels, test_pred)
 
@@ -442,6 +476,8 @@ class MultiDEC(nn.Module):
             test_f_1 = f1_score(test_labels, test_pred, average='macro')
             print("#Test measure %3d: acc: %.4f, nmi: %.4f, f_1: %.4f" % (
                 epoch + 1, test_acc, test_nmi, test_f_1))
+            print("#Test loss %3d: unsup image: %.4f, unsup text: %.4f, super image: %.4f, super text: %.4f" % (
+                epoch + 1, test_unsupervised_image_loss, test_unsupervised_text_loss, test_supervised_image_loss, test_supervised_text_loss))
             self.acc = test_acc
             self.nmi = test_nmi
             self.f_1 = test_f_1
