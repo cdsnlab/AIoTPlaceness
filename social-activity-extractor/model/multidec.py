@@ -295,7 +295,7 @@ class MultiDEC(nn.Module):
                 optimizer.zero_grad()
                 image_inputs = Variable(image_batch).to(self.device)
                 text_inputs = Variable(text_batch).to(self.device)
-                label_inputs = Variable(label_batch)
+                label_inputs = Variable(label_batch).to(self.device)
 
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
                 qbatch, rbatch = self.soft_assignemt(_image_z, _text_z)
@@ -345,7 +345,7 @@ class MultiDEC(nn.Module):
                 optimizer.zero_grad()
                 image_inputs = Variable(image_batch).to(self.device)
                 text_inputs = Variable(text_batch).to(self.device)
-                p_inputs = Variable(pbatch)
+                p_inputs = Variable(pbatch).to(self.device)
 
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
                 qbatch, rbatch = self.soft_assignemt(_image_z, _text_z)
