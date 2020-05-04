@@ -209,7 +209,7 @@ class MultiDEC(nn.Module):
         full_num = len(full_dataset)
         full_num_batch = int(math.ceil(1.0 * len(full_dataset) / batch_size))
         train_num = len(train_dataset)
-        train_num_batch = int(math.ceil(1.0 * len(test_dataset) / batch_size))
+        train_num_batch = int(math.ceil(1.0 * len(train_dataset) / batch_size))
         test_num = len(test_dataset)
         test_num_batch = int(math.ceil(1.0 * len(test_dataset) / batch_size))
         '''X: tensor data'''
