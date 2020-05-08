@@ -299,6 +299,22 @@ class MultiDEC(nn.Module):
             r.append(_r.data.cpu())
 
             del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r
+        for batch_idx in range(test_num_batch):
+            image_batch = test_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, test_num)][1]
+            text_batch = test_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, test_num)][2]
+
+            image_inputs = Variable(image_batch).to(self.device)
+            text_inputs = Variable(text_batch).to(self.device)
+
+            _image_z, _text_z = self.forward(image_inputs, text_inputs)
+            _q = 1.0 / (1.0 + torch.sum((_image_z.unsqueeze(1) - self.image_encoder.mu) ** 2, dim=2) / self.alpha)
+            _q = _q ** (self.alpha + 1.0) / 2.0
+            q.append(_q.data.cpu())
+            _r = 1.0 / (1.0 + torch.sum((_text_z.unsqueeze(1) - self.text_encoder.mu) ** 2, dim=2) / self.alpha)
+            _r = _r ** (self.alpha + 1.0) / 2.0
+            r.append(_r.data.cpu())
+
+            del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r
         q = torch.cat(q, dim=0)
         q = q / torch.sum(q, dim=1, keepdim=True)
         r = torch.cat(r, dim=0)
@@ -355,22 +371,6 @@ class MultiDEC(nn.Module):
             for batch_idx in range(full_num_batch):
                 image_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][1]
                 text_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][2]
-
-                image_inputs = Variable(image_batch).to(self.device)
-                text_inputs = Variable(text_batch).to(self.device)
-
-                _image_z, _text_z = self.forward(image_inputs, text_inputs)
-                _q = 1.0 / (1.0 + torch.sum((_image_z.unsqueeze(1) - self.image_encoder.mu) ** 2, dim=2) / self.alpha)
-                _q = _q ** (self.alpha + 1.0) / 2.0
-                q.append(_q.data.cpu())
-                _r = 1.0 / (1.0 + torch.sum((_text_z.unsqueeze(1) - self.text_encoder.mu) ** 2, dim=2) / self.alpha)
-                _r = _r ** (self.alpha + 1.0) / 2.0
-                r.append(_r.data.cpu())
-
-                del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r
-            for batch_idx in range(test_num_batch):
-                image_batch = test_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, test_num)][1]
-                text_batch = test_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, test_num)][2]
 
                 image_inputs = Variable(image_batch).to(self.device)
                 text_inputs = Variable(text_batch).to(self.device)
