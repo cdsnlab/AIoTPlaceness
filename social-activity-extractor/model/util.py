@@ -887,3 +887,4 @@ def do_tsne(input_data, df_label, num_clusters, save_path):
     color_dict = {v: k for v, k in enumerate(sns.color_palette("Paired", num_clusters))}
     sns_plot = sns.scatterplot(x="x", y="y", hue='label', palette=color_dict, data=df_tsne, marker='.', s=128)
     plt.savefig(save_path)
+    plt.close(fig)
