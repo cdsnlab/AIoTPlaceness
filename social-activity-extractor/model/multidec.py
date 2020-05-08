@@ -322,7 +322,7 @@ class MultiDEC(nn.Module):
 
         p, _, _ = self.target_distribution(q, r)
         initial_pred = torch.argmax(p, dim=1).numpy()
-        df_initial = pd.DataFrame(data=initial_pred, index=full_short_codes, columns=['label'])
+        df_initial = pd.DataFrame(data=initial_pred, index=full_short_codes + test_short_codes, columns=['label'])
         for index, row in df_train.iterrows():
             df_initial.loc[index]['label'] = row['label'] + self.n_clusters
         for index, row in df_test.iterrows():
