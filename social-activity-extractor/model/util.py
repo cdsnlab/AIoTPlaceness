@@ -882,11 +882,12 @@ def do_tsne(input_data, df_label, num_clusters, save_path):
     df_tsne = pd.DataFrame({
         'x': tsne_result[:, 0],
         'y': tsne_result[:, 1],
-        'label': df_label.label.squeeze()
+        'label': df_label.label.squeeze(),
+        'size': df_label.size.squeeze()
     })
     df_tsne.index = df_label.index
     fig = plt.figure()
     color_dict = {v: k for v, k in enumerate(sns.color_palette("Paired", num_clusters))}
-    sns_plot = sns.scatterplot(x="x", y="y", hue='label', palette=color_dict, data=df_tsne, marker='.', s=128)
+    sns_plot = sns.scatterplot(x="x", y="y", hue='label', size='size', palette=color_dict, data=df_tsne, marker='.')
     plt.savefig(save_path)
     plt.close(fig)
