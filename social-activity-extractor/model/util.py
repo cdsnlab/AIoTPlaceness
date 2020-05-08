@@ -878,8 +878,8 @@ def do_tsne(input_data, df_label, num_clusters, save_path):
     tsne_object = TSNE(random_state=42)
     tsne_result = tsne_object.fit_transform(input_data)
     df_tsne = pd.DataFrame({
-        'x': tsne_result[:][0],
-        'y': tsne_result[:][1],
+        'x': tsne_result[:, 0],
+        'y': tsne_result[:, 1],
         'label': df_label.label.squeeze()
     })
     df_tsne.index = df_label.index
