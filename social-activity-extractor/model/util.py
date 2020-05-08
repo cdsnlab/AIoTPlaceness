@@ -1,5 +1,7 @@
 import collections
 import operator
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns; sns.set()
 import torch
