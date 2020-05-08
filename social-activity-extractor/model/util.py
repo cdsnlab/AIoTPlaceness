@@ -1,10 +1,12 @@
 import collections
 import operator
-
+import matplotlib.pyplot as plt
+import seaborn as sns; sns.set()
 import torch
 import torchvision.transforms as transforms
 from torchvision.datasets.folder import pil_loader
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.manifold import TSNE
 from sklearn.model_selection import train_test_split
 
 import torch.nn.functional as F
@@ -870,3 +872,19 @@ def pdist(sample_1, sample_2, norm=2, eps=1e-5):
         differences = torch.abs(expanded_1 - expanded_2) ** norm
         inner = torch.sum(differences, dim=2, keepdim=False)
         return (eps + inner) ** (1. / norm)
+
+
+def do_tsne(input_data, df_label, num_clusters, save_path):
+    tsne_object = TSNE(random_state=42)
+    tsne_result = tsne_object.fit_transform(input_data)
+    print(tsne_result.shape)
+    df_tsne = pd.DataFrame({
+        'x': tsne_result[:][0],
+        'y': tsne_result[:][1],
+        'label': df_label['label']
+    })
+    df_tsne.index = df_label.index
+    fig = plt.figure()
+    color_dict = {v: k for v, k in enumerate(sns.color_palette("Paired", num_clusters))}
+    sns_plot = sns.scatterplot(x="x", y="y", hue='label', palette=color_dict, data=df_tsne, marker='.', s=128)
+    plt.savefig(save_path)

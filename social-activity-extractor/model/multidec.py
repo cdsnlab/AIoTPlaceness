@@ -15,7 +15,7 @@ from torch.autograd import Variable
 
 import numpy as np
 import math
-from model.util import align_cluster, count_percentage, pdist
+from model.util import align_cluster, count_percentage, pdist, do_tsne
 from sklearn.cluster import KMeans
 
 
@@ -205,7 +205,7 @@ class MultiDEC(nn.Module):
             p = p_image/2 + p_text/2
         return p, p_image, p_text
 
-    def fit_predict(self, full_dataset, train_dataset, test_dataset, lr=0.001, batch_size=256, num_epochs=10, update_time=1, save_path=None, tol=1e-3, kappa=0.1):
+    def fit_predict(self, full_dataset, train_dataset, test_dataset, CONFIG, lr=0.001, batch_size=256, num_epochs=10, update_time=1, save_path=None, tol=1e-3, kappa=0.1):
         full_num = len(full_dataset)
         full_num_batch = int(math.ceil(1.0 * len(full_dataset) / batch_size))
         train_num = len(train_dataset)
@@ -308,11 +308,13 @@ class MultiDEC(nn.Module):
         initial_pred = torch.argmax(p, dim=1).numpy()
         df_initial = pd.DataFrame(data=initial_pred, index=full_short_codes, columns=['label'])
         for index, row in df_train.iterrows():
-            df_initial.loc[index] = row['label'] + self.n_clusters
+            df_initial.loc[index]['label'] = row['label'] + self.n_clusters
         for index, row in df_test.iterrows():
-            df_initial.loc[index] = row['label'] + self.n_clusters
+            df_initial.loc[index]['label'] = row['label'] + self.n_clusters
 
-        print(df_initial)
+        print("Conducting TSNE at %s" % (str(datetime.datetime.now())))
+        do_tsne(p.numpy(), df_initial, self.n_clusters, os.path.join(CONFIG.SVG_PATH, 'test.svg'))
+        print("TSNE completed at %s" % (str(datetime.datetime.now())))
 
         flag_end_training = False
         for epoch in range(num_epochs):
