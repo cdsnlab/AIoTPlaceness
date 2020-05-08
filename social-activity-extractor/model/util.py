@@ -881,7 +881,7 @@ def do_tsne(input_data, df_label, num_clusters, save_path):
     df_tsne = pd.DataFrame({
         'x': tsne_result[:][0],
         'y': tsne_result[:][1],
-        'label': df_label['label']
+        'label': df_label.label.squeeze()
     })
     df_tsne.index = df_label.index
     fig = plt.figure()
