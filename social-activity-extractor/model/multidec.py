@@ -259,9 +259,11 @@ class MultiDEC(nn.Module):
 
         full_short_codes = full_dataset[:][0]
         train_short_codes = train_dataset[:][0]
+        test_short_codes = test_dataset[:][0]
         train_labels = train_dataset[:][3].squeeze(dim=0).data.cpu().numpy()
         test_labels = test_dataset[:][3].squeeze(dim=0).data.cpu().numpy()
         df_train = pd.DataFrame(data=train_labels, index=train_short_codes, columns=['label'])
+        df_test = pd.DataFrame(data=test_labels, index=test_short_codes, columns=['label'])
         _, image_ind = align_cluster(train_labels, train_image_pred)
         _, text_ind = align_cluster(train_labels, train_text_pred)
 
@@ -276,6 +278,42 @@ class MultiDEC(nn.Module):
             for label in train_labels:
                 self.prior[label] = self.prior[label] + 1
             self.prior = self.prior / len(train_labels)
+
+        print("Calculating initial p at %s" % (str(datetime.datetime.now())))
+        # update p considering short memory
+        q = []
+        r = []
+        for batch_idx in range(full_num_batch):
+            image_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][1]
+            text_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][2]
+
+            image_inputs = Variable(image_batch).to(self.device)
+            text_inputs = Variable(text_batch).to(self.device)
+
+            _image_z, _text_z = self.forward(image_inputs, text_inputs)
+            _q = 1.0 / (1.0 + torch.sum((_image_z.unsqueeze(1) - self.image_encoder.mu) ** 2, dim=2) / self.alpha)
+            _q = _q ** (self.alpha + 1.0) / 2.0
+            q.append(_q.data.cpu())
+            _r = 1.0 / (1.0 + torch.sum((_text_z.unsqueeze(1) - self.text_encoder.mu) ** 2, dim=2) / self.alpha)
+            _r = _r ** (self.alpha + 1.0) / 2.0
+            r.append(_r.data.cpu())
+
+            del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r
+        q = torch.cat(q, dim=0)
+        q = q / torch.sum(q, dim=1, keepdim=True)
+        r = torch.cat(r, dim=0)
+        r = r / torch.sum(r, dim=1, keepdim=True)
+
+        p, _, _ = self.target_distribution(q, r)
+        initial_pred = torch.argmax(p, dim=1).numpy()
+        df_initial = pd.DataFrame(data=initial_pred, index=full_short_codes, columns=['label'])
+        for index, row in df_train.iterrows():
+            df_initial.loc[index] = row['label'] + self.n_clusters
+        for index, row in df_test.iterrows():
+            df_initial.loc[index] = row['label'] + self.n_clusters
+
+        print(df_initial)
+
         flag_end_training = False
         for epoch in range(num_epochs):
             print("Epoch %d at %s" % (epoch, str(datetime.datetime.now())))
@@ -315,6 +353,22 @@ class MultiDEC(nn.Module):
             for batch_idx in range(full_num_batch):
                 image_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][1]
                 text_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][2]
+
+                image_inputs = Variable(image_batch).to(self.device)
+                text_inputs = Variable(text_batch).to(self.device)
+
+                _image_z, _text_z = self.forward(image_inputs, text_inputs)
+                _q = 1.0 / (1.0 + torch.sum((_image_z.unsqueeze(1) - self.image_encoder.mu) ** 2, dim=2) / self.alpha)
+                _q = _q ** (self.alpha + 1.0) / 2.0
+                q.append(_q.data.cpu())
+                _r = 1.0 / (1.0 + torch.sum((_text_z.unsqueeze(1) - self.text_encoder.mu) ** 2, dim=2) / self.alpha)
+                _r = _r ** (self.alpha + 1.0) / 2.0
+                r.append(_r.data.cpu())
+
+                del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r
+            for batch_idx in range(test_num_batch):
+                image_batch = test_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, test_num)][1]
+                text_batch = test_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, test_num)][2]
 
                 image_inputs = Variable(image_batch).to(self.device)
                 text_inputs = Variable(text_batch).to(self.device)
@@ -459,20 +513,8 @@ class MultiDEC(nn.Module):
             test_supervised_image_loss /= test_num
             test_supervised_text_loss /= test_num
 
-
             test_pred = torch.argmax(test_p, dim=1).numpy()[full_num:]
             test_acc = accuracy_score(test_labels, test_pred)
-
-            test_short_codes = test_dataset[:][0]
-            test_short_codes = np.concatenate([full_short_codes, test_short_codes], axis=0)
-            # df_test = pd.DataFrame(data=torch.argmax(test_p, dim=1).numpy(), index=test_short_codes, columns=['labels'])
-            # df_test.to_csv('mdec_label.csv', encoding='utf-8-sig')
-            # df_test_p = pd.DataFrame(data=test_p.data.numpy(), index=test_short_codes)
-            # df_test_p.to_csv('mdec_p.csv', encoding='utf-8-sig')
-            # df_test_p_image = pd.DataFrame(data=test_p_image.data.numpy(), index=test_short_codes)
-            # df_test_p_image.to_csv('mdec_p_image.csv', encoding='utf-8-sig')
-            # df_test_p_text = pd.DataFrame(data=test_p_text.data.numpy(), index=test_short_codes)
-            # df_test_p_text.to_csv('mdec_p_text.csv', encoding='utf-8-sig')
             test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')
             test_f_1 = f1_score(test_labels, test_pred, average='macro')
             print("#Test measure %3d: acc: %.4f, nmi: %.4f, f_1: %.4f" % (
