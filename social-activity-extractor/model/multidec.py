@@ -308,9 +308,9 @@ class MultiDEC(nn.Module):
         initial_pred = torch.argmax(p, dim=1).numpy()
         df_initial = pd.DataFrame(data=initial_pred, index=full_short_codes, columns=['label'])
         for index, row in df_train.iterrows():
-            df_initial.loc[index]['label'] = row['label'] + self.n_clusters
+            df_initial.loc[index] = row['label'] + self.n_clusters
         for index, row in df_test.iterrows():
-            df_initial.loc[index]['label'] = row['label'] + self.n_clusters
+            df_initial.loc[index] = row['label'] + self.n_clusters
 
         print("Conducting TSNE at %s" % (str(datetime.datetime.now())))
         do_tsne(p.numpy(), df_initial, self.n_clusters, os.path.join(CONFIG.SVG_PATH, 'test.svg'))
