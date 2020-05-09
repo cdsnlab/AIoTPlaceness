@@ -886,7 +886,7 @@ def do_tsne(input_data, df_label, num_clusters, save_path):
         'pred': df_label.pred.squeeze()
     })
     df_tsne.index = df_label.index
-    fig = plt.figure(figsize=(13.2, 9.6))
+    fig = plt.figure(figsize=(24, 24))
     color_dict = {v: k for v, k in enumerate(sns.color_palette("Paired", num_clusters))}
     sns_plot = sns.scatterplot(x="x", y="y", hue='label', size='pred', style='pred',
                                markers={'pred': '.', 'label': 'X'}, sizes={'pred': 40, 'label': 40},
