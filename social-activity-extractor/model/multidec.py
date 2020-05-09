@@ -205,7 +205,7 @@ class MultiDEC(nn.Module):
             p = p_image/2 + p_text/2
         return p, p_image, p_text
 
-    def fit_predict(self, full_dataset, train_dataset, test_dataset, CONFIG, lr=0.001, batch_size=256, num_epochs=10, update_time=1, save_path=None, tol=1e-3, kappa=0.1):
+    def fit_predict(self, full_dataset, train_dataset, test_dataset, args, CONFIG, lr=0.001, batch_size=256, num_epochs=10, update_time=1, save_path=None, tol=1e-3, kappa=0.1):
         full_num = len(full_dataset)
         full_num_batch = int(math.ceil(1.0 * len(full_dataset) / batch_size))
         train_num = len(train_dataset)
@@ -327,8 +327,8 @@ class MultiDEC(nn.Module):
         df_initial.loc[df_train.index, 'pred'] = 'label'
         df_initial.loc[df_test.index, 'pred'] = 'label'
 
-        print("Conducting TSNE at %s" % (str(datetime.datetime.now())))
-        do_tsne(p.numpy(), df_initial, self.n_clusters, os.path.join(CONFIG.SVG_PATH, 'test.png'))
+        print("Conducting initial TSNE at %s" % (str(datetime.datetime.now())))
+        do_tsne(p.numpy(), df_initial, self.n_clusters, os.path.join(CONFIG.SVG_PATH, args.gpu, 'epoch_000.png'))
         print("TSNE completed at %s" % (str(datetime.datetime.now())))
 
         flag_end_training = False
@@ -491,6 +491,9 @@ class MultiDEC(nn.Module):
             r = torch.cat(r, dim=0)
             r = r / torch.sum(r, dim=1, keepdim=True)
             test_p, test_p_image, test_p_text = self.target_distribution(q, r)
+
+            str_epoch = '%03d' % (epoch + 1)
+            do_tsne(test_p.numpy(), df_initial, self.n_clusters, os.path.join(CONFIG.SVG_PATH, args.gpu, 'epoch_' + str_epoch + '.png'))
 
             for batch_idx in range(full_num_batch):
                 # clustering phase
