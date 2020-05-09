@@ -325,7 +325,11 @@ class MultiDEC(nn.Module):
         df_initial = pd.DataFrame(data=initial_pred, index=full_short_codes + test_short_codes, columns=['label'])
         df_initial['pred'] = 'pred'
         df_initial.loc[df_train.index, 'pred'] = 'label'
+        for idx, row in df_train.iterrows():
+            df_initial.loc[idx, 'label'] = row['label']
         df_initial.loc[df_test.index, 'pred'] = 'label'
+        for idx, row in df_test.iterrows():
+            df_initial.loc[idx, 'label'] = row['label']
 
         print("Conducting initial TSNE at %s" % (str(datetime.datetime.now())))
         do_tsne(p.numpy(), df_initial, self.n_clusters, os.path.join(CONFIG.SVG_PATH, args.gpu, 'epoch_000.png'))
