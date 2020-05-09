@@ -323,12 +323,12 @@ class MultiDEC(nn.Module):
         p, _, _ = self.target_distribution(q, r)
         initial_pred = torch.argmax(p, dim=1).numpy()
         df_initial = pd.DataFrame(data=initial_pred, index=full_short_codes + test_short_codes, columns=['label'])
-        df_initial['size'] = 1
-        df_initial.loc[df_train.index]['size'] = 3
-        df_initial.loc[df_test.index]['size'] = 3
+        df_initial['pred'] = 'pred'
+        df_initial.loc[df_train.index]['pred'] = 'label'
+        df_initial.loc[df_test.index]['pred'] = 'label'
 
         print("Conducting TSNE at %s" % (str(datetime.datetime.now())))
-        do_tsne(p.numpy(), df_initial, self.n_clusters, os.path.join(CONFIG.SVG_PATH, 'test.svg'))
+        do_tsne(p.numpy(), df_initial, self.n_clusters, os.path.join(CONFIG.SVG_PATH, 'test.png'))
         print("TSNE completed at %s" % (str(datetime.datetime.now())))
 
         flag_end_training = False
