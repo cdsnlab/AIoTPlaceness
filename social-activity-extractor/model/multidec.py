@@ -501,7 +501,7 @@ class MultiDEC(nn.Module):
             r = r / torch.sum(r, dim=1, keepdim=True)
             test_p, test_p_image, test_p_text = self.target_distribution(q, r)
 
-            if args.tsne:
+            if args.tsne and (epoch + 1) % 5 == 0:
                 do_tsne(test_p.numpy(), df_initial, self.n_clusters, os.path.join(CONFIG.SVG_PATH, args.gpu, 'epoch_' + ('%03d' % (epoch + 1)) + '.png'))
 
             for batch_idx in range(full_num_batch):
