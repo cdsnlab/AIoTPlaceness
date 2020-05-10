@@ -54,6 +54,7 @@ def main():
     parser.add_argument('-fold', type=int, default=5, help='number of fold')
     parser.add_argument('-stop_fold', type=int, default=5, help='early stop at fold idx')
     parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
+    parser.add_argument('-tsne', action='store_true', default=False, help='whether to print tsne result')
     parser.add_argument('-gpu', type=str, default='cuda', help='gpu number')
     # option
     parser.add_argument('-eval', action='store_true', default=False, help='whether evaluate or train it')
@@ -108,17 +109,17 @@ def train_multidec(args):
 
             image_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=n_clusters,
                                          encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
-            image_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix_model + "_image_sdae_" + str(fold_idx)) + ".pt")
+            image_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix_model + "_image_sdae_" + str(args.latent_dim) + '_'  + str(fold_idx)) + ".pt")
             # image_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "sampled_plus_labeled_scaled_image_sdae_" + str(fold_idx)) + ".pt")
             text_encoder = MDEC_encoder(input_dim=args.input_dim, z_dim=args.latent_dim, n_clusters=n_clusters,
                                         encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
-            text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix_model + "_text_sdae_" + str(fold_idx)) + ".pt")
+            text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix_model + "_text_sdae_" + str(args.latent_dim) + '_'  + str(fold_idx)) + ".pt")
             # text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "sampled_plus_labeled_scaled_text_sdae_" + str(fold_idx)) + ".pt")
             mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder, ours=args.ours, use_prior=args.use_prior,
                                 n_clusters=n_clusters)
 
             mdec.fit_predict(full_dataset, train_dataset, val_dataset, args, CONFIG, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
-                     save_path=os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix_csv + "_mdec_" + str(fold_idx)) + ".pt", tol=args.tol, kappa=args.kappa)
+                     save_path=os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix_csv + "_mdec_" + str(args.latent_dim) + '_'  + str(fold_idx)) + ".pt", tol=args.tol, kappa=args.kappa)
             acc_list.append(mdec.acc)
             nmi_list.append(mdec.nmi)
             f_1_list.append(mdec.f_1)

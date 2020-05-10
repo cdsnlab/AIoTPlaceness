@@ -322,6 +322,10 @@ class MultiDEC(nn.Module):
 
         p, _, _ = self.target_distribution(q, r)
         initial_pred = torch.argmax(p, dim=1).numpy()
+        initial_acc = accuracy_score(test_labels, initial_pred[full_num:])
+        initial_nmi = normalized_mutual_info_score(test_labels, initial_pred[full_num:], average_method='geometric')
+        initial_f_1 = f1_score(test_labels, initial_pred[full_num:], average='macro')
+        print("#Initial measure: acc: %.4f, nmi: %.4f, f_1: %.4f" % (initial_acc, initial_nmi, initial_f_1))
         df_initial = pd.DataFrame(data=initial_pred, index=full_short_codes + test_short_codes, columns=['label'])
         df_initial['pred'] = 'pred'
         df_initial.loc[df_train.index, 'pred'] = 'label'
@@ -331,9 +335,10 @@ class MultiDEC(nn.Module):
         for idx, row in df_test.iterrows():
             df_initial.loc[idx, 'label'] = row['label']
 
-        print("Conducting initial TSNE at %s" % (str(datetime.datetime.now())))
-        do_tsne(p.numpy(), df_initial, self.n_clusters, os.path.join(CONFIG.SVG_PATH, args.gpu, 'epoch_000.png'))
-        print("TSNE completed at %s" % (str(datetime.datetime.now())))
+        if args.tsne:
+            print("Conducting initial TSNE at %s" % (str(datetime.datetime.now())))
+            do_tsne(p.numpy(), df_initial, self.n_clusters, os.path.join(CONFIG.SVG_PATH, args.gpu, 'epoch_000.png'))
+            print("TSNE completed at %s" % (str(datetime.datetime.now())))
 
         flag_end_training = False
         for epoch in range(num_epochs):
@@ -496,8 +501,8 @@ class MultiDEC(nn.Module):
             r = r / torch.sum(r, dim=1, keepdim=True)
             test_p, test_p_image, test_p_text = self.target_distribution(q, r)
 
-            str_epoch = '%03d' % (epoch + 1)
-            do_tsne(test_p.numpy(), df_initial, self.n_clusters, os.path.join(CONFIG.SVG_PATH, args.gpu, 'epoch_' + str_epoch + '.png'))
+            if args.tsne:
+                do_tsne(test_p.numpy(), df_initial, self.n_clusters, os.path.join(CONFIG.SVG_PATH, args.gpu, 'epoch_' + ('%03d' % (epoch + 1)) + '.png'))
 
             for batch_idx in range(full_num_batch):
                 # clustering phase
