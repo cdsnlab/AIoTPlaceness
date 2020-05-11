@@ -142,7 +142,7 @@ class MultiDEC(nn.Module):
         self.alpha = alpha
         self.use_prior = use_prior
         if use_prior:
-            self.prior = torch.zeros(self.n_clusters).float()
+            self.prior = torch.zeros(self.n_clusters).float().to(device)
         self.acc = 0.
         self.nmi = 0.
         self.f_1 = 0.
