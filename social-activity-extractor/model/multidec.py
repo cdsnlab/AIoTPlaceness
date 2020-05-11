@@ -142,7 +142,7 @@ class MultiDEC(nn.Module):
         self.alpha = alpha
         self.use_prior = use_prior
         if use_prior:
-            self.prior = None
+            self.prior = torch.zeros(self.n_clusters).float()
         self.acc = 0.
         self.nmi = 0.
         self.f_1 = 0.
@@ -275,11 +275,9 @@ class MultiDEC(nn.Module):
         self.image_encoder.mu.data.copy_(torch.Tensor(image_cluster_centers))
         self.text_encoder.mu.data.copy_(torch.Tensor(text_cluster_centers))
         if self.use_prior:
-            self.prior = torch.zeros(self.n_clusters).float()
             for label in train_labels:
                 self.prior[label] = self.prior[label] + 1
             self.prior /= len(train_labels)
-            self.prior.to(self.device)
 
         print("Calculating initial p at %s" % (str(datetime.datetime.now())))
         # update p considering short memory
