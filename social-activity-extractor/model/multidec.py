@@ -278,6 +278,7 @@ class MultiDEC(nn.Module):
             for label in train_labels:
                 self.prior[label] = self.prior[label] + 1
             self.prior = self.prior / len(train_labels)
+            self.prior.to(self.device)
 
         print("Calculating initial p at %s" % (str(datetime.datetime.now())))
         # update p considering short memory
