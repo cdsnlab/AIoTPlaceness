@@ -146,6 +146,7 @@ class MultiDEC(nn.Module):
         self.acc = 0.
         self.nmi = 0.
         self.f_1 = 0.
+        self.softmax = nn.Softmax(dim=1)
 
     def save_model(self, path):
         torch.save(self.state_dict(), path)
@@ -197,7 +198,7 @@ class MultiDEC(nn.Module):
             p_text = p_text / torch.sum(p_text, dim=1, keepdim=True)
             p = (p_image ** 0.5) * (p_text ** 0.5)
             # p = (p_image * p_text) ** 0.5
-            p = torch.softmax(p, dim=1)
+            p = self.softmax(p)
         else:
             p_image = q ** 2 / torch.sum(q, dim=0)
             p_image = p_image / torch.sum(p_image, dim=1, keepdim=True)
