@@ -442,13 +442,24 @@ class MultiDEC(nn.Module):
                 epoch + 1, train_unsupervised_image_loss, train_unsupervised_text_loss, train_supervised_image_loss, train_supervised_text_loss))
             if epoch == 0:
                 train_pred_last = train_pred
+                train_supervised_loss_last = train_supervised_image_loss + train_supervised_text_loss
+                train_unsupervised_loss_last = train_unsupervised_image_loss + train_unsupervised_text_loss
             else:
-                delta_label = np.sum(train_pred != train_pred_last).astype(np.float32) / len(train_pred)
-                train_pred_last = train_pred
-                if delta_label < tol:
-                    print('delta_label ', delta_label, '< tol ', tol)
-                    print("Reach tolerance threshold. Stopping training.")
-                    flag_end_training = True
+                if args.es:
+                    train_supervised_loss = train_supervised_image_loss + train_supervised_text_loss
+                    train_unsupervised_loss = train_unsupervised_image_loss + train_unsupervised_text_loss
+                    if train_supervised_loss_last < train_supervised_loss and train_unsupervised_loss_last > train_unsupervised_loss:
+                        print("Reach local max/min loss. Stopping training.")
+                        flag_end_training = True
+                    train_supervised_loss_last = train_supervised_loss
+                    train_unsupervised_loss_last = train_unsupervised_loss
+                else:
+                    delta_label = np.sum(train_pred != train_pred_last).astype(np.float32) / len(train_pred)
+                    train_pred_last = train_pred
+                    if delta_label < tol:
+                        print('delta_label ', delta_label, '< tol ', tol)
+                        print("Reach tolerance threshold. Stopping training.")
+                        flag_end_training = True
 
             self.eval()
             test_unsupervised_image_loss = 0.0
