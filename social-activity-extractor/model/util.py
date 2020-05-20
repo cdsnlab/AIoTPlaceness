@@ -518,6 +518,26 @@ def load_image_data_with_short_code(args, CONFIG):
     return full_dataset
 
 
+def load_image_data_from_directory(args, CONFIG):
+    img_transform = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225])
+    ])
+    full_data = []
+    file_list = os.listdir(args.image_dir)
+    pbar = tqdm(total=len(file_list))
+    for file in file_list:
+        pbar.update(1)
+        short_code = os.path.splitext(file)[0]
+        image_path = os.path.join(args.image_dir, file)
+        full_data.append([short_code, image_path])
+    pbar.close()
+    full_dataset = ImageDataset_with_short_code(full_data, CONFIG, img_transform)
+    return full_dataset
+
 class ImageDataset_with_short_code(Dataset):
     def __init__(self, data_list, CONFIG, transform):
         self.data = data_list

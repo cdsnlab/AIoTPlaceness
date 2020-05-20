@@ -27,7 +27,7 @@ from torch.autograd import Variable
 from torch.optim.adam import Adam
 from torch.optim.lr_scheduler import StepLR, CyclicLR
 from model import util
-from model.util import load_image_data_with_short_code
+from model.util import load_image_data_with_short_code, load_image_data_from_directory
 
 CONFIG = config.Config
 
@@ -42,6 +42,7 @@ def main():
     parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
     parser.add_argument('-tau', type=float, default=0.01, help='temperature parameter')
     # data
+    parser.add_argument('-image_dir', type=str, default=None, help='directory of image')
     parser.add_argument('-target_dataset', type=str, default='seoul_subway', help='folder name of target dataset')
     parser.add_argument('-shuffle', default=True, help='shuffle data every epoch')
     parser.add_argument('-split_rate', type=float, default=0.9, help='split rate between train and validation')
@@ -91,7 +92,10 @@ def get_latent(args):
 
     print("Loading embedding model completed")
     print("Loading dataset...")
-    full_dataset = load_image_data_with_short_code(args, CONFIG)
+    if args.image_dir is not None:
+        full_dataset = load_image_data_from_directory(args, CONFIG)
+    else:
+        full_dataset = load_image_data_with_short_code(args, CONFIG)
     print("Loading dataset completed")
     full_loader = DataLoader(full_dataset, batch_size=args.batch_size, shuffle=False)
     image_encoder.to(device)
@@ -118,7 +122,7 @@ def get_latent(args):
     result_df = pd.DataFrame(data=row_list, index=short_code_list, columns=[i for i in range(args.latent_size)])
     result_df.index.name = "short_code"
     result_df.sort_index(inplace=True)
-    result_df.to_csv(os.path.join('/ssdmnt/dist', csv_name), encoding='utf-8-sig')
+    result_df.to_csv(os.path.join('/4TBSSD/dist', csv_name), encoding='utf-8-sig')
     print("Finish!!!")
 
 
