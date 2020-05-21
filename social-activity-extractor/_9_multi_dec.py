@@ -41,6 +41,7 @@ def main():
     parser.add_argument('-batch_size', type=int, default=256, help='batch size for training')
     # data
     parser.add_argument('-prefix_csv', type=str, default=None, help='prefix of csv name')
+    parser.add_argument('-target_dataset', type=str, default=None, help='file name of target csv')
     parser.add_argument('-image_csv', type=str, default='pca_normalized_image_encoded_seoul_subway.csv', help='file name of target csv')
     parser.add_argument('-text_csv', type=str, default='text_doc2vec_seoul_subway.csv', help='file name of target csv')
     parser.add_argument('-label_csv', type=str, default='category_label.csv', help='file name of target label')
@@ -96,10 +97,10 @@ def train_multidec(args):
         kf_count = 0
         for fold_idx in range(args.fold):
             print("Current fold: ", kf_count)
-            df_train = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "train_" + str(fold_idx) + "_category_label.csv"),
+            df_train = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "train_" + str(fold_idx) + "_" + args.target_dataset + "_label.csv"),
                                   index_col=0,
                                   encoding='utf-8-sig')
-            df_test = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "test_" + str(fold_idx) + "_category_label.csv"),
+            df_test = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "test_" + str(fold_idx) + "_" + args.target_dataset + "_label.csv"),
                                   index_col=0,
                                   encoding='utf-8-sig')
             print("Loading dataset...")

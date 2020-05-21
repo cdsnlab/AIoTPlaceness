@@ -580,14 +580,15 @@ def make_scaled_csv(csv_path, target_csv):
     print(df_scaled_data[:5])
     df_scaled_data.to_csv(os.path.join(csv_path, 'scaled_' + target_csv), encoding='utf-8-sig')
 
-def sampled_plus_labeled_csv(target_csv, label_csv):
+def sampled_plus_labeled_csv(target_csv, label_csv, n):
     df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, encoding='utf-8')
     df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, label_csv), index_col=0, encoding='utf-8')
     df_label = df_data.loc[df_label.index]
     df_data = df_data.loc[set(df_data.index) - set(df_label.index)]
-    df_data = df_data.sample(n=10000, random_state=42)
+    df_data = df_data.sample(n=int(n), random_state=42)
     df_data = pd.concat([df_data, df_label])
-    df_data.to_csv(os.path.join(CONFIG.CSV_PATH, '10000_plus_labeled_' + target_csv), encoding='utf-8-sig')
+    df_data = df_data.sample(frac=1)
+    df_data.to_csv(os.path.join(CONFIG.CSV_PATH, n + '_plus_labeled_' + target_csv), encoding='utf-8-sig')
 
 def kfold_cut_csv(label_csv):
     df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, label_csv), index_col=0, encoding='utf-8')
@@ -668,6 +669,73 @@ def test2():
                 print(index)
     print(result_matrix)
 
+def process_dataset_text_english(target_dataset):
+    from util import process_text_english
+    dataset_path = os.path.join(CONFIG.DATASET_PATH, target_dataset)
+    df_data = pd.read_csv(os.path.join(dataset_path, 'original.csv'), index_col=0, header=None,
+                          encoding='utf-8-sig')
+    df_data.index.name = "short_code"
+    df_data.sort_index(inplace=True)
+    print("tokenizing sentences...")
+    pbar = tqdm(total=df_data.shape[0])
+    shortcode_list = []
+    word_list_list = []
+    image_list = []
+    for index, in_row in df_data.iterrows():
+        pbar.update(1)
+        if pd.isna(in_row.iloc[0]):
+            continue
+        word_list = process_text_english(in_row.iloc[0])
+        if len(word_list) > 0:
+            shortcode_list.append(index)
+            word_list_list.append(word_list)
+            image_list.append(in_row.iloc[1])
+    pbar.close()
+    print("counting frequencies...")
+    frequency = {}
+    pbar = tqdm(total=len(word_list_list))
+    for word_list in word_list_list:
+        pbar.update(1)
+        for word in word_list:
+            count = frequency.get(word, 0)
+            frequency[word] = count + 1
+    pbar.close()
+    count = 0
+    for word in frequency:
+        if frequency[word] >= CONFIG.MIN_WORD_COUNT:
+            count = count + 1
+    print("words more then min_count: " + str(count))
+    print("convert too few words to UNK token...")
+    pbar = tqdm(total=len(word_list_list))
+    processed_word_list_list = []
+    for word_list in word_list_list:
+        pbar.update(1)
+        processed_word_list = []
+        for word in word_list:
+            if frequency[word] < CONFIG.MIN_WORD_COUNT:
+                processed_word_list.append('UNK')
+            else:
+                processed_word_list.append(word)
+        processed_word_list_list.append(processed_word_list)
+    pbar.close()
+    print("making corpus and csv files...")
+    f_csv = open(os.path.join(dataset_path, 'posts.csv'), 'w', encoding='utf-8-sig')
+    f_corpus = open(os.path.join(dataset_path, 'corpus.txt'), 'w', encoding='utf-8')
+    wr = csv.writer(f_csv)
+    pbar = tqdm(total=len(processed_word_list_list))
+    for index in range(len(processed_word_list_list)):
+        pbar.update(1)
+        sentence = ' '.join(processed_word_list_list[index])
+        if len(sentence) > 0:
+            out_row = []
+            out_row.append(shortcode_list[index])
+            out_row.append(sentence + ' <EOS>')
+            out_row.append(image_list[index])
+            wr.writerow(out_row)
+            f_corpus.write(sentence + ' <EOS>\n')
+    pbar.close()
+    f_csv.close()
+    f_corpus.close()
 
 def run(option):
     if option == 0:
@@ -703,11 +771,13 @@ def run(option):
     elif option == 15:
         make_scaled_csv(csv_path=sys.argv[2], target_csv=sys.argv[3])
     elif option == 16:
-        sampled_plus_labeled_csv(target_csv=sys.argv[2], label_csv=sys.argv[3])
+        sampled_plus_labeled_csv(target_csv=sys.argv[2], label_csv=sys.argv[3], n=sys.argv[4])
     elif option == 17:
         kfold_cut_csv(label_csv=sys.argv[2])
     elif option == 18:
         test2()
+    elif option == 19:
+        process_dataset_text_english(target_dataset=sys.argv[2])
     else:
         print("This option does not exist!\n")
 

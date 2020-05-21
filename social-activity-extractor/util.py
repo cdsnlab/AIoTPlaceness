@@ -3,11 +3,15 @@ from konlpy.tag import Okt
 import re
 import nltk
 import sys
+from nltk import regexp_tokenize
 from nltk.tokenize import word_tokenize, sent_tokenize
 from nltk.tag import pos_tag
+from nltk.corpus import stopwords
 
 okt=Okt()
-expression = re.compile('[ㄱ-ㅣ가-힣|a-zA-Z|\s]+') 
+expression = re.compile('[ㄱ-ㅣ가-힣|a-zA-Z|\s]+')
+shortword = re.compile(r'\W*\b\w{1,2}\b')
+stop_words = set(stopwords.words('english'))
 def process_text(text_data):
 	text_data = ''.join(x for x in text_data if x.isprintable())
 	text_data = text_data.replace("#", " ")
@@ -39,6 +43,18 @@ def process_text(text_data):
 			else:
 				word_list.append(word)		
 	return word_list
+
+def process_text_english(text_data):
+	#text_data = shortword.sub('', text_data)
+	word_tokens = word_tokenize(text_data)
+
+	result = []
+	for w in word_tokens:
+		word = w.lower()
+		if word not in stop_words:
+			result.append(word)
+
+	return result
 
 def temp(text_data):
 	text_data = [re.findall(expression, x) for x in text_data if x.isprintable()]

@@ -34,6 +34,7 @@ def main():
     # data
     parser.add_argument('-prefix', type=str, default=None, help='prefix of file name')
     parser.add_argument('-target_csv', type=str, default=None, help='file name of target csv')
+    parser.add_argument('-target_dataset', type=str, default=None, help='file name of target csv')
     parser.add_argument('-target_modal', type=str, default=None, help='file name of target csv')
     parser.add_argument('-shuffle', default=True, help='shuffle data every epoch')
     # model
@@ -68,7 +69,7 @@ def train_reconstruction(args):
         for fold_idx in range(args.fold):
             print("Loading dataset...")
 
-            df_test = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "test_" + str(fold_idx) + "_category_label.csv"), index_col=0,
+            df_test = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "test_" + str(fold_idx) + "_" + args.target_dataset + "_label.csv"), index_col=0,
                                   encoding='utf-8-sig')
             df_input_without_test = df_input_data.loc[set(df_input_data.index) - set(df_test.index)]
             train_dataset, val_dataset = load_autoencoder_data(df_input_without_test, CONFIG)
