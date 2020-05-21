@@ -82,12 +82,12 @@ def train_reconstruction(args):
                               dropout=args.dropout, device=device)
             if args.resume:
                 print("resume from checkpoint")
-                sdae.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix + "_" + args.target_modal + "_sdae_" + str(args.latent_dim) + '_' + str(fold_idx)) + ".pt")
+                sdae.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix + "_" + args.target_modal + "_" + args.target_dataset + "_sdae_" + str(args.latent_dim) + '_' + str(fold_idx)) + ".pt")
             else:
                 sdae.pretrain(train_loader, val_loader, lr=args.lr, batch_size=args.batch_size,
                               num_epochs=args.pretrain_epochs, corrupt=0.2, loss_type="mse")
             sdae.fit(train_loader, val_loader, lr=args.lr, num_epochs=args.epochs, corrupt=0.2, loss_type="mse",
-                     save_path=os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix + "_" + args.target_modal + "_sdae_" + str(args.latent_dim) + '_' + str(fold_idx)) + ".pt")
+                     save_path=os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix + "_" + args.target_modal + "_" + args.target_dataset + "_sdae_" + str(args.latent_dim) + '_' + str(fold_idx)) + ".pt")
     finally:
         exp.end()
 
