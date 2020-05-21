@@ -45,7 +45,6 @@ def main():
     parser.add_argument('-image_csv', type=str, default='pca_normalized_image_encoded_seoul_subway.csv', help='file name of target csv')
     parser.add_argument('-text_csv', type=str, default='text_doc2vec_seoul_subway.csv', help='file name of target csv')
     parser.add_argument('-label_csv', type=str, default='category_label.csv', help='file name of target label')
-    parser.add_argument('-weight_csv', type=str, default='weight_label.csv', help='file name of target label')
     # model
     parser.add_argument('-prefix_model', type=str, default=None, help='prefix of csv name')
     parser.add_argument('-input_dim', type=int, default=300, help='size of input dimension')
@@ -82,7 +81,6 @@ def train_multidec(args):
                                encoding='utf-8-sig')
 
     df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.label_csv), index_col=0, encoding='utf-8-sig')
-    df_weight = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.weight_csv), index_col=0, encoding='utf-8-sig')
     label_array = np.array(df_label['category'])
     n_clusters = np.max(label_array) + 1
 
@@ -105,7 +103,7 @@ def train_multidec(args):
                                   encoding='utf-8-sig')
             print("Loading dataset...")
             full_dataset, train_dataset, val_dataset = load_semi_supervised_csv_data(df_image_data, df_text_data, df_train,
-                                                                                     df_test, df_weight, CONFIG)
+                                                                                     df_test, CONFIG)
             print("\nLoading dataset completed")
 
 

@@ -74,7 +74,7 @@ class LabeledWeightedMultiCSVDataset(Dataset):
         text_tensor = torch.from_numpy(self.text_data[idx]).type(torch.FloatTensor)
         return self.short_codes[idx], image_tensor, text_tensor, self.label_data[idx], self.weight_data[idx]
 
-def load_semi_supervised_csv_data(df_image_data, df_text_data, df_train, df_val, df_weight, CONFIG):
+def load_semi_supervised_csv_data(df_image_data, df_text_data, df_train, df_val, CONFIG):
     train_index = set(df_train.index)
     val_index = set(df_val.index)
     full_short_codes = []
@@ -84,12 +84,10 @@ def load_semi_supervised_csv_data(df_image_data, df_text_data, df_train, df_val,
     train_image_data = []
     train_text_data = []
     train_label_data = []
-    train_weight_data = []
     val_short_codes = []
     val_image_data = []
     val_text_data = []
     val_label_data = []
-    val_weight_data = []
 
     pbar = tqdm(total=df_image_data.shape[0])
     for index, row in df_image_data.iterrows():
@@ -101,13 +99,11 @@ def load_semi_supervised_csv_data(df_image_data, df_text_data, df_train, df_val,
             train_image_data.append(np.array(row))
             train_text_data.append(np.array(df_text_data.loc[index]))
             train_label_data.append(df_train.loc[index][0])
-            train_weight_data.append(np.array(df_weight.loc[index]))
         elif index in val_index:
             val_short_codes.append(index)
             val_image_data.append(np.array(row))
             val_text_data.append(np.array(df_text_data.loc[index]))
             val_label_data.append(df_val.loc[index][0])
-            val_weight_data.append(np.array(df_weight.loc[index]))
         else:
             full_short_codes.append(index)
             full_image_data.append(np.array(row))
@@ -115,8 +111,8 @@ def load_semi_supervised_csv_data(df_image_data, df_text_data, df_train, df_val,
         pbar.update(1)
     pbar.close()
     full_dataset = MultiCSVDataset(full_short_codes, np.array(full_image_data), np.array(full_text_data), CONFIG)
-    train_dataset = LabeledMultiCSVDataset(train_short_codes, np.array(train_image_data), np.array(train_text_data), train_label_data, np.array(train_weight_data), CONFIG)
-    val_dataset = LabeledMultiCSVDataset(val_short_codes, np.array(val_image_data), np.array(val_text_data), val_label_data, np.array(val_weight_data), CONFIG)
+    train_dataset = LabeledMultiCSVDataset(train_short_codes, np.array(train_image_data), np.array(train_text_data), train_label_data, CONFIG)
+    val_dataset = LabeledMultiCSVDataset(val_short_codes, np.array(val_image_data), np.array(val_text_data), val_label_data, CONFIG)
     return full_dataset, train_dataset, val_dataset
 
 class MultiCSVDataset(Dataset):
@@ -135,14 +131,12 @@ class MultiCSVDataset(Dataset):
         return self.short_codes[idx], image_tensor, text_tensor
 
 class LabeledMultiCSVDataset(Dataset):
-    def __init__(self, short_codes, image_data, text_data, label_data, weight_data, CONFIG):
+    def __init__(self, short_codes, image_data, text_data, label_data, CONFIG):
         self.short_codes = short_codes
         self.image_data = image_data
         self.text_data = text_data
         self.CONFIG = CONFIG
         self.label_data = label_data
-        self.weight_data = weight_data
-
     def __len__(self):
         return len(self.short_codes)
 
@@ -150,8 +144,7 @@ class LabeledMultiCSVDataset(Dataset):
         image_tensor = torch.from_numpy(self.image_data[idx]).type(torch.FloatTensor)
         text_tensor = torch.from_numpy(self.text_data[idx]).type(torch.FloatTensor)
         label_tensor = torch.LongTensor([self.label_data[idx]])
-        weight_tensor = torch.from_numpy(self.weight_data[idx]).type(torch.FloatTensor)
-        return self.short_codes[idx], image_tensor, text_tensor, label_tensor, weight_tensor
+        return self.short_codes[idx], image_tensor, text_tensor, label_tensor
 
 def load_semi_supervised_uni_csv_data(df_input_data, df_train, df_val, CONFIG):
     train_index = set(df_train.index)
