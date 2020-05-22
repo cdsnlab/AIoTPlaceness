@@ -77,6 +77,7 @@ class LabeledWeightedMultiCSVDataset(Dataset):
 def load_semi_supervised_csv_data(df_image_data, df_text_data, df_train, df_val, CONFIG):
     train_index = set(df_train.index)
     val_index = set(df_val.index)
+    val_index = set(df_val.index)
     full_short_codes = []
     full_image_data = []
     full_text_data = []
@@ -566,14 +567,16 @@ def load_image_data(df_full, df_train_label, df_val_label, CONFIG):
         pbar.update(1)
         if index in df_train_index:
             train_short_codes.append(index)
-            image_path = row.iloc[1].replace('/mnt/SEOUL_SUBWAY_DATA/', '/ssdmnt/placeness/SEOUL_SUBWAY_DATA_300x300/')
+            #image_path = row.iloc[1].replace('/mnt/SEOUL_SUBWAY_DATA/', '/ssdmnt/placeness/SEOUL_SUBWAY_DATA_300x300/')
+            image_path = row.iloc[1]
             #train_input_data.append(image_path)
             image_data = img_transform(pil_loader(image_path))
             train_input_data.append(image_data)
             train_label_data.append(df_train_label.loc[index][0])
         elif index in df_val_index:
             val_short_codes.append(index)
-            image_path = row.iloc[1].replace('/mnt/SEOUL_SUBWAY_DATA/', '/ssdmnt/placeness/SEOUL_SUBWAY_DATA_300x300/')
+            #image_path = row.iloc[1].replace('/mnt/SEOUL_SUBWAY_DATA/', '/ssdmnt/placeness/SEOUL_SUBWAY_DATA_300x300/')
+            image_path = row.iloc[1]
             #val_input_data.append(image_path)
             image_data = img_transform(pil_loader(image_path))
             val_input_data.append(image_data)
