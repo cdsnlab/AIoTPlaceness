@@ -48,10 +48,10 @@ def get_latent(args):
 	kf_count = 0
 	for fold_idx in range(args.fold):
 		print("Current fold: ", kf_count)
-		df_train = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "train_" + str(fold_idx) + "_category_label.csv"),
+		df_train = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "train_" + str(fold_idx) + "_" + args.target_dataset + "_label.csv"),
 							  index_col=0,
 							  encoding='utf-8-sig')
-		df_test = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "test_" + str(fold_idx) + "_category_label.csv"),
+		df_test = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "test_" + str(fold_idx) + "_" + args.target_dataset + "_label.csv"),
 							  index_col=0,
 							  encoding='utf-8-sig')
 		X_train, X_test = np.array(df_data.loc[df_train.index][1]), np.array(df_data.loc[df_test.index][1])
