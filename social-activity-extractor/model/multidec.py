@@ -446,7 +446,7 @@ class MultiDEC(nn.Module):
             else:
                 if args.es:
                     train_unsupervised_loss = train_unsupervised_image_loss + train_unsupervised_text_loss
-                    if train_unsupervised_loss_last > train_unsupervised_loss:
+                    if train_unsupervised_loss_last > train_unsupervised_loss and epoch >= 5:
                         print("Reach local max/min loss. Stopping training.")
                         flag_end_training = True
                     train_unsupervised_loss_last = train_unsupervised_loss

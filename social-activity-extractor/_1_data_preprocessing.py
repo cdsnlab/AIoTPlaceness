@@ -232,12 +232,12 @@ def make_word2vec(target_corpus):
 		word2idx[word] = idx
 		word_vectors.append(embedding_model.wv[word])
 
-	# n_words = len(word2idx)
-	# word2idx["<PAD>"] = n_words
-	# idx2word[n_words] = "<PAD>"
-	# pad_array = np.full(embedding_size, pad_value)
-	# pad_array = pad_array / np.linalg.norm(pad_array, axis=0, ord=2, keepdims=True)
-	# word_vectors.append(pad_array)
+	n_words = len(word2idx)
+	word2idx["<PAD>"] = n_words
+	idx2word[n_words] = "<PAD>"
+	pad_array = np.full(embedding_size, pad_value)
+	pad_array = pad_array / np.linalg.norm(pad_array, axis=0, ord=2, keepdims=True)
+	word_vectors.append(pad_array)
 	word_array = np.array(word_vectors, dtype=np.float32)
 	with open(os.path.join(CONFIG.DATASET_PATH, target_corpus, 'word_idx.json'), "w", encoding='utf-8') as f:
 		f.write(json.dumps([idx2word, word2idx], ensure_ascii=False))
@@ -327,7 +327,7 @@ def make_doc2vec(target_posts):
 
 def make_tfidf(target_posts):
 	df_data = pd.read_csv(os.path.join(CONFIG.DATASET_PATH, target_posts, 'posts.csv'), index_col=0, header=None, encoding='utf-8-sig')
-	with open(os.path.join(CONFIG.DATASET_PATH, 'seoul_subway', 'word_idx.json'), "r", encoding='utf-8') as f:
+	with open(os.path.join(CONFIG.DATASET_PATH, target_posts, 'word_idx.json'), "r", encoding='utf-8') as f:
 		word_idx = json.load(f)
 	with open(os.path.join(CONFIG.DATASET_PATH, target_posts, 'corpus.txt'), 'r', encoding='utf-8') as f:
 		data = f.read()
@@ -354,7 +354,7 @@ def make_tfidf(target_posts):
 	for word, value in sorted_d:
 		dictionary_list.append(word)
 
-	with open(os.path.join(CONFIG.DATASET_PATH, 'seoul_subway', 'dictionary_list.p'), 'wb') as f:
+	with open(os.path.join(CONFIG.DATASET_PATH, target_posts, 'dictionary_list.p'), 'wb') as f:
 		cPickle.dump(dictionary_list, f)
 
 
