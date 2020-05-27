@@ -894,7 +894,7 @@ def pdist(sample_1, sample_2, norm=2, eps=1e-5):
 
 def do_tsne(input_data, df_label, num_clusters, save_path):
     plt.rcParams['font.family'] = 'Times New Roman'
-    plt.rcParams.update({'font.size': 50})
+    #plt.rcParams.update({'font.size': 50})
     tsne_object = TSNE(random_state=42)
     tsne_result = tsne_object.fit_transform(input_data)
     df_tsne = pd.DataFrame({
@@ -906,7 +906,7 @@ def do_tsne(input_data, df_label, num_clusters, save_path):
     df_tsne.index = df_label.index
     fig = plt.figure(figsize=(24, 24))
     color_dict = {v: k for v, k in enumerate(sns.color_palette("Paired", num_clusters))}
-    #sns.set_context("paper", rc={"font.size": 15, "axes.titlesize": 15, "axes.labelsize": 15})
+    sns.set_context("paper", rc={"font.size": 60, "axes.titlesize": 60, "axes.labelsize": 60})
     sns_plot = sns.scatterplot(x="x", y="y", hue='label', size='pred', style='pred',
                                markers={'pred': '.', 'label': 'X'}, sizes={'pred': 40, 'label': 40},
                                palette=color_dict, data=df_tsne)
