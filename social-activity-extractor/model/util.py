@@ -893,6 +893,8 @@ def pdist(sample_1, sample_2, norm=2, eps=1e-5):
 
 
 def do_tsne(input_data, df_label, num_clusters, save_path):
+    plt.rcParams['font.family'] = 'Times New Roman'
+    plt.rcParams.update({'font.size': 15})
     tsne_object = TSNE(random_state=42)
     tsne_result = tsne_object.fit_transform(input_data)
     df_tsne = pd.DataFrame({
