@@ -906,7 +906,8 @@ def do_tsne(input_data, df_label, num_clusters, save_path):
     df_tsne.index = df_label.index
     fig = plt.figure(figsize=(24, 24))
     color_dict = {v: k for v, k in enumerate(sns.color_palette("Paired", num_clusters))}
-    sns.set(context="paper", font='Times New Roman', font_scale=2.0)
+    sns.set(context="paper", font_scale=3.0)
+    sns.set_style({'font.family': 'serif', 'font.serif': ['Times New Roman']})
     sns_plot = sns.scatterplot(x="x", y="y", hue='label', size='pred', style='pred',
                                markers={'pred': '.', 'label': 'X'}, sizes={'pred': 40, 'label': 40},
                                palette=color_dict, data=df_tsne)
