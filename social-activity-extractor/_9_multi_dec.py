@@ -149,8 +149,6 @@ def train_multidec_transductive(args):
     for arg, value in vars(args).items():
         exp.param(arg, value)
     try:
-        kf_count = 0
-        print("Current fold: ", kf_count)
 
         df_train = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.trans_csv),
                               index_col=0,
