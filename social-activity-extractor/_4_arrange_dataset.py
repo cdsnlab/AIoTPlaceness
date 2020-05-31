@@ -737,6 +737,30 @@ def process_dataset_text_english(target_dataset):
     f_csv.close()
     f_corpus.close()
 
+def balanced_sampling(target_csv, n):
+    df_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, target_csv), index_col=0, encoding='utf-8')
+    print(df_data)
+    label_dict = {}
+    
+    for idx, row in df_data.iterrows():
+        category = row['category']
+        if category not in label_dict:
+            label_dict[category] = []
+        label_dict[category].append(idx)
+
+    for label in label_dict:
+        num_sample = round(len(label_dict[label]) * float(n))
+        if num_sample <= 0:
+            num_sample = 1
+        label_dict[label] = np.random.choice(label_dict[label], size=num_sample)
+    data_dict = {}
+    for label in label_dict:
+        for data in label_dict[label]:
+            data_dict[data] = label
+
+    df_data = pd.DataFrame.from_dict(data_dict, orient='index', columns=['category'])
+    df_data.to_csv(os.path.join(CONFIG.CSV_PATH, n + '_' + target_csv), encoding='utf-8-sig')
+
 def run(option):
     if option == 0:
         copy_selected_post(target_folder=sys.argv[2])
@@ -778,6 +802,8 @@ def run(option):
         test2()
     elif option == 19:
         process_dataset_text_english(target_dataset=sys.argv[2])
+    elif option == 20:
+        balanced_sampling(target_csv=sys.argv[2], n=sys.argv[3])
     else:
         print("This option does not exist!\n")
 

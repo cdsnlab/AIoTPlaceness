@@ -43,6 +43,7 @@ def main():
     parser.add_argument('-dropout', type=float, default=0, help='dropout rate')
     # train
     parser.add_argument('-fold', type=int, default=5, help='number of fold')
+    parser.add_argument('-all', action='store_true', default=False, help='pretrain all data (no fold)')
     parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
     parser.add_argument('-gpu', type=str, default='cuda', help='gpu number')
     # option
@@ -52,7 +53,10 @@ def main():
 
     if args.noti:
         slacknoti("underkoo start using")
-    train_reconstruction(args)
+    if args.all:
+        train_reconstruction_all(args)
+    else:
+        train_reconstruction(args)
     if args.noti:
         slacknoti("underkoo end using")
 
@@ -91,6 +95,36 @@ def train_reconstruction(args):
     finally:
         exp.end()
 
+
+def train_reconstruction_all(args):
+    device = torch.device(args.gpu)
+
+    df_input_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.prefix + "_" + args.target_csv), index_col=0,
+                                encoding='utf-8-sig')
+    exp = Experiment(args.target_modal + " SDAE " + str(args.latent_dim), capture_io=True)
+    try:
+        for arg, value in vars(args).items():
+            exp.param(arg, value)
+        print("Loading dataset...")
+
+        train_dataset, val_dataset = load_autoencoder_data(df_input_data, CONFIG)
+        print("Loading dataset completed")
+        train_loader, val_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=args.shuffle), \
+                                   DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
+
+        sdae = StackedDAE(input_dim=args.input_dim, z_dim=args.latent_dim, binary=False,
+                          encodeLayer=[500, 500, 2000], decodeLayer=[2000, 500, 500], activation="relu",
+                          dropout=args.dropout, device=device)
+        if args.resume:
+            print("resume from checkpoint")
+            sdae.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix + "_" + args.target_modal + "_" + args.target_dataset + "_sdae_" + str(args.latent_dim) + "_all.pt"))
+        else:
+            sdae.pretrain(train_loader, val_loader, lr=args.lr, batch_size=args.batch_size,
+                          num_epochs=args.pretrain_epochs, corrupt=0.2, loss_type="mse")
+        sdae.fit(train_loader, val_loader, lr=args.lr, num_epochs=args.epochs, corrupt=0.2, loss_type="mse",
+                 save_path=os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix + "_" + args.target_modal + "_" + args.target_dataset + "_sdae_" + str(args.latent_dim) + "_all.pt"))
+    finally:
+        exp.end()
 
 if __name__ == '__main__':
     main()
