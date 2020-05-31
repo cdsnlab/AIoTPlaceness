@@ -766,23 +766,6 @@ class MultiDEC(nn.Module):
                 epoch + 1, train_acc, train_nmi, train_f_1))
             print("#Train loss %3d: unsup img: %.4f, unsup txt: %.4f, super img: %.4f, super txt: %.4f" % (
                 epoch + 1, train_unsupervised_image_loss, train_unsupervised_text_loss, train_supervised_image_loss, train_supervised_text_loss))
-            if epoch == 0:
-                train_pred_last = train_pred
-                train_unsupervised_loss_last = train_unsupervised_image_loss + train_unsupervised_text_loss
-            else:
-                if args.es:
-                    train_unsupervised_loss = train_unsupervised_image_loss + train_unsupervised_text_loss
-                    if train_unsupervised_loss_last > train_unsupervised_loss and epoch >= 5:
-                        print("Reach local max/min loss. Stopping training.")
-                        flag_end_training = True
-                    train_unsupervised_loss_last = train_unsupervised_loss
-                else:
-                    delta_label = np.sum(train_pred != train_pred_last).astype(np.float32) / len(train_pred)
-                    train_pred_last = train_pred
-                    if delta_label < tol:
-                        print('delta_label ', delta_label, '< tol ', tol)
-                        print("Reach tolerance threshold. Stopping training.")
-                        flag_end_training = True
 
             self.eval()
             test_unsupervised_image_loss = 0.0
@@ -848,6 +831,24 @@ class MultiDEC(nn.Module):
             self.acc = test_acc
             self.nmi = test_nmi
             self.f_1 = test_f_1
+
+            if epoch == 0:
+                test_pred_last = test_pred
+                test_unsupervised_loss_last = test_unsupervised_image_loss + test_unsupervised_text_loss
+            else:
+                if args.es:
+                    test_unsupervised_loss = test_unsupervised_image_loss + test_unsupervised_text_loss
+                    if test_unsupervised_loss_last > test_unsupervised_loss and epoch >= 5:
+                        print("Reach local max/min loss. Stopping training.")
+                        flag_end_training = True
+                    test_unsupervised_loss_last = test_unsupervised_loss
+                else:
+                    delta_label = np.sum(test_pred != test_pred_last).astype(np.float32) / len(test_pred)
+                    test_pred_last = test_pred
+                    if delta_label < tol:
+                        print('delta_label ', delta_label, '< tol ', tol)
+                        print("Reach tolerance threshold. Stopping training.")
+                        flag_end_training = True
 
             if flag_end_training:
                 break
