@@ -887,7 +887,7 @@ class MultiDEC(nn.Module):
                         flag_end_training = True
                     test_unsupervised_loss_last = test_unsupervised_loss
                 else:
-                    delta_label = np.sum(train_pred != test_pred_last).astype(np.float32) / len(test_pred)
+                    delta_label = np.sum(test_pred != test_pred_last).astype(np.float32) / len(test_pred)
                     test_pred_last = test_pred
                     if delta_label < tol:
                         print('delta_label ', delta_label, '< tol ', tol)
