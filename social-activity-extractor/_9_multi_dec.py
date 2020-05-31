@@ -121,8 +121,13 @@ def train_multidec(args):
             mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder, ours=args.ours, use_prior=args.use_prior,
                                 n_clusters=n_clusters)
 
-            mdec.fit_predict(full_dataset, train_dataset, val_dataset, args, CONFIG, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
-                     save_path=os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix_csv + "_mdec_" + str(args.latent_dim) + '_'  + str(fold_idx)) + ".pt", tol=args.tol, kappa=args.kappa)
+            if args.ssldec:
+                mdec.fit_predict(full_dataset, train_dataset, val_dataset, args, CONFIG, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
+                         save_path=os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix_csv + "_mdec_" + str(args.latent_dim) + '_'  + str(fold_idx)) + ".pt", tol=args.tol, kappa=args.kappa)
+            else:
+                mdec.fit_predict(full_dataset, train_dataset, val_dataset, args, CONFIG, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
+                         save_path=os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix_csv + "_mdec_" + str(args.latent_dim) + '_'  + str(fold_idx)) + ".pt", tol=args.tol, kappa=args.kappa)
+
             acc_list.append(mdec.acc)
             nmi_list.append(mdec.nmi)
             f_1_list.append(mdec.f_1)
@@ -171,7 +176,7 @@ def train_multidec_transductive(args):
                             n_clusters=n_clusters)
 
         if args.ssldec:
-            mdec.fit_predict_ssldec(full_dataset, train_dataset, args, CONFIG, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
+            mdec.fit_predict_transductive_ssldec(full_dataset, train_dataset, args, CONFIG, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
                  save_path=os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix_csv + "_mdec_" + str(args.latent_dim) + "_all.pt"), tol=args.tol, kappa=args.kappa)
         else:
             mdec.fit_predict_transductive(full_dataset, train_dataset, args, CONFIG, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
