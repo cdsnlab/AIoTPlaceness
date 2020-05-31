@@ -759,6 +759,8 @@ def balanced_sampling(target_csv, n):
             data_dict[data] = label
 
     df_data = pd.DataFrame.from_dict(data_dict, orient='index', columns=['category'])
+    df_data = df_data.sample(frac=1)
+    print(df_data)
     df_data.to_csv(os.path.join(CONFIG.CSV_PATH, n + '_' + target_csv), encoding='utf-8-sig')
 
 def run(option):

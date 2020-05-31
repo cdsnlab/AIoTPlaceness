@@ -116,6 +116,34 @@ def load_semi_supervised_csv_data(df_image_data, df_text_data, df_train, df_val,
     val_dataset = LabeledMultiCSVDataset(val_short_codes, np.array(val_image_data), np.array(val_text_data), val_label_data, CONFIG)
     return full_dataset, train_dataset, val_dataset
 
+def load_transductive_semi_supervised_csv_data(df_image_data, df_text_data, df_full, df_train, CONFIG):
+    train_index = set(df_train.index)
+    full_short_codes = []
+    full_image_data = []
+    full_text_data = []
+    full_label_data = []
+    train_short_codes = []
+    train_image_data = []
+    train_text_data = []
+    train_label_data = []
+
+    pbar = tqdm(total=df_image_data.shape[0])
+    for index, row in df_image_data.iterrows():
+        if index in train_index:
+            train_short_codes.append(index)
+            train_image_data.append(np.array(row))
+            train_text_data.append(np.array(df_text_data.loc[index]))
+            train_label_data.append(df_train.loc[index][0])
+        full_short_codes.append(index)
+        full_image_data.append(np.array(row))
+        full_text_data.append(np.array(df_text_data.loc[index]))
+        full_label_data.append(df_full.loc[index][0])
+        pbar.update(1)
+    pbar.close()
+    full_dataset = LabeledMultiCSVDataset(full_short_codes, np.array(full_image_data), np.array(full_text_data), full_label_data, CONFIG)
+    train_dataset = LabeledMultiCSVDataset(train_short_codes, np.array(train_image_data), np.array(train_text_data), train_label_data, CONFIG)
+    return full_dataset, train_dataset
+
 class MultiCSVDataset(Dataset):
     def __init__(self, short_codes, image_data, text_data, CONFIG):
         self.short_codes = short_codes
