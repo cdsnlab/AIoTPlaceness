@@ -16,7 +16,7 @@ from model import util
 from sklearn.model_selection import train_test_split, StratifiedKFold
 
 from model.Weight_Calculator import WeightCalculator
-from model.util import load_multi_csv_data, load_semi_supervised_csv_data
+from model.util import load_multi_csv_data, load_semi_supervised_csv_data, load_transductive_semi_supervised_csv_data
 from model.multidec import MDEC_encoder, MultiDEC
 
 CONFIG = config.Config
@@ -54,6 +54,8 @@ def main():
     # train
     parser.add_argument('-fold', type=int, default=5, help='number of fold')
     parser.add_argument('-stop_fold', type=int, default=5, help='early stop at fold idx')
+    parser.add_argument('-trans', action='store_true', default=False, help='transductive learning')
+    parser.add_argument('-trans_csv', type=str, default='0.02_category_label.csv', help='file name of target transductive label')
     parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
     parser.add_argument('-tsne', action='store_true', default=False, help='whether to print tsne result')
     parser.add_argument('-gpu', type=str, default='cuda', help='gpu number')
@@ -64,8 +66,8 @@ def main():
 
     if args.noti:
         slacknoti("underkoo start using")
-    if args.eval:
-        eval_multidec(args)
+    if args.trans:
+        train_multidec_transductive(args)
     else:
         train_multidec(args)
     if args.noti:
@@ -149,15 +151,12 @@ def train_multidec_transductive(args):
     try:
         kf_count = 0
         print("Current fold: ", kf_count)
-        df_train = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "train_" + str(fold_idx) + "_" + args.target_dataset + "_label.csv"),
-                              index_col=0,
-                              encoding='utf-8-sig')
-        df_test = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "test_" + str(fold_idx) + "_" + args.target_dataset + "_label.csv"),
+
+        df_train = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.trans_csv),
                               index_col=0,
                               encoding='utf-8-sig')
         print("Loading dataset...")
-        full_dataset, train_dataset, val_dataset = load_semi_supervised_csv_data(df_image_data, df_text_data, df_train,
-                                                                                 df_test, CONFIG)
+        full_dataset, train_dataset = load_transductive_semi_supervised_csv_data(df_image_data, df_text_data, df_label, df_train, CONFIG)
         print("\nLoading dataset completed")
 
 
@@ -172,7 +171,7 @@ def train_multidec_transductive(args):
         mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder, ours=args.ours, use_prior=args.use_prior,
                             n_clusters=n_clusters)
 
-        mdec.fit_predict_transductive(full_dataset, train_dataset, val_dataset, args, CONFIG, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
+        mdec.fit_predict_transductive(full_dataset, train_dataset, args, CONFIG, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
                  save_path=os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix_csv + "_mdec_" + str(args.latent_dim) + "_all.pt"), tol=args.tol, kappa=args.kappa)
         print("#Average acc: %.4f, Average nmi: %.4f, Average f_1: %.4f" % (
             mdec.acc, mdec.nmi, mdec.f_1))
