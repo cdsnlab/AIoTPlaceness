@@ -56,6 +56,7 @@ def main():
     parser.add_argument('-stop_fold', type=int, default=5, help='early stop at fold idx')
     parser.add_argument('-trans', action='store_true', default=False, help='transductive learning')
     parser.add_argument('-trans_csv', type=str, default='0.02_category_label.csv', help='file name of target transductive label')
+    parser.add_argument('-ssldec', action='store_true', default=False, help='use if ssldec')
     parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
     parser.add_argument('-tsne', action='store_true', default=False, help='whether to print tsne result')
     parser.add_argument('-gpu', type=str, default='cuda', help='gpu number')
@@ -169,7 +170,11 @@ def train_multidec_transductive(args):
         mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder, ours=args.ours, use_prior=args.use_prior,
                             n_clusters=n_clusters)
 
-        mdec.fit_predict_transductive(full_dataset, train_dataset, args, CONFIG, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
+        if args.ssldec:
+            mdec.fit_predict_ssldec(full_dataset, train_dataset, args, CONFIG, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
+                 save_path=os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix_csv + "_mdec_" + str(args.latent_dim) + "_all.pt"), tol=args.tol, kappa=args.kappa)
+        else:
+            mdec.fit_predict_transductive(full_dataset, train_dataset, args, CONFIG, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
                  save_path=os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix_csv + "_mdec_" + str(args.latent_dim) + "_all.pt"), tol=args.tol, kappa=args.kappa)
         print("#Average acc: %.4f, Average nmi: %.4f, Average f_1: %.4f" % (
             mdec.acc, mdec.nmi, mdec.f_1))
