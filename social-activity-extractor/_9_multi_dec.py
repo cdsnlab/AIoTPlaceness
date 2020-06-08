@@ -46,7 +46,7 @@ def main():
     parser.add_argument('-image_csv', type=str, default='pca_normalized_image_encoded_seoul_subway.csv', help='file name of target csv')
     parser.add_argument('-text_csv', type=str, default='text_doc2vec_seoul_subway.csv', help='file name of target csv')
     parser.add_argument('-label_csv', type=str, default='category_label.csv', help='file name of target label')
-	parser.add_argument('-sampled_n', type=int, default=None, help='number of fold')
+    parser.add_argument('-sampled_n', type=int, default=None, help='number of fold')
     # model
     parser.add_argument('-prefix_model', type=str, default=None, help='prefix of csv name')
     parser.add_argument('-input_dim', type=int, default=300, help='size of input dimension')
