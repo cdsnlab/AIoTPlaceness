@@ -42,6 +42,7 @@ def main():
     # data
     parser.add_argument('-prefix_csv', type=str, default=None, help='prefix of csv name')
     parser.add_argument('-target_dataset', type=str, default=None, help='file name of target csv')
+    parser.add_argument('-n_clusters', type=int, default=12, help='num of class')
     parser.add_argument('-image_csv', type=str, default='pca_normalized_image_encoded_seoul_subway.csv', help='file name of target csv')
     parser.add_argument('-text_csv', type=str, default='text_doc2vec_seoul_subway.csv', help='file name of target csv')
     parser.add_argument('-label_csv', type=str, default='category_label.csv', help='file name of target label')
@@ -83,9 +84,10 @@ def train_multidec(args):
     df_text_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.prefix_csv + "_" + args.text_csv), index_col=0,
                                encoding='utf-8-sig')
 
-    df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.label_csv), index_col=0, encoding='utf-8-sig')
-    label_array = np.array(df_label['category'])
-    n_clusters = np.max(label_array) + 1
+    #df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.label_csv), index_col=0, encoding='utf-8-sig')
+    #label_array = np.array(df_label['category'])
+    #n_clusters = np.max(label_array) + 1
+    n_clusters = args.n_clusters
 
     exp = Experiment(args.prefix_csv + "_MDEC", capture_io=True)
 

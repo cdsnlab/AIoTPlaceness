@@ -763,6 +763,18 @@ def balanced_sampling(target_csv, n):
     print(df_data)
     df_data.to_csv(os.path.join(CONFIG.CSV_PATH, n + '_' + target_csv), encoding='utf-8-sig')
 
+def kfold_sampling(label_csv, n):
+    n = int(n)
+    for kf_count in range(5):
+        df_train = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'train_' + str(kf_count) + '_' + label_csv), encoding='utf-8-sig')
+        df_test = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'test_' + str(kf_count) + '_' + label_csv), encoding='utf-8-sig')
+        df_train = df_train.sample(int(n * 0.8))
+        df_test = df_test.sample(int(n * 0.2))
+
+        df_train.to_csv(os.path.join(CONFIG.CSV_PATH, 'train_' + str(kf_count) + '_' + str(n) + '_' + label_csv), encoding='utf-8-sig')
+        df_test.to_csv(os.path.join(CONFIG.CSV_PATH, 'test_' + str(kf_count) + '_' + str(n) + '_' + label_csv), encoding='utf-8-sig')
+
+
 def run(option):
     if option == 0:
         copy_selected_post(target_folder=sys.argv[2])
@@ -806,6 +818,8 @@ def run(option):
         process_dataset_text_english(target_dataset=sys.argv[2])
     elif option == 20:
         balanced_sampling(target_csv=sys.argv[2], n=sys.argv[3])
+    elif option == 21:
+        kfold_sampling(label_csv=sys.argv[2], n=sys.argv[3])
     else:
         print("This option does not exist!\n")
 
