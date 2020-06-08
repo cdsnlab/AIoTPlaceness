@@ -766,8 +766,8 @@ def balanced_sampling(target_csv, n):
 def kfold_sampling(label_csv, n):
     n = int(n)
     for kf_count in range(5):
-        df_train = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'train_' + str(kf_count) + '_' + label_csv), encoding='utf-8-sig')
-        df_test = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'test_' + str(kf_count) + '_' + label_csv), encoding='utf-8-sig')
+        df_train = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'train_' + str(kf_count) + '_' + label_csv), index_col=0, encoding='utf-8-sig')
+        df_test = pd.read_csv(os.path.join(CONFIG.CSV_PATH, 'test_' + str(kf_count) + '_' + label_csv), index_col=0, encoding='utf-8-sig')
         df_train = df_train.sample(int(n * 0.8))
         df_test = df_test.sample(int(n * 0.2))
 
