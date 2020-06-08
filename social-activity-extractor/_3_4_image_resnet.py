@@ -105,12 +105,12 @@ def train_multidec(args):
         kf_count = 0
         for fold_idx in range(args.fold):
             print("Current fold: ", kf_count)
-            df_train = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "train_" + str(fold_idx) + "_" + args.target_dataset + "_label.csv"),
+            df_train = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "train_" + str(fold_idx) + "_" + args.label_csv),
                                   index_col=0,
                                   encoding='utf-8-sig')
             if args.sampled_n is not None:
                 df_train = df_train.sample(n=args.sampled_n, random_state=42)
-            df_test = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "test_" + str(fold_idx) + "_" + args.target_dataset + "_label.csv"),
+            df_test = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "test_" + str(fold_idx) + "_" + args.label_csv),
                                   index_col=0,
                                   encoding='utf-8-sig')
 
