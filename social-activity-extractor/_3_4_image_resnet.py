@@ -34,12 +34,13 @@ def main():
     parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
     # learning
     parser.add_argument('-lr', type=float, default=0.01, help='initial learning rate')
-    parser.add_argument('-epochs', type=int, default=50, help='number of epochs for train')
+    parser.add_argument('-epochs', type=int, default=200, help='number of epochs for train')
     parser.add_argument('-update_time', type=int, default=1, help='update time within epoch')
     parser.add_argument('-batch_size', type=int, default=64, help='batch size for training')
     # data
     parser.add_argument('-target_dataset', type=str, default='seoul_subway', help='folder name of target dataset')
     parser.add_argument('-label_csv', type=str, default='category_label.csv', help='file name of target label')
+    parser.add_argument('-sampled_n', type=int, default=None, help='number of fold')
     # model
     parser.add_argument('-dropout', type=float, default=0.5, help='dropout rate')
     parser.add_argument('-arch', type=str, default='resnet50', help='torchvision model')
@@ -107,6 +108,8 @@ def train_multidec(args):
             df_train = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "train_" + str(fold_idx) + "_" + args.target_dataset + "_label.csv"),
                                   index_col=0,
                                   encoding='utf-8-sig')
+            if args.sampled_n is not None:
+                df_train = df_train.sample(n=args.sampled_n, random_state=42)
             df_test = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "test_" + str(fold_idx) + "_" + args.target_dataset + "_label.csv"),
                                   index_col=0,
                                   encoding='utf-8-sig')

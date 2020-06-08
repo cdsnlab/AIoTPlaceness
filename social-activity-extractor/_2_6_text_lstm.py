@@ -39,6 +39,7 @@ def main():
     # data
     parser.add_argument('-target_dataset', type=str, default='seoul_subway', help='folder name of target dataset')
     parser.add_argument('-label_csv', type=str, default='category_label.csv', help='file name of target label')
+    parser.add_argument('-sampled_n', type=int, default=None, help='number of fold')
     # model
     parser.add_argument('-input_dim', type=int, default=300, help='size of input dimension')
     parser.add_argument('-hidden_size', type=int, default=256, help='size of latent variable')
@@ -92,10 +93,12 @@ def train_multidec(args):
         kf_count = 0
         for fold_idx in range(args.fold):
             print("Current fold: ", kf_count)
-            df_train = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "train_" + str(fold_idx) + "_" + args.target_dataset + "_label.csv"),
+            df_train = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "train_" + str(fold_idx) + "_" + args.label_csv),
                                   index_col=0,
                                   encoding='utf-8-sig')
-            df_test = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "test_" + str(fold_idx) + "_" + args.target_dataset + "_label.csv"),
+            if args.sampled_n is not None:
+                df_train = df_train.sample(n=args.sampled_n, random_state=42)
+            df_test = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "test_" + str(fold_idx) + "_" + args.label_csv),
                                   index_col=0,
                                   encoding='utf-8-sig')
             embedding = nn.Embedding.from_pretrained(torch.FloatTensor(embedding_model))
