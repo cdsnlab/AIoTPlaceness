@@ -119,7 +119,7 @@ def train_multidec(args):
                                           embedding=embedding, dropout=args.dropout)
             text_model = TextModel(device=device, text_encoder=text_encoder)
             text_model.fit(train_dataset, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
-                     save_path=os.path.join(CONFIG.CHECKPOINT_PATH, "text_lstm.pt"), use_de=args.use_de)
+                     save_path=None, use_de=args.use_de)
             text_model.predict(test_dataset, batch_size=args.batch_size, use_de=args.use_de)
             acc_list.append(text_model.acc)
             nmi_list.append(text_model.nmi)
