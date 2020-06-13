@@ -54,8 +54,8 @@ def main():
     parser.add_argument('-ours', action='store_true', default=False, help='use our target distribution')
     parser.add_argument('-use_prior', action='store_true', default=False, help='use prior knowledge')
     # train
+    parser.add_argument('-start_fold', type=int, default=0, help='fold for start')
     parser.add_argument('-fold', type=int, default=5, help='number of fold')
-    parser.add_argument('-stop_fold', type=int, default=5, help='early stop at fold idx')
     parser.add_argument('-trans', action='store_true', default=False, help='transductive learning')
     parser.add_argument('-trans_csv', type=str, default='0.02_category_label.csv', help='file name of target transductive label')
     parser.add_argument('-ssldec', action='store_true', default=False, help='use if ssldec')
@@ -99,7 +99,7 @@ def train_multidec(args):
         nmi_list = []
         f_1_list = []
         kf_count = 0
-        for fold_idx in range(args.fold):
+        for fold_idx in range(args.start_fold, args.fold):
             print("Current fold: ", kf_count)
             df_train = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "train_" + str(fold_idx) + "_" + args.target_dataset + "_label.csv"),
                                   index_col=0,

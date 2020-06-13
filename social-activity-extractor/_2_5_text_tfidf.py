@@ -32,6 +32,7 @@ def main():
 	parser.add_argument('-target_dataset', type=str, default='seoul_subway', help='folder name of target dataset')
 	parser.add_argument('-label_csv', type=str, default='category_label.csv', help='folder name of target dataset')
 	parser.add_argument('-sampled_n', type=int, default=None, help='number of fold')
+    parser.add_argument('-start_fold', type=int, default=0, help='fold for start')
 	parser.add_argument('-fold', type=int, default=5, help='number of fold')
 	args = parser.parse_args()
 
@@ -47,7 +48,7 @@ def get_latent(args):
 	nmi_list = []
 	f_1_list = []
 	kf_count = 0
-	for fold_idx in range(args.fold):
+	for fold_idx in range(args.start_fold, args.fold):
 		print("Current fold: ", kf_count)
 		df_train = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "train_" + str(fold_idx) + "_" + args.label_csv),
 							  index_col=0,

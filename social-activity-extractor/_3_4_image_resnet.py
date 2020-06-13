@@ -45,6 +45,7 @@ def main():
     parser.add_argument('-dropout', type=float, default=0.5, help='dropout rate')
     parser.add_argument('-arch', type=str, default='resnet50', help='torchvision model')
     # train
+    parser.add_argument('-start_fold', type=int, default=0, help='fold for start')
     parser.add_argument('-fold', type=int, default=5, help='number of fold')
     parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
     parser.add_argument('-gpu', type=str, default='cuda', help='gpu number')
@@ -103,7 +104,7 @@ def train_multidec(args):
         nmi_list = []
         f_1_list = []
         kf_count = 0
-        for fold_idx in range(args.fold):
+        for fold_idx in range(args.start_fold, args.fold):
             print("Current fold: ", kf_count)
             df_train = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "train_" + str(fold_idx) + "_" + args.label_csv),
                                   index_col=0,
