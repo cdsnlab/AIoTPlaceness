@@ -249,12 +249,12 @@ class MultiDEC(nn.Module):
         train_text_z = torch.cat(train_text_z, dim=0)
 
         print("Initializing cluster centers with kmeans at %s" % (str(datetime.datetime.now())))
-        image_kmeans = KMeans(self.n_clusters, n_init=20, random_state=42)
+        image_kmeans = KMeans(n_clusters=self.n_clusters, n_init=20, random_state=42)
         image_kmeans.fit(image_z.data.cpu().numpy())
         train_image_pred = image_kmeans.predict(train_image_z.data.cpu().numpy())
         print("Image kmeans completed at %s" % (str(datetime.datetime.now())))
 
-        text_kmeans = KMeans(self.n_clusters, n_init=20, random_state=42)
+        text_kmeans = KMeans(n_clusters=self.n_clusters, n_init=20, random_state=42)
         text_kmeans.fit(text_z.data.cpu().numpy())
         train_text_pred = text_kmeans.predict(train_text_z.data.cpu().numpy())
         print("Text kmeans completed at %s" % (str(datetime.datetime.now())))
