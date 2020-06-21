@@ -80,9 +80,9 @@ def main():
 def train_multidec(args):
     print("Training multidec")
     device = torch.device(args.gpu)
-    df_image_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.prefix_csv + "_" + args.image_csv), index_col=0,
+    df_image_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.prefix_csv + "_pca_normalized_image_encoded_" + args.target_dataset + ".csv"), index_col=0,
                                 encoding='utf-8-sig')
-    df_text_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.prefix_csv + "_" + args.text_csv), index_col=0,
+    df_text_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.prefix_csv + "_text_doc2vec_" + args.target_dataset + ".csv"), index_col=0,
                                encoding='utf-8-sig')
 
     #df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.label_csv), index_col=0, encoding='utf-8-sig')
