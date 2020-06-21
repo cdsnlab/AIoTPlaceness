@@ -32,7 +32,7 @@ def main():
     parser = argparse.ArgumentParser(description='text convolution-deconvolution auto-encoder model')
     # learning
     parser.add_argument('-lr', type=float, default=1e-02, help='initial learning rate')
-    parser.add_argument('-kappa', type=float, default=0.1, help='lr adjust rate')
+    parser.add_argument('-kappa', type=float, default=1.0, help='lr adjust rate')
     parser.add_argument('-tol', type=float, default=1e-03, help='tolerance for early stopping')
     parser.add_argument('-es', action='store_true', default=False, help='early stops when unsupervised loss increases')
     parser.add_argument('-trade_off', type=float, default=1e-04, help='trade_off value for semi-supervised learning')
@@ -85,10 +85,10 @@ def train_multidec(args):
     df_text_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.prefix_csv + "_text_doc2vec_" + args.target_dataset + ".csv"), index_col=0,
                                encoding='utf-8-sig')
 
-    #df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.label_csv), index_col=0, encoding='utf-8-sig')
-    #label_array = np.array(df_label['category'])
-    #n_clusters = np.max(label_array) + 1
-    n_clusters = args.n_clusters
+    df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.label_csv), index_col=0, encoding='utf-8-sig')
+    label_array = np.array(df_label['category'])
+    n_clusters = np.max(label_array) + 1
+    #n_clusters = args.n_clusters
 
     exp = Experiment(args.prefix_csv + "_MDEC", capture_io=True)
 

@@ -686,10 +686,9 @@ def process_dataset_text_english(target_dataset):
         if pd.isna(in_row.iloc[0]):
             continue
         word_list = process_text_english(in_row.iloc[0])
-        if len(word_list) > 0:
-            shortcode_list.append(index)
-            word_list_list.append(word_list)
-            image_list.append(in_row.iloc[1])
+        shortcode_list.append(index)
+        word_list_list.append(word_list)
+        image_list.append(in_row.iloc[1])
     pbar.close()
     print("counting frequencies...")
     frequency = {}
@@ -726,13 +725,12 @@ def process_dataset_text_english(target_dataset):
     for index in range(len(processed_word_list_list)):
         pbar.update(1)
         sentence = ' '.join(processed_word_list_list[index])
-        if len(sentence) > 0:
-            out_row = []
-            out_row.append(shortcode_list[index])
-            out_row.append(sentence + ' <EOS>')
-            out_row.append(image_list[index])
-            wr.writerow(out_row)
-            f_corpus.write(sentence + ' <EOS>\n')
+        out_row = []
+        out_row.append(shortcode_list[index])
+        out_row.append(sentence + ' <EOS>')
+        out_row.append(image_list[index])
+        wr.writerow(out_row)
+        f_corpus.write(sentence + ' <EOS>\n')
     pbar.close()
     f_csv.close()
     f_corpus.close()
