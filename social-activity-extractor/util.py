@@ -46,11 +46,20 @@ def process_text(text_data):
 
 def process_text_english(text_data):
 	#text_data = shortword.sub('', text_data)
+	text_data = ''.join(x for x in text_data if x.isprintable())
+	text_data = text_data.replace("#", " ")
+	text_data = text_data.replace("\n", " ")
+	tokens = okt.pos(text_data)
 	word_tokens = word_tokenize(text_data)
 
 	result = []
-	for w in word_tokens:
-		word = w.lower()
+	for token in tokens:
+		word = token[0]
+		if token[1] in ['Foreign', 'Number', 'URL', 'Email', 'ScreenName', 'Hashtag']:
+			# all Hashtag remaining are Japanese
+			continue
+		elif token[1] == 'Alpha':
+			word = word.lower()
 		if word not in stop_words:
 			result.append(word)
 

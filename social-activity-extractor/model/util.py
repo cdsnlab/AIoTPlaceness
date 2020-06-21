@@ -7,6 +7,8 @@ import seaborn as sns; sns.set()
 import torch
 import torchvision.transforms as transforms
 from torchvision.datasets.folder import pil_loader
+from PIL import ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.manifold import TSNE
 from sklearn.model_selection import train_test_split
