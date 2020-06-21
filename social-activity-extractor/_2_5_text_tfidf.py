@@ -32,7 +32,7 @@ def main():
 	parser.add_argument('-target_dataset', type=str, default='seoul_subway', help='folder name of target dataset')
 	parser.add_argument('-label_csv', type=str, default='category_label.csv', help='folder name of target dataset')
 	parser.add_argument('-sampled_n', type=int, default=None, help='number of fold')
-    parser.add_argument('-start_fold', type=int, default=0, help='fold for start')
+	parser.add_argument('-start_fold', type=int, default=0, help='fold for start')
 	parser.add_argument('-fold', type=int, default=5, help='number of fold')
 	args = parser.parse_args()
 
