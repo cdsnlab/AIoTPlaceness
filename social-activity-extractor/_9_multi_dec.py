@@ -85,10 +85,10 @@ def train_multidec(args):
     df_text_data = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.prefix_csv + "_text_doc2vec_" + args.target_dataset + ".csv"), index_col=0,
                                encoding='utf-8-sig')
 
-    #df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.label_csv), index_col=0, encoding='utf-8-sig')
-    #label_array = np.array(df_label['category'])
-    #n_clusters = np.max(label_array) + 1
-    n_clusters = args.n_clusters
+    df_label = pd.read_csv(os.path.join(CONFIG.CSV_PATH, args.label_csv), index_col=0, encoding='utf-8-sig')
+    label_array = np.array(df_label['category'])
+    n_clusters = np.max(label_array) + 1
+    #n_clusters = args.n_clusters
 
     exp = Experiment(args.prefix_csv + "_MDEC", capture_io=True)
 
