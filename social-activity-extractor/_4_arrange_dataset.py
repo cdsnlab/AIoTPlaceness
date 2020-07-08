@@ -467,6 +467,7 @@ def normalized_csv(csv_path, target_csv):
 
 def normalized_and_pca(csv_path, target_csv):
     df_data = pd.read_csv(os.path.join(csv_path, target_csv), index_col=0, encoding='utf-8')
+    df_data = df_data.sample(frac=1.0)
     print(df_data[:5])
     df_normalized = df_data.div((np.sqrt(np.sum(np.square(df_data), axis=1))), axis=0)
     pca_normalized = PCA(n_components=300, random_state=42)
@@ -573,6 +574,7 @@ def cut_label_csv(target_csv, label_csv):
 
 def make_scaled_csv(csv_path, target_csv):
     df_data = pd.read_csv(os.path.join(csv_path, target_csv), index_col=0, encoding='utf-8')
+    df_data = df_data.sample(frac=1.0)
     scaled_data = StandardScaler().fit_transform(np.array(df_data.values))
     df_scaled_data = pd.DataFrame(data=scaled_data, index=df_data.index,
                                         columns=df_data.columns)
