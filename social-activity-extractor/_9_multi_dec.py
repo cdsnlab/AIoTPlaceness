@@ -100,7 +100,7 @@ def train_multidec(args):
         f_1_list = []
         kf_count = 0
         for fold_idx in range(args.start_fold, args.fold):
-            print("Current fold: ", kf_count)
+            print("Current fold: ", fold_idx)
             df_train = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "train_" + str(fold_idx) + "_" + args.target_dataset + "_label.csv"),
                                   index_col=0,
                                   encoding='utf-8-sig')

@@ -42,7 +42,8 @@ def main():
     parser.add_argument('-latent_dim', type=int, default=10, help='size of latent variable')
     parser.add_argument('-dropout', type=float, default=0, help='dropout rate')
     # train
-    parser.add_argument('-fold', type=int, default=5, help='number of fold')
+    parser.add_argument('-start_fold', type=int, default=0, help='fold to start')
+    parser.add_argument('-fold', type=int, default=5, help='fold to end')
     parser.add_argument('-all', action='store_true', default=False, help='pretrain all data (no fold)')
     parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
     parser.add_argument('-gpu', type=str, default='cuda', help='gpu number')
@@ -70,7 +71,8 @@ def train_reconstruction(args):
     try:
         for arg, value in vars(args).items():
             exp.param(arg, value)
-        for fold_idx in range(args.fold):
+        for fold_idx in range(args.start_fold, args.fold):
+            print("Current fold: ", fold_idx)
             print("Loading dataset...")
 
             df_test = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "test_" + str(fold_idx) + "_" + args.target_dataset + "_label.csv"), index_col=0,
