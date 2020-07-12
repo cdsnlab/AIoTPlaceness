@@ -205,7 +205,10 @@ class MultiDEC(nn.Module):
         '''X: tensor data'''
         self.to(self.device)
         print("=====Training DEC=======")
-        optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=lr, momentum=0.9)
+        if args.adam:
+            optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=lr)
+        else:
+            optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=lr, momentum=0.9)
 
         print("Extracting initial features at %s" % (str(datetime.datetime.now())))
         image_z = []

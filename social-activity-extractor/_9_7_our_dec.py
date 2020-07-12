@@ -58,6 +58,7 @@ def main():
     parser.add_argument('-start_fold', type=int, default=0, help='fold for start')
     parser.add_argument('-fold', type=int, default=5, help='number of fold')
     parser.add_argument('-noti', action='store_true', default=False, help='whether using gpu server')
+    parser.add_argument('-adam', action='store_true', default=False, help='set optimizer to adam')
     parser.add_argument('-tsne', action='store_true', default=False, help='whether to print tsne result')
     parser.add_argument('-gpu', type=str, default='cuda', help='gpu number')
     # option
