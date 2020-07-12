@@ -64,12 +64,11 @@ class MDEC_encoder(nn.Module):
         z = self._enc_mu(h)
         return z
 
-class PCalculator(nn.Module):
+class QCalculator(nn.Module):
     def __init__(self, n_clusters):
         super(self.__class__, self).__init__()
         self.n_clusters = n_clusters
 
-        self.lstm0 = nn.LSTM(2, hidden_size=1, num_layers=2, batch_first=True)
         self.layer0 = nn.Sequential(
             nn.Linear(n_clusters*2, int(n_clusters*3/2)),
             nn.BatchNorm1d(int(n_clusters*3/2)),
@@ -91,13 +90,11 @@ class PCalculator(nn.Module):
         model_dict.update(pretrained_dict)
         self.load_state_dict(model_dict)
 
-    def forward(self, p_image, p_text):
-        # output0, _ = self.lstm0(torch.stack([p_image, p_text], dim=2))
-        # prob = self.softmax(output0.squeeze())
-        output0 = self.layer0(torch.cat([p_image, p_text], dim=1))
+    def forward(self, image_q, text_q):
+        output0 = self.layer0(torch.cat([image_q, text_q], dim=1))
         output1 = self.layer1(output0)
-        prob = self.softmax(output1)
-        return prob
+        q = self.softmax(output1)
+        return q
 
 # class FusionLayer(nn.Module):
 #     def __init__(self, n_clusters):
@@ -148,11 +145,7 @@ class MultiDEC(nn.Module):
         self.softmax = nn.Softmax(dim=1)
         self.fl = fl
         if fl:
-            self.fusion_layer = nn.Sequential(
-                nn.Linear(n_clusters*2, n_clusters),
-                nn.Sigmoid(),
-                nn.Softmax(dim=1)
-            )
+            self.fusion_layer = QCalculator(n_clusters)
 
     def save_model(self, path):
         torch.save(self.state_dict(), path)
@@ -178,7 +171,7 @@ class MultiDEC(nn.Module):
         text_q = text_q ** (self.alpha + 1.0) / 2.0
         text_q = text_q / torch.sum(text_q, dim=1, keepdim=True)
         if self.fl:
-            q = self.fusion_layer(torch.cat([image_q, text_q], dim=1))
+            q = self.fusion_layer(image_q, text_q)
         else:
             q = torch.mean(torch.stack([image_q, text_q]), dim=0)
         return q
