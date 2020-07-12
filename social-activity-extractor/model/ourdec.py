@@ -468,7 +468,7 @@ class MultiDEC(nn.Module):
                 # clustering phase
                 image_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][1]
                 text_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][2]
-                pbatch = p[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)]
+                pbatch = test_p[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)]
 
                 image_inputs = Variable(image_batch).to(self.device)
                 text_inputs = Variable(text_batch).to(self.device)
@@ -482,7 +482,7 @@ class MultiDEC(nn.Module):
             test_unsupervised_loss /= full_num
             test_supervised_loss /= test_num
 
-            test_pred = torch.argmax(test_p, dim=1).numpy()[full_num:]
+            test_pred = torch.argmax(q, dim=1).numpy()[full_num:]
             test_acc = accuracy_score(test_labels, test_pred)
             test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')
             test_f_1 = f1_score(test_labels, test_pred, average='macro')
