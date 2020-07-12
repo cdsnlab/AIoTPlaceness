@@ -293,11 +293,8 @@ class MultiDEC(nn.Module):
             text_inputs = Variable(text_batch).to(self.device)
 
             _image_z, _text_z = self.forward(image_inputs, text_inputs)
-            _q = 1.0 / (1.0 + torch.sum((_image_z.unsqueeze(1) - self.image_encoder.mu) ** 2, dim=2) / self.alpha)
-            _q = _q ** (self.alpha + 1.0) / 2.0
+            _q, _r = self.soft_assignemt(_image_z, _text_z)
             q.append(_q.data.cpu())
-            _r = 1.0 / (1.0 + torch.sum((_text_z.unsqueeze(1) - self.text_encoder.mu) ** 2, dim=2) / self.alpha)
-            _r = _r ** (self.alpha + 1.0) / 2.0
             r.append(_r.data.cpu())
 
             del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r
@@ -309,18 +306,13 @@ class MultiDEC(nn.Module):
             text_inputs = Variable(text_batch).to(self.device)
 
             _image_z, _text_z = self.forward(image_inputs, text_inputs)
-            _q = 1.0 / (1.0 + torch.sum((_image_z.unsqueeze(1) - self.image_encoder.mu) ** 2, dim=2) / self.alpha)
-            _q = _q ** (self.alpha + 1.0) / 2.0
+            _q, _r = self.soft_assignemt(_image_z, _text_z)
             q.append(_q.data.cpu())
-            _r = 1.0 / (1.0 + torch.sum((_text_z.unsqueeze(1) - self.text_encoder.mu) ** 2, dim=2) / self.alpha)
-            _r = _r ** (self.alpha + 1.0) / 2.0
             r.append(_r.data.cpu())
 
             del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r
         q = torch.cat(q, dim=0)
-        q = q / torch.sum(q, dim=1, keepdim=True)
         r = torch.cat(r, dim=0)
-        r = r / torch.sum(r, dim=1, keepdim=True)
 
         p, _, _ = self.target_distribution(q, r)
         initial_pred = torch.argmax(p, dim=1).numpy()
@@ -386,18 +378,13 @@ class MultiDEC(nn.Module):
                 text_inputs = Variable(text_batch).to(self.device)
 
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
-                _q = 1.0 / (1.0 + torch.sum((_image_z.unsqueeze(1) - self.image_encoder.mu) ** 2, dim=2) / self.alpha)
-                _q = _q ** (self.alpha + 1.0) / 2.0
+                _q, _r = self.soft_assignemt(_image_z, _text_z)
                 q.append(_q.data.cpu())
-                _r = 1.0 / (1.0 + torch.sum((_text_z.unsqueeze(1) - self.text_encoder.mu) ** 2, dim=2) / self.alpha)
-                _r = _r ** (self.alpha + 1.0) / 2.0
                 r.append(_r.data.cpu())
 
                 del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r
             q = torch.cat(q, dim=0)
-            q = q / torch.sum(q, dim=1, keepdim=True)
             r = torch.cat(r, dim=0)
-            r = r / torch.sum(r, dim=1, keepdim=True)
 
             p, _, _ = self.target_distribution(q, r)
 
@@ -474,11 +461,8 @@ class MultiDEC(nn.Module):
                 text_inputs = Variable(text_batch).to(self.device)
 
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
-                _q = 1.0 / (1.0 + torch.sum((_image_z.unsqueeze(1) - self.image_encoder.mu) ** 2, dim=2) / self.alpha)
-                _q = _q ** (self.alpha + 1.0) / 2.0
+                _q, _r = self.soft_assignemt(_image_z, _text_z)
                 q.append(_q.data.cpu())
-                _r = 1.0 / (1.0 + torch.sum((_text_z.unsqueeze(1) - self.text_encoder.mu) ** 2, dim=2) / self.alpha)
-                _r = _r ** (self.alpha + 1.0) / 2.0
                 r.append(_r.data.cpu())
 
                 del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r
@@ -497,18 +481,13 @@ class MultiDEC(nn.Module):
                 supervised_image_loss, supervised_text_loss = self.semi_loss_function(label_inputs, qbatch, rbatch)
                 test_supervised_image_loss += supervised_image_loss.data * len(label_inputs)
                 test_supervised_text_loss += supervised_text_loss.data * len(label_inputs)
-                _q = 1.0 / (1.0 + torch.sum((_image_z.unsqueeze(1) - self.image_encoder.mu) ** 2, dim=2) / self.alpha)
-                _q = _q ** (self.alpha + 1.0) / 2.0
+                _q, _r = self.soft_assignemt(_image_z, _text_z)
                 q.append(_q.data.cpu())
-                _r = 1.0 / (1.0 + torch.sum((_text_z.unsqueeze(1) - self.text_encoder.mu) ** 2, dim=2) / self.alpha)
-                _r = _r ** (self.alpha + 1.0) / 2.0
                 r.append(_r.data.cpu())
 
                 del image_batch, text_batch, label_batch, image_inputs, text_inputs, label_inputs, _image_z, _text_z, _q, _r
             q = torch.cat(q, dim=0)
-            q = q / torch.sum(q, dim=1, keepdim=True)
             r = torch.cat(r, dim=0)
-            r = r / torch.sum(r, dim=1, keepdim=True)
             test_p, test_p_image, test_p_text = self.target_distribution(q, r)
 
             if args.tsne and (epoch + 1) % 5 == 0:
