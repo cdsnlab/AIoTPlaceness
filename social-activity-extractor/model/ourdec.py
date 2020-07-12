@@ -184,10 +184,9 @@ class MultiDEC(nn.Module):
             unsupervised_loss = F.kl_div(q.log(), p, reduction='batchmean') + F.kl_div(u.log(), h, reduction='batchmean')
         return unsupervised_loss
 
-    def semi_loss_function(self, label_batch, q_batch, r_batch):
-        supervised_image_loss = F.nll_loss(q_batch.log(), label_batch)
-        supervised_text_loss = F.nll_loss(r_batch.log(), label_batch)
-        return supervised_image_loss, supervised_text_loss
+    def semi_loss_function(self, label_batch, q_batch):
+        supervised_loss = F.nll_loss(q_batch.log(), label_batch)
+        return supervised_loss
 
     def target_distribution(self, q):
         p = q ** 2 / torch.sum(q, dim=0)
@@ -279,14 +278,10 @@ class MultiDEC(nn.Module):
             text_inputs = Variable(text_batch).to(self.device)
 
             _image_z, _text_z = self.forward(image_inputs, text_inputs)
-            _image_q = 1.0 / (1.0 + torch.sum((_image_z.unsqueeze(1) - self.image_encoder.mu) ** 2, dim=2) / self.alpha)
-            _image_q = _image_q ** (self.alpha + 1.0) / 2.0
-            _text_q = 1.0 / (1.0 + torch.sum((_text_z.unsqueeze(1) - self.text_encoder.mu) ** 2, dim=2) / self.alpha)
-            _text_q = _text_q ** (self.alpha + 1.0) / 2.0
-            _q = torch.mean(torch.stack([_image_q, _text_q]))
+            _q = self.soft_assignemt(_image_z, _text_z)
             q.append(_q.data.cpu())
 
-            del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _image_q, _text_q, _q
+            del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q
 
         for batch_idx in range(test_num_batch):
             image_batch = test_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, test_num)][1]
@@ -296,21 +291,14 @@ class MultiDEC(nn.Module):
             text_inputs = Variable(text_batch).to(self.device)
 
             _image_z, _text_z = self.forward(image_inputs, text_inputs)
-            _image_q = 1.0 / (1.0 + torch.sum((_image_z.unsqueeze(1) - self.image_encoder.mu) ** 2, dim=2) / self.alpha)
-            _image_q = _image_q ** (self.alpha + 1.0) / 2.0
-            _text_q = 1.0 / (1.0 + torch.sum((_text_z.unsqueeze(1) - self.text_encoder.mu) ** 2, dim=2) / self.alpha)
-            _text_q = _text_q ** (self.alpha + 1.0) / 2.0
-            _q = torch.mean(torch.stack([_image_q, _text_q]))
+            _q = self.soft_assignemt(_image_z, _text_z)
             q.append(_q.data.cpu())
 
-            del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _image_q, _text_q, _q
+            del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q
 
-        imageq = torch.cat(q, dim=0)
-        q = q / torch.sum(q, dim=1, keepdim=True)
-        r = torch.cat(r, dim=0)
-        r = r / torch.sum(r, dim=1, keepdim=True)
+        q = torch.cat(q, dim=0)
 
-        p, _, _ = self.target_distribution(q, r)
+        p = self.target_distribution(q)
         initial_pred = torch.argmax(p, dim=1).numpy()
         initial_acc = accuracy_score(test_labels, initial_pred[full_num:])
         initial_nmi = normalized_mutual_info_score(test_labels, initial_pred[full_num:], average_method='geometric')
@@ -336,10 +324,8 @@ class MultiDEC(nn.Module):
             # update the target distribution p
             self.train()
             # train 1 epoch
-            train_unsupervised_image_loss = 0.0
-            train_unsupervised_text_loss = 0.0
-            train_supervised_image_loss = 0.0
-            train_supervised_text_loss = 0.0
+            train_unsupervised_loss = 0.0
+            train_supervised_loss = 0.0
             adjust_learning_rate(lr, optimizer)
             for batch_idx in range(train_num_batch):
                 # supervised phase
@@ -353,11 +339,9 @@ class MultiDEC(nn.Module):
                 label_inputs = Variable(label_batch).to(self.device)
 
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
-                qbatch, rbatch = self.soft_assignemt(_image_z, _text_z)
-                supervised_image_loss, supervised_text_loss = self.semi_loss_function(label_inputs, qbatch, rbatch)
-                train_supervised_image_loss += supervised_image_loss.data * len(label_inputs)
-                train_supervised_text_loss += supervised_text_loss.data * len(label_inputs)
-                supervised_loss = supervised_image_loss + supervised_text_loss
+                qbatch = self.soft_assignemt(_image_z, _text_z)
+                supervised_loss = self.semi_loss_function(label_inputs, qbatch)
+                train_supervised_loss += supervised_loss.data * len(label_inputs)
                 supervised_loss.backward()
                 optimizer.step()
 
@@ -365,7 +349,6 @@ class MultiDEC(nn.Module):
 
             # update p considering short memory
             q = []
-            r = []
             for batch_idx in range(full_num_batch):
                 image_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][1]
                 text_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][2]
@@ -374,20 +357,13 @@ class MultiDEC(nn.Module):
                 text_inputs = Variable(text_batch).to(self.device)
 
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
-                _q = 1.0 / (1.0 + torch.sum((_image_z.unsqueeze(1) - self.image_encoder.mu) ** 2, dim=2) / self.alpha)
-                _q = _q ** (self.alpha + 1.0) / 2.0
+                _q = self.soft_assignemt(_image_z, _text_z)
                 q.append(_q.data.cpu())
-                _r = 1.0 / (1.0 + torch.sum((_text_z.unsqueeze(1) - self.text_encoder.mu) ** 2, dim=2) / self.alpha)
-                _r = _r ** (self.alpha + 1.0) / 2.0
-                r.append(_r.data.cpu())
 
-                del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r
+                del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q
             q = torch.cat(q, dim=0)
-            q = q / torch.sum(q, dim=1, keepdim=True)
-            r = torch.cat(r, dim=0)
-            r = r / torch.sum(r, dim=1, keepdim=True)
 
-            p, _, _ = self.target_distribution(q, r)
+            p = self.target_distribution(q)
 
             adjust_learning_rate(lr * kappa, optimizer)
 
@@ -403,19 +379,15 @@ class MultiDEC(nn.Module):
                 p_inputs = Variable(pbatch).to(self.device)
 
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
-                qbatch, rbatch = self.soft_assignemt(_image_z, _text_z)
-                unsupervised_image_loss, unsupervised_text_loss = self.loss_function(p_inputs, qbatch, rbatch)
-                train_unsupervised_image_loss += unsupervised_image_loss.data * len(p_inputs)
-                train_unsupervised_text_loss += unsupervised_text_loss.data * len(p_inputs)
-                unsupervised_loss = unsupervised_image_loss + unsupervised_text_loss
+                qbatch = self.soft_assignemt(_image_z, _text_z)
+                unsupervised_loss = self.loss_function(p_inputs, qbatch)
+                train_unsupervised_loss += unsupervised_loss.data * len(p_inputs)
                 unsupervised_loss.backward()
                 optimizer.step()
 
                 del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
-            train_unsupervised_image_loss /= full_num
-            train_unsupervised_text_loss /= full_num
-            train_supervised_image_loss /= train_num
-            train_supervised_text_loss /= train_num
+            train_unsupervised_loss /= full_num
+            train_supervised_loss /= train_num
 
             train_pred = torch.argmax(p, dim=1).numpy()
             df_pred = pd.DataFrame(data=train_pred, index=full_short_codes, columns=['pred'])
@@ -426,14 +398,14 @@ class MultiDEC(nn.Module):
             train_f_1 = f1_score(train_labels, train_pred, average='macro')
             print("#Train measure %3d: acc: %.4f, nmi: %.4f, f_1: %.4f" % (
                 epoch + 1, train_acc, train_nmi, train_f_1))
-            print("#Train loss %3d: unsup img: %.4f, unsup txt: %.4f, super img: %.4f, super txt: %.4f" % (
-                epoch + 1, train_unsupervised_image_loss, train_unsupervised_text_loss, train_supervised_image_loss, train_supervised_text_loss))
+            print("#Train loss %3d: unsup lss: %.4f, super lss: %.4f" % (
+                epoch + 1, train_unsupervised_loss, train_supervised_loss))
             if epoch == 0:
                 train_pred_last = train_pred
-                train_unsupervised_loss_last = train_unsupervised_image_loss + train_unsupervised_text_loss
+                train_unsupervised_loss_last = train_unsupervised_loss
             else:
                 if args.es:
-                    train_unsupervised_loss = train_unsupervised_image_loss + train_unsupervised_text_loss
+                    train_unsupervised_loss = train_unsupervised_loss
                     if train_unsupervised_loss_last > train_unsupervised_loss and epoch >= 5:
                         print("Reach local max/min loss. Stopping training.")
                         flag_end_training = True
@@ -447,13 +419,10 @@ class MultiDEC(nn.Module):
                         flag_end_training = True
 
             self.eval()
-            test_unsupervised_image_loss = 0.0
-            test_unsupervised_text_loss = 0.0
-            test_supervised_image_loss = 0.0
-            test_supervised_text_loss = 0.0
+            test_unsupervised_loss = 0.0
+            test_supervised_loss = 0.0
             # update p considering short memory
             q = []
-            r = []
             for batch_idx in range(full_num_batch):
                 image_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][1]
                 text_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][2]
@@ -462,14 +431,10 @@ class MultiDEC(nn.Module):
                 text_inputs = Variable(text_batch).to(self.device)
 
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
-                _q = 1.0 / (1.0 + torch.sum((_image_z.unsqueeze(1) - self.image_encoder.mu) ** 2, dim=2) / self.alpha)
-                _q = _q ** (self.alpha + 1.0) / 2.0
+                _q = self.soft_assignemt(_image_z, _text_z)
                 q.append(_q.data.cpu())
-                _r = 1.0 / (1.0 + torch.sum((_text_z.unsqueeze(1) - self.text_encoder.mu) ** 2, dim=2) / self.alpha)
-                _r = _r ** (self.alpha + 1.0) / 2.0
-                r.append(_r.data.cpu())
 
-                del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r
+                del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q
 
             for batch_idx in range(test_num_batch):
                 image_batch = test_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, test_num)][1]
@@ -482,22 +447,14 @@ class MultiDEC(nn.Module):
 
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
                 qbatch, rbatch = self.soft_assignemt(_image_z, _text_z)
-                supervised_image_loss, supervised_text_loss = self.semi_loss_function(label_inputs, qbatch, rbatch)
-                test_supervised_image_loss += supervised_image_loss.data * len(label_inputs)
-                test_supervised_text_loss += supervised_text_loss.data * len(label_inputs)
-                _q = 1.0 / (1.0 + torch.sum((_image_z.unsqueeze(1) - self.image_encoder.mu) ** 2, dim=2) / self.alpha)
-                _q = _q ** (self.alpha + 1.0) / 2.0
+                supervised_loss = self.semi_loss_function(label_inputs, qbatch)
+                test_supervised_loss += supervised_loss.data * len(label_inputs)
+                _q = self.soft_assignemt(_image_z, _text_z)
                 q.append(_q.data.cpu())
-                _r = 1.0 / (1.0 + torch.sum((_text_z.unsqueeze(1) - self.text_encoder.mu) ** 2, dim=2) / self.alpha)
-                _r = _r ** (self.alpha + 1.0) / 2.0
-                r.append(_r.data.cpu())
 
-                del image_batch, text_batch, label_batch, image_inputs, text_inputs, label_inputs, _image_z, _text_z, _q, _r
+                del image_batch, text_batch, label_batch, image_inputs, text_inputs, label_inputs, _image_z, _text_z, _q
             q = torch.cat(q, dim=0)
-            q = q / torch.sum(q, dim=1, keepdim=True)
-            r = torch.cat(r, dim=0)
-            r = r / torch.sum(r, dim=1, keepdim=True)
-            test_p, test_p_image, test_p_text = self.target_distribution(q, r)
+            test_p = self.target_distribution(q)
 
             if args.tsne and (epoch + 1) % 5 == 0:
                 do_tsne(test_p.numpy(), df_initial, self.n_clusters, os.path.join(CONFIG.SVG_PATH, args.gpu, 'epoch_' + ('%03d' % (epoch + 1)) + '.png'))
@@ -513,16 +470,12 @@ class MultiDEC(nn.Module):
                 p_inputs = Variable(pbatch).to(self.device)
 
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
-                qbatch, rbatch = self.soft_assignemt(_image_z, _text_z)
-                unsupervised_image_loss, unsupervised_text_loss = self.loss_function(p_inputs, qbatch, rbatch)
-                test_unsupervised_image_loss += unsupervised_image_loss.data * len(p_inputs)
-                test_unsupervised_text_loss += unsupervised_text_loss.data * len(p_inputs)
-
+                qbatch = self.soft_assignemt(_image_z, _text_z)
+                unsupervised_loss = self.loss_function(p_inputs, qbatch)
+                test_unsupervised_loss += unsupervised_loss.data * len(p_inputs)
                 del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
-            test_unsupervised_image_loss /= full_num
-            test_unsupervised_text_loss /= full_num
-            test_supervised_image_loss /= test_num
-            test_supervised_text_loss /= test_num
+            test_unsupervised_loss /= full_num
+            test_supervised_loss /= test_num
 
             test_pred = torch.argmax(test_p, dim=1).numpy()[full_num:]
             test_acc = accuracy_score(test_labels, test_pred)
@@ -530,8 +483,8 @@ class MultiDEC(nn.Module):
             test_f_1 = f1_score(test_labels, test_pred, average='macro')
             print("#Test measure %3d: acc: %.4f, nmi: %.4f, f_1: %.4f" % (
                 epoch + 1, test_acc, test_nmi, test_f_1))
-            print("#Test loss %3d: unsup img: %.4f, unsup txt: %.4f, super img: %.4f, super txt: %.4f" % (
-                epoch + 1, test_unsupervised_image_loss, test_unsupervised_text_loss, test_supervised_image_loss, test_supervised_text_loss))
+            print("#Test loss %3d: unsup lss: %.4f, super lss: %.4f" % (
+                epoch + 1, test_unsupervised_loss, test_supervised_loss))
             self.acc = test_acc
             self.nmi = test_nmi
             self.f_1 = test_f_1

@@ -17,7 +17,7 @@ from sklearn.model_selection import train_test_split, StratifiedKFold
 
 from model.Weight_Calculator import WeightCalculator
 from model.util import load_multi_csv_data, load_semi_supervised_csv_data, load_transductive_semi_supervised_csv_data
-from model.multidec import MDEC_encoder, MultiDEC
+from model.ourdec import MDEC_encoder, MultiDEC
 
 CONFIG = config.Config
 
