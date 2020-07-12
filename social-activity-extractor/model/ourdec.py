@@ -394,7 +394,7 @@ class MultiDEC(nn.Module):
             train_unsupervised_loss /= full_num
             train_supervised_loss /= train_num
 
-            train_pred = torch.argmax(p, dim=1).numpy()
+            train_pred = torch.argmax(q, dim=1).numpy()
             df_pred = pd.DataFrame(data=train_pred, index=full_short_codes, columns=['pred'])
             df_pred = df_pred.loc[df_train.index]
             train_pred = df_pred['pred']
