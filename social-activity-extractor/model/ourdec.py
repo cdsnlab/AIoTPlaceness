@@ -446,7 +446,7 @@ class MultiDEC(nn.Module):
                 label_inputs = Variable(label_batch).to(self.device)
 
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
-                qbatch, rbatch = self.soft_assignemt(_image_z, _text_z)
+                qbatch = self.soft_assignemt(_image_z, _text_z)
                 supervised_loss = self.semi_loss_function(label_inputs, qbatch)
                 test_supervised_loss += supervised_loss.data * len(label_inputs)
                 _q = self.soft_assignemt(_image_z, _text_z)
