@@ -171,7 +171,7 @@ class MultiDEC(nn.Module):
         text_q = 1.0 / (1.0 + torch.sum((text_z.unsqueeze(1) - self.text_encoder.mu) ** 2, dim=2) / self.alpha)
         text_q = text_q ** (self.alpha + 1.0) / 2.0
         text_q = text_q / torch.sum(text_q, dim=1, keepdim=True)
-        q = torch.mean(torch.stack([image_q, text_q]))
+        q = torch.mean(torch.stack([image_q, text_q]), dim=0)
         return q
 
     def loss_function(self, p, q):
