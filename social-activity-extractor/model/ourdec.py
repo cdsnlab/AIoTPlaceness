@@ -84,8 +84,7 @@ class WeightCalculator(nn.Module):
 
     def forward(self, image_z, text_z):
         output0 = self.layer0(torch.cat([image_z, text_z], dim=1))
-        output1 = self.layer1(output0)
-        weight = self.softmax(output1)
+        weight = self.layer1(output0)
         return weight
 
 
