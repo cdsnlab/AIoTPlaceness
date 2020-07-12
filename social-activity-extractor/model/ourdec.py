@@ -107,7 +107,7 @@ class MultiDEC(nn.Module):
         self.softmax = nn.Softmax(dim=1)
         self.fl = fl
         if fl:
-            self.weight_calculator = WeightCalculator(z_dim=300, n_clusters=n_clusters)
+            self.weight_calculator = WeightCalculator(z_dim=10, n_clusters=n_clusters)
             #self.weight_parameter = Parameter(torch.full((n_clusters,), 0.5))
 
     def save_model(self, path):
