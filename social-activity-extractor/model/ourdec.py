@@ -64,68 +64,29 @@ class MDEC_encoder(nn.Module):
         z = self._enc_mu(h)
         return z
 
-class QCalculator(nn.Module):
-    def __init__(self, n_clusters):
+class WeightCalculator(nn.Module):
+    def __init__(self, z_dim, n_clusters):
         super(self.__class__, self).__init__()
+        self.z_dim = z_dim
         self.n_clusters = n_clusters
 
         self.layer0 = nn.Sequential(
-            nn.Linear(n_clusters*2, int(n_clusters*3/2)),
-            nn.BatchNorm1d(int(n_clusters*3/2)),
+            nn.Linear(z_dim*2, int(z_dim*3/2)),
+            nn.BatchNorm1d(int(z_dim*3/2)),
             nn.ReLU()
         )
         self.layer1 = nn.Sequential(
-            nn.Linear(int(n_clusters*3/2), n_clusters),
+            nn.Linear(int(z_dim*3/2), n_clusters),
             nn.Sigmoid()
         )
         self.softmax = nn.Softmax(dim=1)
 
-    def save_model(self, path):
-        torch.save(self.state_dict(), path)
-
-    def load_model(self, path):
-        pretrained_dict = torch.load(path, map_location=lambda storage, loc: storage)
-        model_dict = self.state_dict()
-        pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
-        model_dict.update(pretrained_dict)
-        self.load_state_dict(model_dict)
-
-    def forward(self, image_q, text_q):
-        output0 = self.layer0(torch.cat([image_q, text_q], dim=1))
+    def forward(self, image_z, text_z):
+        output0 = self.layer0(torch.cat([image_z, text_z], dim=1))
         output1 = self.layer1(output0)
-        q = self.softmax(output1)
-        return q
+        weight = self.softmax(output1)
+        return weight
 
-# class FusionLayer(nn.Module):
-#     def __init__(self, n_clusters):
-#         super(self.__class__, self).__init__()
-#         self.n_clusters = n_clusters
-#
-#         self.layer0 = nn.Sequential(
-#             nn.Linear(n_clusters*2, n_clusters),
-#             nn.ReLU()
-#         )
-#         self.layer1 = nn.Sequential(
-#             nn.Linear(n_clusters, 2),
-#             nn.Sigmoid()
-#         )
-#         self.softmax = nn.Softmax(dim=1)
-#
-#     def save_model(self, path):
-#         torch.save(self.state_dict(), path)
-#
-#     def load_model(self, path):
-#         pretrained_dict = torch.load(path, map_location=lambda storage, loc: storage)
-#         model_dict = self.state_dict()
-#         pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
-#         model_dict.update(pretrained_dict)
-#         self.load_state_dict(model_dict)
-#
-#     def forward(self, p_image, p_text):
-#         output0 = self.layer0(torch.cat([p_image, p_text], dim=1))
-#         output1 = self.layer1(output0)
-#         prob = self.softmax(output1)
-#         return prob
 
 class MultiDEC(nn.Module):
     def __init__(self, device, image_encoder, text_encoder, ours=False, use_prior=False, fl=False, n_clusters=10, alpha=1):
@@ -145,7 +106,8 @@ class MultiDEC(nn.Module):
         self.softmax = nn.Softmax(dim=1)
         self.fl = fl
         if fl:
-            self.weight_parameter = Parameter(torch.full((n_clusters,), 0.5))
+            self.weight_calculator = WeightCalculator(z_dim=300, n_clusters=n_clusters)
+            #self.weight_parameter = Parameter(torch.full((n_clusters,), 0.5))
 
     def save_model(self, path):
         torch.save(self.state_dict(), path)
@@ -171,7 +133,9 @@ class MultiDEC(nn.Module):
         text_q = text_q ** (self.alpha + 1.0) / 2.0
         text_q = text_q / torch.sum(text_q, dim=1, keepdim=True)
         if self.fl:
-            q = image_q * self.weight_parameter.expand_as(image_q) + text_q * (1 - self.weight_parameter).expand_as(text_q)
+            w = self.weight_calculator(image_z, text_z)
+            q = image_q * w + text_q * (1 - w)
+            #q = image_q * self.weight_parameter.expand_as(image_q) + text_q * (1 - self.weight_parameter).expand_as(text_q)
         else:
             q = torch.mean(torch.stack([image_q, text_q]), dim=0)
         return q
