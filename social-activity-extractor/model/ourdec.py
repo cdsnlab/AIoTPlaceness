@@ -145,7 +145,7 @@ class MultiDEC(nn.Module):
         self.softmax = nn.Softmax(dim=1)
         self.fl = fl
         if fl:
-            self.fusion_layer = QCalculator(n_clusters)
+            self.weight_parameter = Parameter(torch.full((n_clusters,), 0.5))
 
     def save_model(self, path):
         torch.save(self.state_dict(), path)
@@ -171,7 +171,7 @@ class MultiDEC(nn.Module):
         text_q = text_q ** (self.alpha + 1.0) / 2.0
         text_q = text_q / torch.sum(text_q, dim=1, keepdim=True)
         if self.fl:
-            q = self.fusion_layer(image_q, text_q)
+            q = image_q * self.weight_parameter.expand_as(image_q) + text_q * (1 - self.weight_parameter).expand_as(text_q)
         else:
             q = torch.mean(torch.stack([image_q, text_q]), dim=0)
         return q

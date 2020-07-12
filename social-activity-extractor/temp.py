@@ -1,4 +1,7 @@
 import argparse
+
+from torch.nn import Parameter
+
 import config
 import requests
 import json
@@ -72,10 +75,11 @@ def main():
 	parser.add_argument('-checkpoint', type=str, default=None, help='filename of checkpoint to resume')
 
 	args = parser.parse_args()
-
+	weight_parameter = Parameter(torch.full((12,), 0.5))
+	print(weight_parameter.size())
 	if args.noti:
 		slacknoti("underkoo start using")
-	get_latent(args)
+	#get_latent(args)
 	if args.noti:
 		slacknoti("underkoo end using")
 
