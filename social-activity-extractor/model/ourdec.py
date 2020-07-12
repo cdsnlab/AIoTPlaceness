@@ -135,6 +135,7 @@ class MultiDEC(nn.Module):
         if self.fl:
             w = self.weight_calculator(image_z, text_z)
             q = image_q * w + text_q * (1 - w)
+            q = self.softmax(q)
             #q = image_q * self.weight_parameter.expand_as(image_q) + text_q * (1 - self.weight_parameter).expand_as(text_q)
         else:
             q = torch.mean(torch.stack([image_q, text_q]), dim=0)
