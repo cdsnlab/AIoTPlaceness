@@ -64,6 +64,7 @@ class MDEC_encoder(nn.Module):
         z = self._enc_mu(h)
         return z
 
+
 class WeightCalculator(nn.Module):
     def __init__(self, z_dim, n_clusters):
         super(self.__class__, self).__init__()
@@ -71,12 +72,12 @@ class WeightCalculator(nn.Module):
         self.n_clusters = n_clusters
 
         self.layer0 = nn.Sequential(
-            nn.Linear(z_dim*2, int(z_dim*3/2)),
-            nn.BatchNorm1d(int(z_dim*3/2)),
+            nn.Linear(z_dim*2, z_dim),
+            nn.BatchNorm1d(z_dim),
             nn.ReLU()
         )
         self.layer1 = nn.Sequential(
-            nn.Linear(int(z_dim*3/2), n_clusters),
+            nn.Linear(z_dim, n_clusters),
             nn.Sigmoid()
         )
         self.softmax = nn.Softmax(dim=1)
