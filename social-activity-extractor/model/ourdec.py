@@ -146,8 +146,8 @@ class MultiDEC(nn.Module):
         self.nmi = 0.
         self.f_1 = 0.
         self.softmax = nn.Softmax(dim=1)
+        self.fl = fl
         if fl:
-            self.fl = fl
             self.fusion_layer = nn.Sequential(
                 nn.Linear(n_clusters*2, n_clusters),
                 nn.Sigmoid(),
