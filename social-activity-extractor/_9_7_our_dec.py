@@ -53,7 +53,7 @@ def main():
     parser.add_argument('-latent_dim', type=int, default=10, help='size of latent variable')
     parser.add_argument('-ours', action='store_true', default=False, help='use our target distribution')
     parser.add_argument('-use_prior', action='store_true', default=False, help='use prior knowledge')
-    parser.add_argument('-wp', action='store_true', default=False, help='set weight parameter')
+    parser.add_argument('-fl', action='store_true', default=False, help='set fusion layer')
     # train
     parser.add_argument('-start_fold', type=int, default=0, help='fold for start')
     parser.add_argument('-fold', type=int, default=5, help='number of fold')
@@ -118,7 +118,7 @@ def train_multidec(args):
                                         encodeLayer=[500, 500, 2000], activation="relu", dropout=0)
             text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix_model + "_text""_" + args.target_dataset + "_sdae_" + str(args.latent_dim) + '_'  + str(fold_idx)) + ".pt")
             # text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "sampled_plus_labeled_scaled_text_sdae_" + str(fold_idx)) + ".pt")
-            mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder, ours=args.ours, use_prior=args.use_prior,
+            mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder, ours=args.ours, use_prior=args.use_prior, fl=args.fl,
                                 n_clusters=n_clusters)
             mdec.fit_predict(full_dataset, train_dataset, val_dataset, args, CONFIG, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
                          save_path=os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix_csv + "_mdec_" + str(args.latent_dim) + '_'  + str(fold_idx)) + ".pt", tol=args.tol, kappa=args.kappa)

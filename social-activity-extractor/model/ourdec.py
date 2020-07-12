@@ -99,7 +99,7 @@ class PCalculator(nn.Module):
         prob = self.softmax(output1)
         return prob
 
-# class WeightCalculator(nn.Module):
+# class FusionLayer(nn.Module):
 #     def __init__(self, n_clusters):
 #         super(self.__class__, self).__init__()
 #         self.n_clusters = n_clusters
@@ -127,12 +127,11 @@ class PCalculator(nn.Module):
 #     def forward(self, p_image, p_text):
 #         output0 = self.layer0(torch.cat([p_image, p_text], dim=1))
 #         output1 = self.layer1(output0)
-#         return output1
-#         # prob = self.softmax(output1)
-#         # return prob
+#         prob = self.softmax(output1)
+#         return prob
 
 class MultiDEC(nn.Module):
-    def __init__(self, device, image_encoder, text_encoder, ours=False, use_prior=False, n_clusters=10, alpha=1):
+    def __init__(self, device, image_encoder, text_encoder, ours=False, use_prior=False, fl=False, n_clusters=10, alpha=1):
         super(self.__class__, self).__init__()
         self.device = device
         self.image_encoder = image_encoder
@@ -147,6 +146,13 @@ class MultiDEC(nn.Module):
         self.nmi = 0.
         self.f_1 = 0.
         self.softmax = nn.Softmax(dim=1)
+        if fl:
+            self.fl = fl
+            self.fusion_layer = nn.Sequential(
+                nn.Linear(n_clusters*2, n_clusters),
+                nn.Sigmoid(),
+                nn.Softmax(dim=1)
+            )
 
     def save_model(self, path):
         torch.save(self.state_dict(), path)
@@ -171,7 +177,10 @@ class MultiDEC(nn.Module):
         text_q = 1.0 / (1.0 + torch.sum((text_z.unsqueeze(1) - self.text_encoder.mu) ** 2, dim=2) / self.alpha)
         text_q = text_q ** (self.alpha + 1.0) / 2.0
         text_q = text_q / torch.sum(text_q, dim=1, keepdim=True)
-        q = torch.mean(torch.stack([image_q, text_q]), dim=0)
+        if self.fl:
+            q = self.fusion_layer(torch.cat([image_q, text_q], dim=1))
+        else:
+            q = torch.mean(torch.stack([image_q, text_q]), dim=0)
         return q
 
     def loss_function(self, p, q):
