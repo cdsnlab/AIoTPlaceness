@@ -106,8 +106,8 @@ class MultiDEC(nn.Module):
         self.softmax = nn.Softmax(dim=1)
         self.fl = fl
         if fl:
-            self.weight_calculator = WeightCalculator(z_dim=10, n_clusters=n_clusters)
-            #self.weight_parameter = Parameter(torch.full((n_clusters,), 0.5))
+            #self.weight_calculator = WeightCalculator(z_dim=10, n_clusters=n_clusters)
+            self.weight_parameter = Parameter(torch.full((n_clusters,), 0.5))
 
     def save_model(self, path):
         torch.save(self.state_dict(), path)
@@ -135,7 +135,10 @@ class MultiDEC(nn.Module):
         return q, r
 
     def probabililty_fusion(self, q, r):
-        s = torch.mean(torch.stack([q, r]), dim=0)
+        if self.fl:
+            s = self.weight_parameter.expand_as(q) * q + (1 - self.weight_parameter).expand_as(r) * r
+        else:
+            s = torch.mean(torch.stack([q, r]), dim=0)
         return s
 
     def loss_function(self, p, q):
