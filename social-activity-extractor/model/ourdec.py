@@ -106,8 +106,8 @@ class MultiDEC(nn.Module):
         self.softmax = nn.Softmax(dim=1)
         self.fl = fl
         if fl:
-            #self.weight_calculator = WeightCalculator(z_dim=10, n_clusters=n_clusters)
-            self.weight_parameter = Parameter(torch.full((n_clusters,), 0.5))
+            self.weight_calculator = WeightCalculator(z_dim=10, n_clusters=n_clusters)
+            #self.weight_parameter = Parameter(torch.full((n_clusters,), 0.5))
 
     def save_model(self, path):
         torch.save(self.state_dict(), path)
@@ -134,9 +134,11 @@ class MultiDEC(nn.Module):
         r = r / torch.sum(r, dim=1, keepdim=True)
         return q, r
 
-    def probabililty_fusion(self, q, r):
+    def probabililty_fusion(self, q, r, image_z, text_z):
         if self.fl:
-            s = self.weight_parameter.expand_as(q) * q + (1 - self.weight_parameter).expand_as(r) * r
+            #s = self.weight_parameter.expand_as(q) * q + (1 - self.weight_parameter).expand_as(r) * r
+            w = self.weight_calculator(image_z, text_z)
+            s = w * q + (1-w) * r
         else:
             s = torch.mean(torch.stack([q, r]), dim=0)
         return s
@@ -250,7 +252,7 @@ class MultiDEC(nn.Module):
 
             _image_z, _text_z = self.forward(image_inputs, text_inputs)
             _q, _r = self.soft_assignemt(_image_z, _text_z)
-            _s = self.probabililty_fusion(_q, _r)
+            _s = self.probabililty_fusion(_q, _r, _image_z, _text_z)
             s.append(_s.data.cpu())
 
             del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r, _s
@@ -264,7 +266,7 @@ class MultiDEC(nn.Module):
 
             _image_z, _text_z = self.forward(image_inputs, text_inputs)
             _q, _r = self.soft_assignemt(_image_z, _text_z)
-            _s = self.probabililty_fusion(_q, _r)
+            _s = self.probabililty_fusion(_q, _r, _image_z, _text_z)
             s.append(_s.data.cpu())
 
             del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r, _s
@@ -334,7 +336,7 @@ class MultiDEC(nn.Module):
 
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
                 _q, _r = self.soft_assignemt(_image_z, _text_z)
-                _s = self.probabililty_fusion(_q, _r)
+                _s = self.probabililty_fusion(_q, _r, _image_z, _text_z)
                 s.append(_s.data.cpu())
 
                 del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r, _s
@@ -357,7 +359,7 @@ class MultiDEC(nn.Module):
 
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
                 qbatch, rbatch = self.soft_assignemt(_image_z, _text_z)
-                sbatch = self.probabililty_fusion(qbatch, rbatch)
+                sbatch = self.probabililty_fusion(qbatch, rbatch, _image_z, _text_z)
                 unsupervised_loss = self.loss_function(p_inputs, sbatch)
                 train_unsupervised_loss += unsupervised_loss.data * len(p_inputs)
                 unsupervised_loss.backward()
@@ -412,7 +414,7 @@ class MultiDEC(nn.Module):
 
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
                 _q, _r = self.soft_assignemt(_image_z, _text_z)
-                _s = self.probabililty_fusion(_q, _r)
+                _s = self.probabililty_fusion(_q, _r, _image_z, _text_z)
                 s.append(_s.data.cpu())
 
                 del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r, _s
@@ -432,7 +434,7 @@ class MultiDEC(nn.Module):
                 train_supervised_image_loss += supervised_image_loss.data * len(label_inputs)
                 train_supervised_text_loss += supervised_text_loss.data * len(label_inputs)
                 _q, _r = self.soft_assignemt(_image_z, _text_z)
-                _s = self.probabililty_fusion(_q, _r)
+                _s = self.probabililty_fusion(_q, _r, _image_z, _text_z)
                 s.append(_s.data.cpu())
 
                 del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r, _s
@@ -454,7 +456,7 @@ class MultiDEC(nn.Module):
 
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
                 qbatch, rbatch = self.soft_assignemt(_image_z, _text_z)
-                sbatch = self.probabililty_fusion(qbatch, rbatch)
+                sbatch = self.probabililty_fusion(qbatch, rbatch, _image_z, _text_z)
                 unsupervised_loss = self.loss_function(p_inputs, sbatch)
                 test_unsupervised_loss += unsupervised_loss.data * len(p_inputs)
                 del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
