@@ -125,21 +125,18 @@ class MultiDEC(nn.Module):
         return image_z, text_z
 
     def soft_assignemt(self, image_z, text_z):
-        image_q = 1.0 / (1.0 + torch.sum((image_z.unsqueeze(1) - self.image_encoder.mu) ** 2, dim=2) / self.alpha)
-        image_q = image_q ** (self.alpha + 1.0) / 2.0
-        image_q = image_q / torch.sum(image_q, dim=1, keepdim=True)
+        q = 1.0 / (1.0 + torch.sum((image_z.unsqueeze(1) - self.image_encoder.mu) ** 2, dim=2) / self.alpha)
+        q = q ** (self.alpha + 1.0) / 2.0
+        q = q / torch.sum(q, dim=1, keepdim=True)
 
-        text_q = 1.0 / (1.0 + torch.sum((text_z.unsqueeze(1) - self.text_encoder.mu) ** 2, dim=2) / self.alpha)
-        text_q = text_q ** (self.alpha + 1.0) / 2.0
-        text_q = text_q / torch.sum(text_q, dim=1, keepdim=True)
-        if self.fl:
-            w = self.weight_calculator(image_z, text_z)
-            q = image_q * w + text_q * (1 - w)
-            q = self.softmax(q)
-            #q = image_q * self.weight_parameter.expand_as(image_q) + text_q * (1 - self.weight_parameter).expand_as(text_q)
-        else:
-            q = torch.mean(torch.stack([image_q, text_q]), dim=0)
-        return q
+        r = 1.0 / (1.0 + torch.sum((text_z.unsqueeze(1) - self.text_encoder.mu) ** 2, dim=2) / self.alpha)
+        r = r ** (self.alpha + 1.0) / 2.0
+        r = r / torch.sum(r, dim=1, keepdim=True)
+        return q, r
+
+    def probabililty_fusion(self, q, r):
+        s = torch.mean(torch.stack([q, r]), dim=0)
+        return s
 
     def loss_function(self, p, q):
         h = torch.mean(p, dim=0, keepdim=True)
@@ -151,9 +148,10 @@ class MultiDEC(nn.Module):
             unsupervised_loss = F.kl_div(q.log(), p, reduction='batchmean') + F.kl_div(u.log(), h, reduction='batchmean')
         return unsupervised_loss
 
-    def semi_loss_function(self, label_batch, q_batch):
-        supervised_loss = F.nll_loss(q_batch.log(), label_batch)
-        return supervised_loss
+    def semi_loss_function(self, label_batch, q_batch, r_batch):
+        supervised_image_loss = F.nll_loss(q_batch.log(), label_batch)
+        supervised_text_loss = F.nll_loss(r_batch.log(), label_batch)
+        return supervised_image_loss, supervised_text_loss
 
     def target_distribution(self, q):
         p = q ** 2 / torch.sum(q, dim=0)
@@ -239,7 +237,7 @@ class MultiDEC(nn.Module):
 
         print("Calculating initial p at %s" % (str(datetime.datetime.now())))
         # update p considering short memory
-        q = []
+        s = []
         for batch_idx in range(full_num_batch):
             image_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][1]
             text_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][2]
@@ -248,10 +246,11 @@ class MultiDEC(nn.Module):
             text_inputs = Variable(text_batch).to(self.device)
 
             _image_z, _text_z = self.forward(image_inputs, text_inputs)
-            _q = self.soft_assignemt(_image_z, _text_z)
-            q.append(_q.data.cpu())
+            _q, _r = self.soft_assignemt(_image_z, _text_z)
+            _s = self.probabililty_fusion(_q, _r)
+            s.append(_s.data.cpu())
 
-            del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q
+            del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r, _s
 
         for batch_idx in range(test_num_batch):
             image_batch = test_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, test_num)][1]
@@ -261,15 +260,16 @@ class MultiDEC(nn.Module):
             text_inputs = Variable(text_batch).to(self.device)
 
             _image_z, _text_z = self.forward(image_inputs, text_inputs)
-            _q = self.soft_assignemt(_image_z, _text_z)
-            q.append(_q.data.cpu())
+            _q, _r = self.soft_assignemt(_image_z, _text_z)
+            _s = self.probabililty_fusion(_q, _r)
+            s.append(_s.data.cpu())
 
-            del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q
+            del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r, _s
 
-        q = torch.cat(q, dim=0)
+        s = torch.cat(s, dim=0)
 
-        p = self.target_distribution(q)
-        initial_pred = torch.argmax(p, dim=1).numpy()
+        p = self.target_distribution(s)
+        initial_pred = torch.argmax(s, dim=1).numpy()
         initial_acc = accuracy_score(test_labels, initial_pred[full_num:])
         initial_nmi = normalized_mutual_info_score(test_labels, initial_pred[full_num:], average_method='geometric')
         initial_f_1 = f1_score(test_labels, initial_pred[full_num:], average='macro')
@@ -295,7 +295,8 @@ class MultiDEC(nn.Module):
             self.train()
             # train 1 epoch
             train_unsupervised_loss = 0.0
-            train_supervised_loss = 0.0
+            train_supervised_image_loss = 0.0
+            train_supervised_text_loss = 0.0
             adjust_learning_rate(lr, optimizer)
             for batch_idx in range(train_num_batch):
                 # supervised phase
@@ -309,16 +310,18 @@ class MultiDEC(nn.Module):
                 label_inputs = Variable(label_batch).to(self.device)
 
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
-                qbatch = self.soft_assignemt(_image_z, _text_z)
-                supervised_loss = self.semi_loss_function(label_inputs, qbatch)
-                train_supervised_loss += supervised_loss.data * len(label_inputs)
+                qbatch, rbatch = self.soft_assignemt(_image_z, _text_z)
+                supervised_image_loss, supervised_text_loss = self.semi_loss_function(label_inputs, qbatch, rbatch)
+                train_supervised_image_loss += supervised_image_loss.data * len(label_inputs)
+                train_supervised_text_loss += supervised_text_loss.data * len(label_inputs)
+                supervised_loss = supervised_image_loss + supervised_text_loss
                 supervised_loss.backward()
                 optimizer.step()
 
                 del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
 
             # update p considering short memory
-            q = []
+            s = []
             for batch_idx in range(full_num_batch):
                 image_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][1]
                 text_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][2]
@@ -327,13 +330,14 @@ class MultiDEC(nn.Module):
                 text_inputs = Variable(text_batch).to(self.device)
 
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
-                _q = self.soft_assignemt(_image_z, _text_z)
-                q.append(_q.data.cpu())
+                _q, _r = self.soft_assignemt(_image_z, _text_z)
+                _s = self.probabililty_fusion(_q, _r)
+                s.append(_s.data.cpu())
 
-                del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q
-            q = torch.cat(q, dim=0)
+                del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r, _s
+            s = torch.cat(s, dim=0)
 
-            p = self.target_distribution(q)
+            p = self.target_distribution(s)
 
             adjust_learning_rate(lr * kappa, optimizer)
 
@@ -349,17 +353,19 @@ class MultiDEC(nn.Module):
                 p_inputs = Variable(pbatch).to(self.device)
 
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
-                qbatch = self.soft_assignemt(_image_z, _text_z)
-                unsupervised_loss = self.loss_function(p_inputs, qbatch)
+                qbatch, rbatch = self.soft_assignemt(_image_z, _text_z)
+                sbatch = self.probabililty_fusion(qbatch, rbatch)
+                unsupervised_loss = self.loss_function(p_inputs, sbatch)
                 train_unsupervised_loss += unsupervised_loss.data * len(p_inputs)
                 unsupervised_loss.backward()
                 optimizer.step()
 
                 del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
             train_unsupervised_loss /= full_num
-            train_supervised_loss /= train_num
+            train_supervised_image_loss /= train_num
+            train_supervised_text_loss /= train_num
 
-            train_pred = torch.argmax(q, dim=1).numpy()
+            train_pred = torch.argmax(s, dim=1).numpy()
             df_pred = pd.DataFrame(data=train_pred, index=full_short_codes, columns=['pred'])
             df_pred = df_pred.loc[df_train.index]
             train_pred = df_pred['pred']
@@ -368,8 +374,8 @@ class MultiDEC(nn.Module):
             train_f_1 = f1_score(train_labels, train_pred, average='macro')
             print("#Train measure %3d: acc: %.4f, nmi: %.4f, f_1: %.4f" % (
                 epoch + 1, train_acc, train_nmi, train_f_1))
-            print("#Train loss %3d: unsup lss: %.4f, super lss: %.4f" % (
-                epoch + 1, train_unsupervised_loss, train_supervised_loss))
+            print("#Train loss %3d: unsup lss: %.4f, super img: %.4f, super txt: %.4f" % (
+                epoch + 1, train_unsupervised_loss, train_supervised_image_loss, train_supervised_text_loss))
             if epoch == 0:
                 train_pred_last = train_pred
                 train_unsupervised_loss_last = train_unsupervised_loss
@@ -390,9 +396,10 @@ class MultiDEC(nn.Module):
 
             self.eval()
             test_unsupervised_loss = 0.0
-            test_supervised_loss = 0.0
+            test_supervised_image_loss = 0.0
+            test_supervised_text_loss = 0.0
             # update p considering short memory
-            q = []
+            s = []
             for batch_idx in range(full_num_batch):
                 image_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][1]
                 text_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][2]
@@ -401,10 +408,11 @@ class MultiDEC(nn.Module):
                 text_inputs = Variable(text_batch).to(self.device)
 
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
-                _q = self.soft_assignemt(_image_z, _text_z)
-                q.append(_q.data.cpu())
+                _q, _r = self.soft_assignemt(_image_z, _text_z)
+                _s = self.probabililty_fusion(_q, _r)
+                s.append(_s.data.cpu())
 
-                del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q
+                del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r, _s
 
             for batch_idx in range(test_num_batch):
                 image_batch = test_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, test_num)][1]
@@ -416,15 +424,17 @@ class MultiDEC(nn.Module):
                 label_inputs = Variable(label_batch).to(self.device)
 
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
-                qbatch = self.soft_assignemt(_image_z, _text_z)
-                supervised_loss = self.semi_loss_function(label_inputs, qbatch)
-                test_supervised_loss += supervised_loss.data * len(label_inputs)
-                _q = self.soft_assignemt(_image_z, _text_z)
-                q.append(_q.data.cpu())
+                qbatch, rbatch = self.soft_assignemt(_image_z, _text_z)
+                supervised_image_loss, supervised_text_loss = self.semi_loss_function(label_inputs, qbatch, rbatch)
+                train_supervised_image_loss += supervised_image_loss.data * len(label_inputs)
+                train_supervised_text_loss += supervised_text_loss.data * len(label_inputs)
+                _q, _r = self.soft_assignemt(_image_z, _text_z)
+                _s = self.probabililty_fusion(_q, _r)
+                s.append(_s.data.cpu())
 
-                del image_batch, text_batch, label_batch, image_inputs, text_inputs, label_inputs, _image_z, _text_z, _q
-            q = torch.cat(q, dim=0)
-            test_p = self.target_distribution(q)
+                del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r, _s
+            s = torch.cat(s, dim=0)
+            test_p = self.target_distribution(s)
 
             if args.tsne and (epoch + 1) % 5 == 0:
                 do_tsne(test_p.numpy(), df_initial, self.n_clusters, os.path.join(CONFIG.SVG_PATH, args.gpu, 'epoch_' + ('%03d' % (epoch + 1)) + '.png'))
@@ -440,21 +450,23 @@ class MultiDEC(nn.Module):
                 p_inputs = Variable(pbatch).to(self.device)
 
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
-                qbatch = self.soft_assignemt(_image_z, _text_z)
-                unsupervised_loss = self.loss_function(p_inputs, qbatch)
+                qbatch, rbatch = self.soft_assignemt(_image_z, _text_z)
+                sbatch = self.probabililty_fusion(qbatch, rbatch)
+                unsupervised_loss = self.loss_function(p_inputs, sbatch)
                 test_unsupervised_loss += unsupervised_loss.data * len(p_inputs)
                 del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
             test_unsupervised_loss /= full_num
-            test_supervised_loss /= test_num
+            test_supervised_image_loss /= test_num
+            test_supervised_text_loss /= test_num
 
-            test_pred = torch.argmax(q, dim=1).numpy()[full_num:]
+            test_pred = torch.argmax(s, dim=1).numpy()[full_num:]
             test_acc = accuracy_score(test_labels, test_pred)
             test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')
             test_f_1 = f1_score(test_labels, test_pred, average='macro')
             print("#Test measure %3d: acc: %.4f, nmi: %.4f, f_1: %.4f" % (
                 epoch + 1, test_acc, test_nmi, test_f_1))
-            print("#Test loss %3d: unsup lss: %.4f, super lss: %.4f" % (
-                epoch + 1, test_unsupervised_loss, test_supervised_loss))
+            print("#Test loss %3d: unsup lss: %.4f, super img: %.4f, super txt: %.4f" % (
+                epoch + 1, test_unsupervised_loss, test_supervised_image_loss, test_supervised_text_loss))
             self.acc = test_acc
             self.nmi = test_nmi
             self.f_1 = test_f_1
