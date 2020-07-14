@@ -177,47 +177,6 @@ class MultiDEC(nn.Module):
             optimizer = optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=lr)
         else:
             optimizer = optim.SGD(filter(lambda p: p.requires_grad, self.parameters()), lr=lr, momentum=0.9)
-
-        print("Extracting initial features at %s" % (str(datetime.datetime.now())))
-        image_z = []
-        text_z = []
-        for batch_idx in range(full_num_batch):
-            image_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][1]
-            text_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][2]
-            image_inputs = Variable(image_batch).to(self.device)
-            text_inputs = Variable(text_batch).to(self.device)
-            _image_z, _text_z = self.forward(image_inputs, text_inputs)
-            image_z.append(_image_z.data.cpu())
-            text_z.append(_text_z.data.cpu())
-            del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
-        image_z = torch.cat(image_z, dim=0)
-        text_z = torch.cat(text_z, dim=0)
-
-        train_image_z = []
-        train_text_z = []
-        for batch_idx in range(train_num_batch):
-            image_batch = train_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, train_num)][1]
-            text_batch = train_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, train_num)][2]
-            image_inputs = Variable(image_batch).to(self.device)
-            text_inputs = Variable(text_batch).to(self.device)
-            _image_z, _text_z = self.forward(image_inputs, text_inputs)
-            train_image_z.append(_image_z.data.cpu())
-            train_text_z.append(_text_z.data.cpu())
-            del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
-        train_image_z = torch.cat(train_image_z, dim=0)
-        train_text_z = torch.cat(train_text_z, dim=0)
-
-        print("Initializing cluster centers with kmeans at %s" % (str(datetime.datetime.now())))
-        image_kmeans = KMeans(n_clusters=self.n_clusters, n_init=20, random_state=42)
-        image_kmeans.fit(image_z.data.cpu().numpy())
-        train_image_pred = image_kmeans.predict(train_image_z.data.cpu().numpy())
-        print("Image kmeans completed at %s" % (str(datetime.datetime.now())))
-
-        text_kmeans = KMeans(n_clusters=self.n_clusters, n_init=20, random_state=42)
-        text_kmeans.fit(text_z.data.cpu().numpy())
-        train_text_pred = text_kmeans.predict(train_text_z.data.cpu().numpy())
-        print("Text kmeans completed at %s" % (str(datetime.datetime.now())))
-
         full_short_codes = full_dataset[:][0]
         train_short_codes = train_dataset[:][0]
         test_short_codes = test_dataset[:][0]
@@ -225,16 +184,59 @@ class MultiDEC(nn.Module):
         test_labels = test_dataset[:][3].squeeze(dim=0).data.cpu().numpy()
         df_train = pd.DataFrame(data=train_labels, index=train_short_codes, columns=['label'])
         df_test = pd.DataFrame(data=test_labels, index=test_short_codes, columns=['label'])
-        _, image_ind = align_cluster(train_labels, train_image_pred)
-        _, text_ind = align_cluster(train_labels, train_text_pred)
 
-        image_cluster_centers = np.zeros_like(image_kmeans.cluster_centers_)
-        text_cluster_centers = np.zeros_like(text_kmeans.cluster_centers_)
-        for i in range(self.n_clusters):
-            image_cluster_centers[i] = image_kmeans.cluster_centers_[image_ind[i]]
-            text_cluster_centers[i] = text_kmeans.cluster_centers_[text_ind[i]]
-        self.image_encoder.mu.data.copy_(torch.Tensor(image_cluster_centers))
-        self.text_encoder.mu.data.copy_(torch.Tensor(text_cluster_centers))
+        if not args.resume:
+            print("Extracting initial features at %s" % (str(datetime.datetime.now())))
+            image_z = []
+            text_z = []
+            for batch_idx in range(full_num_batch):
+                image_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][1]
+                text_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][2]
+                image_inputs = Variable(image_batch).to(self.device)
+                text_inputs = Variable(text_batch).to(self.device)
+                _image_z, _text_z = self.forward(image_inputs, text_inputs)
+                image_z.append(_image_z.data.cpu())
+                text_z.append(_text_z.data.cpu())
+                del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
+            image_z = torch.cat(image_z, dim=0)
+            text_z = torch.cat(text_z, dim=0)
+
+            train_image_z = []
+            train_text_z = []
+            for batch_idx in range(train_num_batch):
+                image_batch = train_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, train_num)][1]
+                text_batch = train_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, train_num)][2]
+                image_inputs = Variable(image_batch).to(self.device)
+                text_inputs = Variable(text_batch).to(self.device)
+                _image_z, _text_z = self.forward(image_inputs, text_inputs)
+                train_image_z.append(_image_z.data.cpu())
+                train_text_z.append(_text_z.data.cpu())
+                del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z
+            train_image_z = torch.cat(train_image_z, dim=0)
+            train_text_z = torch.cat(train_text_z, dim=0)
+
+            print("Initializing cluster centers with kmeans at %s" % (str(datetime.datetime.now())))
+            image_kmeans = KMeans(n_clusters=self.n_clusters, n_init=20, random_state=42)
+            image_kmeans.fit(image_z.data.cpu().numpy())
+            train_image_pred = image_kmeans.predict(train_image_z.data.cpu().numpy())
+            print("Image kmeans completed at %s" % (str(datetime.datetime.now())))
+
+            text_kmeans = KMeans(n_clusters=self.n_clusters, n_init=20, random_state=42)
+            text_kmeans.fit(text_z.data.cpu().numpy())
+            train_text_pred = text_kmeans.predict(train_text_z.data.cpu().numpy())
+            print("Text kmeans completed at %s" % (str(datetime.datetime.now())))
+
+            _, image_ind = align_cluster(train_labels, train_image_pred)
+            _, text_ind = align_cluster(train_labels, train_text_pred)
+
+            image_cluster_centers = np.zeros_like(image_kmeans.cluster_centers_)
+            text_cluster_centers = np.zeros_like(text_kmeans.cluster_centers_)
+            for i in range(self.n_clusters):
+                image_cluster_centers[i] = image_kmeans.cluster_centers_[image_ind[i]]
+                text_cluster_centers[i] = text_kmeans.cluster_centers_[text_ind[i]]
+            self.image_encoder.mu.data.copy_(torch.Tensor(image_cluster_centers))
+            self.text_encoder.mu.data.copy_(torch.Tensor(text_cluster_centers))
+            
         if self.use_prior:
             for label in train_labels:
                 self.prior[label] = self.prior[label] + 1
