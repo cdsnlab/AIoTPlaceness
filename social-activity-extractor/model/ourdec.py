@@ -106,8 +106,8 @@ class MultiDEC(nn.Module):
         self.softmax = nn.Softmax(dim=1)
         self.fl = fl
         if fl:
-            self.weight_calculator = WeightCalculator(z_dim=10, n_clusters=n_clusters)
-            #self.weight_parameter = Parameter(torch.full((n_clusters,), 0.5))
+            #self.weight_calculator = WeightCalculator(z_dim=10, n_clusters=n_clusters)
+            self.weight_parameter = Parameter(torch.full((n_clusters,), 0.5))
 
     def save_model(self, path):
         torch.save(self.state_dict(), path)
@@ -136,9 +136,9 @@ class MultiDEC(nn.Module):
 
     def probabililty_fusion(self, q, r, image_z, text_z):
         if self.fl:
-            #s = self.weight_parameter.expand_as(q) * q + (1 - self.weight_parameter).expand_as(r) * r
-            w = self.weight_calculator(image_z, text_z)
-            s = w * q + (1-w) * r
+            s = self.weight_parameter.expand_as(q) * q + (1 - self.weight_parameter).expand_as(r) * r
+            #w = self.weight_calculator(image_z, text_z)
+            #s = w * q + (1-w) * r
         else:
             s = torch.mean(torch.stack([q, r]), dim=0)
         return s
@@ -431,8 +431,8 @@ class MultiDEC(nn.Module):
                 _image_z, _text_z = self.forward(image_inputs, text_inputs)
                 qbatch, rbatch = self.soft_assignemt(_image_z, _text_z)
                 supervised_image_loss, supervised_text_loss = self.semi_loss_function(label_inputs, qbatch, rbatch)
-                train_supervised_image_loss += supervised_image_loss.data * len(label_inputs)
-                train_supervised_text_loss += supervised_text_loss.data * len(label_inputs)
+                test_supervised_image_loss += supervised_image_loss.data * len(label_inputs)
+                test_supervised_text_loss += supervised_text_loss.data * len(label_inputs)
                 _q, _r = self.soft_assignemt(_image_z, _text_z)
                 _s = self.probabililty_fusion(_q, _r, _image_z, _text_z)
                 s.append(_s.data.cpu())

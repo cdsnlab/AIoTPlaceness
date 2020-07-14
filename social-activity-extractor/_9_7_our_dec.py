@@ -62,6 +62,7 @@ def main():
     parser.add_argument('-tsne', action='store_true', default=False, help='whether to print tsne result')
     parser.add_argument('-gpu', type=str, default='cuda', help='gpu number')
     # option
+    parser.add_argument('-resume', action='store_true', default=False, help='resume')
     parser.add_argument('-eval', action='store_true', default=False, help='whether evaluate or train it')
 
     args = parser.parse_args()
@@ -86,7 +87,7 @@ def train_multidec(args):
     n_clusters = np.max(label_array) + 1
     #n_clusters = args.n_clusters
 
-    exp = Experiment(args.prefix_csv + "_MDEC", capture_io=True)
+    exp = Experiment(args.prefix_csv + "_ODEC", capture_io=True)
 
     for arg, value in vars(args).items():
         exp.param(arg, value)
@@ -121,8 +122,10 @@ def train_multidec(args):
             # text_encoder.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, "sampled_plus_labeled_scaled_text_sdae_" + str(fold_idx)) + ".pt")
             mdec = MultiDEC(device=device, image_encoder=image_encoder, text_encoder=text_encoder, ours=args.ours, use_prior=args.use_prior, fl=args.fl,
                                 n_clusters=n_clusters)
+            if args.resume:
+                mdec.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix_csv + "_odec_" + str(args.latent_dim) + '_'  + str(fold_idx)) + ".pt")
             mdec.fit_predict(full_dataset, train_dataset, val_dataset, args, CONFIG, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
-                         save_path=os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix_csv + "_mdec_" + str(args.latent_dim) + '_'  + str(fold_idx)) + ".pt", tol=args.tol, kappa=args.kappa)
+                         save_path=os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix_csv + "_odec_" + str(args.latent_dim) + '_'  + str(fold_idx)) + ".pt", tol=args.tol, kappa=args.kappa)
 
             acc_list.append(mdec.acc)
             nmi_list.append(mdec.nmi)
