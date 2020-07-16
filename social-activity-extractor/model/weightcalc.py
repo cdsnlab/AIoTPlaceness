@@ -116,7 +116,10 @@ class WeightCalc(nn.Module):
 
             _image_z, _text_z = mdec.forward(image_inputs, text_inputs)
             _q, _r = mdec.soft_assignemt(_image_z, _text_z)
-            _q = Variable(torch.Tensor(_q.numpy())).to(self.device)
+            _image_z = Variable(torch.Tensor(_image_z.data.cpu().numpy())).to(self.device)
+            _text_z = Variable(torch.Tensor(_text_z.data.cpu().numpy())).to(self.device)
+            _q = Variable(torch.Tensor(_q.data.cpu().numpy())).to(self.device)
+            _r = Variable(torch.Tensor(_r.data.cpu().numpy())).to(self.device)
             _s = self.probabililty_fusion(_q, _r, _image_z, _text_z)
             s.append(_s.data.cpu())
 
