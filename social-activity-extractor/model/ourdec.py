@@ -481,7 +481,7 @@ class MultiDEC(nn.Module):
             if flag_end_training:
                 break
 
-        if save_path:
+        if save_path and not args.resume:
             self.save_model(save_path)
 
     def predict(self, X, batch_size=256):
