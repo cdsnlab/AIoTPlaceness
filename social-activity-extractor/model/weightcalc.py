@@ -171,25 +171,17 @@ class WeightCalc(nn.Module):
             train_f_1 = f1_score(train_labels, train_pred, average='macro')
             print("#Train measure %3d: acc: %.4f, nmi: %.4f, f_1: %.4f" % (
                 epoch + 1, train_acc, train_nmi, train_f_1))
-            print("#Train loss %3d: unsup lss: %.4f" % (
-                epoch + 1, train_unsupervised_loss))
+            print("#Train loss %3d: super lss: %.4f" % (
+                epoch + 1, train_supervised_loss))
             if epoch == 0:
                 train_pred_last = train_pred
-                train_unsupervised_loss_last = train_unsupervised_loss
             else:
-                if args.es:
-                    train_unsupervised_loss = train_unsupervised_loss
-                    if train_unsupervised_loss_last > train_unsupervised_loss and epoch >= 5:
-                        print("Reach local max/min loss. Stopping training.")
-                        flag_end_training = True
-                    train_unsupervised_loss_last = train_unsupervised_loss
-                else:
-                    delta_label = np.sum(train_pred != train_pred_last).astype(np.float32) / len(train_pred)
-                    train_pred_last = train_pred
-                    if delta_label < tol:
-                        print('delta_label ', delta_label, '< tol ', tol)
-                        print("Reach tolerance threshold. Stopping training.")
-                        flag_end_training = True
+                delta_label = np.sum(train_pred != train_pred_last).astype(np.float32) / len(train_pred)
+                train_pred_last = train_pred
+                if delta_label < tol:
+                    print('delta_label ', delta_label, '< tol ', tol)
+                    print("Reach tolerance threshold. Stopping training.")
+                    flag_end_training = True
 
             self.eval()
             test_supervised_loss = 0.0
