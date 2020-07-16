@@ -107,20 +107,6 @@ class WeightCalc(nn.Module):
         print("Calculating initial p at %s" % (str(datetime.datetime.now())))
         # update p considering short memory
         s = []
-        for batch_idx in range(full_num_batch):
-            image_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][1]
-            text_batch = full_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, full_num)][2]
-
-            image_inputs = Variable(image_batch).to(self.device)
-            text_inputs = Variable(text_batch).to(self.device)
-
-            _image_z, _text_z = mdec.forward(image_inputs, text_inputs)
-            _q, _r = mdec.soft_assignemt(_image_z, _text_z)
-            _s = self.probabililty_fusion(_q, _r, _image_z, _text_z)
-            s.append(_s.data.cpu())
-
-            del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r, _s
-
         for batch_idx in range(test_num_batch):
             image_batch = test_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, test_num)][1]
             text_batch = test_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, test_num)][2]
@@ -134,10 +120,8 @@ class WeightCalc(nn.Module):
             s.append(_s.data.cpu())
 
             del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r, _s
-
         s = torch.cat(s, dim=0)
 
-        p = self.target_distribution(s)
         initial_pred = torch.argmax(s, dim=1).numpy()
         initial_acc = accuracy_score(test_labels, initial_pred[full_num:])
         initial_nmi = normalized_mutual_info_score(test_labels, initial_pred[full_num:], average_method='geometric')
@@ -169,8 +153,7 @@ class WeightCalc(nn.Module):
             for batch_idx in range(train_num_batch):
                 image_batch = test_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, test_num)][1]
                 text_batch = test_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, test_num)][2]
-                label_batch = test_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, test_num)][
-                    3].squeeze(dim=0)
+                label_batch = test_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, test_num)][3].squeeze(dim=0)
 
                 image_inputs = Variable(image_batch).to(self.device)
                 text_inputs = Variable(text_batch).to(self.device)
