@@ -127,19 +127,6 @@ class WeightCalc(nn.Module):
         initial_nmi = normalized_mutual_info_score(test_labels, initial_pred, average_method='geometric')
         initial_f_1 = f1_score(test_labels, initial_pred, average='macro')
         print("#Initial measure: acc: %.4f, nmi: %.4f, f_1: %.4f" % (initial_acc, initial_nmi, initial_f_1))
-        df_initial = pd.DataFrame(data=initial_pred, index=full_short_codes + test_short_codes, columns=['label'])
-        df_initial['pred'] = 'pred'
-        df_initial.loc[df_train.index, 'pred'] = 'label'
-        for idx, row in df_train.iterrows():
-            df_initial.loc[idx, 'label'] = row['label']
-        df_initial.loc[df_test.index, 'pred'] = 'label'
-        for idx, row in df_test.iterrows():
-            df_initial.loc[idx, 'label'] = row['label']
-
-        if args.tsne:
-            print("Conducting initial TSNE at %s" % (str(datetime.datetime.now())))
-            do_tsne(p.numpy(), df_initial, self.n_clusters, os.path.join(CONFIG.SVG_PATH, args.gpu, 'epoch_000.png'))
-            print("TSNE completed at %s" % (str(datetime.datetime.now())))
 
         flag_end_training = False
         for epoch in range(num_epochs):
