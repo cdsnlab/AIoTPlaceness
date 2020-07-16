@@ -123,9 +123,9 @@ class WeightCalc(nn.Module):
         s = torch.cat(s, dim=0)
 
         initial_pred = torch.argmax(s, dim=1).numpy()
-        initial_acc = accuracy_score(test_labels, initial_pred[full_num:])
-        initial_nmi = normalized_mutual_info_score(test_labels, initial_pred[full_num:], average_method='geometric')
-        initial_f_1 = f1_score(test_labels, initial_pred[full_num:], average='macro')
+        initial_acc = accuracy_score(test_labels, initial_pred)
+        initial_nmi = normalized_mutual_info_score(test_labels, initial_pred, average_method='geometric')
+        initial_f_1 = f1_score(test_labels, initial_pred, average='macro')
         print("#Initial measure: acc: %.4f, nmi: %.4f, f_1: %.4f" % (initial_acc, initial_nmi, initial_f_1))
         df_initial = pd.DataFrame(data=initial_pred, index=full_short_codes + test_short_codes, columns=['label'])
         df_initial['pred'] = 'pred'
