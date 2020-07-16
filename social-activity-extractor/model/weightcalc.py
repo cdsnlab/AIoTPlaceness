@@ -196,8 +196,8 @@ class WeightCalc(nn.Module):
                 text_inputs = Variable(text_batch).to(self.device)
                 label_inputs = Variable(label_batch).to(self.device)
 
-                _image_z, _text_z = self.forward(image_inputs, text_inputs)
-                _q, _r = self.soft_assignemt(_image_z, _text_z)
+                _image_z, _text_z = mdec.forward(image_inputs, text_inputs)
+                _q, _r = mdec.soft_assignemt(_image_z, _text_z)
                 _image_z = Variable(torch.Tensor(_image_z.data.cpu().numpy())).to(self.device)
                 _text_z = Variable(torch.Tensor(_text_z.data.cpu().numpy())).to(self.device)
                 _q = Variable(torch.Tensor(_q.data.cpu().numpy())).to(self.device)
