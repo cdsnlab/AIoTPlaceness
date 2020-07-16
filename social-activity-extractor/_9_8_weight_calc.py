@@ -125,6 +125,7 @@ def train_multidec(args):
                                 n_clusters=n_clusters)
 
             mdec.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix_csv + "_odec_" + str(args.latent_dim) + '_'  + str(fold_idx)) + ".pt")
+            mdec.to(device)
             mdec.eval()
             wcalc = WeightCalc(device=device, ours=args.ours, use_prior=args.use_prior, z_dim=args.latent_dim, n_clusters=n_clusters)
             wcalc.fit_predict(mdec, full_dataset, train_dataset, val_dataset, args, CONFIG, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
