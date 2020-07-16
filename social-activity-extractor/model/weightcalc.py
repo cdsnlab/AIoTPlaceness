@@ -171,9 +171,6 @@ class WeightCalc(nn.Module):
             train_supervised_loss /= train_num
 
             train_pred = torch.argmax(s, dim=1).numpy()
-            df_pred = pd.DataFrame(data=train_pred, index=full_short_codes, columns=['pred'])
-            df_pred = df_pred.loc[df_train.index]
-            train_pred = df_pred['pred']
             train_acc = accuracy_score(train_labels, train_pred)
             train_nmi = normalized_mutual_info_score(train_labels, train_pred, average_method='geometric')
             train_f_1 = f1_score(train_labels, train_pred, average='macro')
