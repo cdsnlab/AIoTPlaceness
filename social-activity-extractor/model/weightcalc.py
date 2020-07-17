@@ -20,7 +20,7 @@ from sklearn.cluster import KMeans
 
 
 class WeightCalc(nn.Module):
-    def __init__(self, device, ours=False, use_prior=False, z_dim=10, n_clusters=10, alpha=1):
+    def __init__(self, device, ours=False, use_prior=False, input_dim=300, n_clusters=10, alpha=1):
         super(self.__class__, self).__init__()
         self.device = device
         self.ours = ours
@@ -30,16 +30,16 @@ class WeightCalc(nn.Module):
         if use_prior:
             self.prior = torch.zeros(self.n_clusters).float().to(device)
 
-        self.z_dim = z_dim
+        self.input_dim = input_dim
         self.n_clusters = n_clusters
 
         self.layer0 = nn.Sequential(
-            nn.Linear(z_dim * 2, z_dim),
-            nn.BatchNorm1d(z_dim),
+            nn.Linear(input_dim * 2, input_dim),
+            nn.BatchNorm1d(input_dim),
             nn.ReLU()
         )
         self.layer1 = nn.Sequential(
-            nn.Linear(z_dim, n_clusters),
+            nn.Linear(input_dim, n_clusters),
             nn.Sigmoid()
         )
         self.acc = 0.
@@ -57,14 +57,14 @@ class WeightCalc(nn.Module):
         model_dict.update(pretrained_dict)
         self.load_state_dict(model_dict)
 
-    def forward(self, image_z, text_z):
-        output0 = self.layer0(torch.cat([image_z, text_z], dim=1))
+    def forward(self, image_input, text_input):
+        output0 = self.layer0(torch.cat([image_input, text_input], dim=1))
         weight = self.layer1(output0)
         return weight
 
-    def probabililty_fusion(self, q, r, image_z, text_z):
+    def probabililty_fusion(self, q, r, image_input, text_input):
         #s = self.weight_parameter.expand_as(q) * q + (1 - self.weight_parameter).expand_as(r) * r
-        w = self.forward(image_z, text_z)
+        w = self.forward(image_input, text_input)
         s = w * q + (1-w) * r
         return s
 
@@ -116,11 +116,9 @@ class WeightCalc(nn.Module):
 
             _image_z, _text_z = mdec.forward(image_inputs, text_inputs)
             _q, _r = mdec.soft_assignemt(_image_z, _text_z)
-            _image_z = Variable(torch.Tensor(_image_z.data.cpu().numpy())).to(self.device)
-            _text_z = Variable(torch.Tensor(_text_z.data.cpu().numpy())).to(self.device)
             _q = Variable(torch.Tensor(_q.data.cpu().numpy())).to(self.device)
             _r = Variable(torch.Tensor(_r.data.cpu().numpy())).to(self.device)
-            _s = self.probabililty_fusion(_q, _r, _image_z, _text_z)
+            _s = self.probabililty_fusion(_q, _r, image_inputs, text_inputs)
             s.append(_s.data.cpu())
 
             del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r, _s
@@ -152,11 +150,9 @@ class WeightCalc(nn.Module):
 
                 _image_z, _text_z = mdec.forward(image_inputs, text_inputs)
                 _q, _r = mdec.soft_assignemt(_image_z, _text_z)
-                _image_z = Variable(torch.Tensor(_image_z.data.cpu().numpy())).to(self.device)
-                _text_z = Variable(torch.Tensor(_text_z.data.cpu().numpy())).to(self.device)
                 _q = Variable(torch.Tensor(_q.data.cpu().numpy())).to(self.device)
                 _r = Variable(torch.Tensor(_r.data.cpu().numpy())).to(self.device)
-                _s = self.probabililty_fusion(_q, _r, _image_z, _text_z)
+                _s = self.probabililty_fusion(_q, _r, image_inputs, text_inputs)
                 supervised_loss = self.semi_loss_function(label_inputs, _s)
                 optimizer.zero_grad()
                 supervised_loss.backward()
@@ -201,11 +197,9 @@ class WeightCalc(nn.Module):
 
                 _image_z, _text_z = mdec.forward(image_inputs, text_inputs)
                 _q, _r = mdec.soft_assignemt(_image_z, _text_z)
-                _image_z = Variable(torch.Tensor(_image_z.data.cpu().numpy())).to(self.device)
-                _text_z = Variable(torch.Tensor(_text_z.data.cpu().numpy())).to(self.device)
                 _q = Variable(torch.Tensor(_q.data.cpu().numpy())).to(self.device)
                 _r = Variable(torch.Tensor(_r.data.cpu().numpy())).to(self.device)
-                _s = self.probabililty_fusion(_q, _r, _image_z, _text_z)
+                _s = self.probabililty_fusion(_q, _r, image_inputs, text_inputs)
                 supervised_loss = self.semi_loss_function(label_inputs, _s)
                 test_supervised_loss += supervised_loss.data * len(label_inputs)
                 s.append(_s.data.cpu())

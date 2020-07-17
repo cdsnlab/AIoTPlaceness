@@ -96,7 +96,6 @@ def train_multidec(args):
         acc_list = []
         nmi_list = []
         f_1_list = []
-        kf_count = 0
         for fold_idx in range(args.start_fold, args.fold):
             print("Current fold: ", fold_idx)
             df_train = pd.read_csv(os.path.join(CONFIG.CSV_PATH, "train_" + str(fold_idx) + "_" + args.target_dataset + "_label.csv"),
@@ -127,13 +126,12 @@ def train_multidec(args):
             mdec.load_model(os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix_csv + "_odec_" + str(args.latent_dim) + '_'  + str(fold_idx)) + ".pt")
             mdec.to(device)
             mdec.eval()
-            wcalc = WeightCalc(device=device, ours=args.ours, use_prior=args.use_prior, z_dim=args.latent_dim, n_clusters=n_clusters)
+            wcalc = WeightCalc(device=device, ours=args.ours, use_prior=args.use_prior, input_dim=args.input_dim, n_clusters=n_clusters)
             wcalc.fit_predict(mdec, full_dataset, train_dataset, val_dataset, args, CONFIG, lr=args.lr, batch_size=args.batch_size, num_epochs=args.epochs,
                          save_path=os.path.join(CONFIG.CHECKPOINT_PATH, args.prefix_csv + "_wcalc_" + str(args.latent_dim) + '_'  + str(fold_idx)) + ".pt", tol=args.tol, kappa=args.kappa)
-            acc_list.append(mdec.acc)
-            nmi_list.append(mdec.nmi)
-            f_1_list.append(mdec.f_1)
-            kf_count = kf_count + 1
+            acc_list.append(wcalc.acc)
+            nmi_list.append(wcalc.nmi)
+            f_1_list.append(wcalc.f_1)
         print("#Average acc: %.4f, Average nmi: %.4f, Average f_1: %.4f" % (
             np.mean(acc_list), np.mean(nmi_list), np.mean(f_1_list)))
 
