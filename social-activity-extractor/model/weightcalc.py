@@ -158,6 +158,9 @@ class WeightCalc(nn.Module):
                 _r = Variable(torch.Tensor(_r.data.cpu().numpy())).to(self.device)
                 _s = self.probabililty_fusion(_q, _r, _image_z, _text_z)
                 supervised_loss = self.semi_loss_function(label_inputs, _s)
+                optimizer.zero_grad()
+                supervised_loss.backward()
+                optimizer.step()
                 train_supervised_loss += supervised_loss.data * len(label_inputs)
                 s.append(_s.data.cpu())
 
