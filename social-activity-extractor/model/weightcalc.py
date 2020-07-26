@@ -206,6 +206,10 @@ class WeightCalc(nn.Module):
                 supervised_loss = self.semi_loss_function(label_inputs, _s)
                 test_supervised_loss += supervised_loss.data * len(label_inputs)
                 s.append(_s.data.cpu())
+                w.append(_w.data.cpu())
+                q.append(_q.data.cpu())
+                r.append(_r.data.cpu())
+
 
                 del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r, _s
             s = torch.cat(s, dim=0)
