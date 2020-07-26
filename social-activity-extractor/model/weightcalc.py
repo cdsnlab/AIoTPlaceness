@@ -66,7 +66,7 @@ class WeightCalc(nn.Module):
         #s = self.weight_parameter.expand_as(q) * q + (1 - self.weight_parameter).expand_as(r) * r
         w = self.forward(image_input, text_input)
         s = w * q + (1-w) * r
-        return s
+        return s, w
 
     def semi_loss_function(self, label_batch, s_batch):
         supervised_loss = F.nll_loss(s_batch.log(), label_batch)
@@ -118,7 +118,7 @@ class WeightCalc(nn.Module):
             _q, _r = mdec.soft_assignemt(_image_z, _text_z)
             _q = Variable(torch.Tensor(_q.data.cpu().numpy())).to(self.device)
             _r = Variable(torch.Tensor(_r.data.cpu().numpy())).to(self.device)
-            _s = self.probabililty_fusion(_q, _r, image_inputs, text_inputs)
+            _s, _ = self.probabililty_fusion(_q, _r, image_inputs, text_inputs)
             s.append(_s.data.cpu())
 
             del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r, _s
@@ -152,7 +152,7 @@ class WeightCalc(nn.Module):
                 _q, _r = mdec.soft_assignemt(_image_z, _text_z)
                 _q = Variable(torch.Tensor(_q.data.cpu().numpy())).to(self.device)
                 _r = Variable(torch.Tensor(_r.data.cpu().numpy())).to(self.device)
-                _s = self.probabililty_fusion(_q, _r, image_inputs, text_inputs)
+                _s, _ = self.probabililty_fusion(_q, _r, image_inputs, text_inputs)
                 supervised_loss = self.semi_loss_function(label_inputs, _s)
                 optimizer.zero_grad()
                 supervised_loss.backward()
@@ -186,6 +186,9 @@ class WeightCalc(nn.Module):
             test_supervised_loss = 0.0
             # update p considering short memory
             s = []
+            w = []
+            q = []
+            r = []
             for batch_idx in range(test_num_batch):
                 image_batch = test_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, test_num)][1]
                 text_batch = test_dataset[batch_idx * batch_size: min((batch_idx + 1) * batch_size, test_num)][2]
@@ -199,19 +202,32 @@ class WeightCalc(nn.Module):
                 _q, _r = mdec.soft_assignemt(_image_z, _text_z)
                 _q = Variable(torch.Tensor(_q.data.cpu().numpy())).to(self.device)
                 _r = Variable(torch.Tensor(_r.data.cpu().numpy())).to(self.device)
-                _s = self.probabililty_fusion(_q, _r, image_inputs, text_inputs)
+                _s, _w = self.probabililty_fusion(_q, _r, image_inputs, text_inputs)
                 supervised_loss = self.semi_loss_function(label_inputs, _s)
                 test_supervised_loss += supervised_loss.data * len(label_inputs)
                 s.append(_s.data.cpu())
 
                 del image_batch, text_batch, image_inputs, text_inputs, _image_z, _text_z, _q, _r, _s
             s = torch.cat(s, dim=0)
+            w = torch.cat(w, dim=0)
+            q = torch.cat(q, dim=0)
+            r = torch.cat(r, dim=0)
             test_supervised_loss /= test_num
 
             test_pred = torch.argmax(s, dim=1).numpy()
             test_acc = accuracy_score(test_labels, test_pred)
             test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')
             test_f_1 = f1_score(test_labels, test_pred, average='macro')
+            df_test = pd.DataFrame(data=torch.argmax(s, dim=1).numpy(), index=test_short_codes, columns=['labels'])
+            df_test.to_csv('dec_label.csv', encoding='utf-8-sig')
+            df_test_s = pd.DataFrame(data=s.data.numpy(), index=test_short_codes)
+            df_test_s.to_csv('dec_s.csv', encoding='utf-8-sig')
+            df_test_w = pd.DataFrame(data=w.data.numpy(), index=test_short_codes)
+            df_test_w.to_csv('dec_w.csv', encoding='utf-8-sig')
+            df_test_q = pd.DataFrame(data=q.data.numpy(), index=test_short_codes)
+            df_test_q.to_csv('dec_q.csv', encoding='utf-8-sig')
+            df_test_r = pd.DataFrame(data=r.data.numpy(), index=test_short_codes)
+            df_test_r.to_csv('dec_r.csv', encoding='utf-8-sig')
             print("#Test measure %3d: acc: %.4f, nmi: %.4f, f_1: %.4f" % (
                 epoch + 1, test_acc, test_nmi, test_f_1))
             print("#Test loss %3d: super lss: %.4f" % (
