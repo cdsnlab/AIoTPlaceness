@@ -222,7 +222,7 @@ class WeightCalc(nn.Module):
             test_acc = accuracy_score(test_labels, test_pred)
             test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')
             test_f_1 = f1_score(test_labels, test_pred, average='macro')
-            df_test = pd.DataFrame(data=torch.argmax(s, dim=1).numpy(), index=test_short_codes, columns=['labels'])
+            df_test = pd.DataFrame(data=np.column_stack([torch.argmax(s, dim=1).numpy(), test_labels]), index=test_short_codes, columns=['pred', 'label'])
             df_test.to_csv('dec_label.csv', encoding='utf-8-sig')
             df_test_s = pd.DataFrame(data=s.data.numpy(), index=test_short_codes)
             df_test_s.to_csv('dec_s.csv', encoding='utf-8-sig')
