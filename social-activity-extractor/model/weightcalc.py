@@ -218,6 +218,13 @@ class WeightCalc(nn.Module):
             r = torch.cat(r, dim=0)
             test_supervised_loss /= test_num
 
+            x = torch.mean(torch.stack([q, r]), dim=0)
+            df_test = pd.DataFrame(data=np.column_stack([torch.argmax(x, dim=1).numpy(), test_labels]),
+                                   index=test_short_codes, columns=['pred', 'label'])
+            df_test.to_csv('xdec_label.csv', encoding='utf-8-sig')
+            df_test_x = pd.DataFrame(data=x.data.numpy(), index=test_short_codes)
+            df_test_x.to_csv('xdec_x.csv', encoding='utf-8-sig')
+
             test_pred = torch.argmax(s, dim=1).numpy()
             test_acc = accuracy_score(test_labels, test_pred)
             test_nmi = normalized_mutual_info_score(test_labels, test_pred, average_method='geometric')
