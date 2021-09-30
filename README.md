@@ -8,7 +8,7 @@
 
 ## social-activity-extractor
 
-..........
+...........
 
 ## instagram-sampler
 
