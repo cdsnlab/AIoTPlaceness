@@ -1,6 +1,6 @@
 # AIoTPlaceness
 
-.........
+..........
 
 ## DEC-Study
 
