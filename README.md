@@ -21,5 +21,3 @@ Sumin Han, Dasom Hong, and Dongman Lee, “Exploring Commercial Gentrification u
 Revised version for simplification of HAR on a Instagram post.
 
 Dongmin Kim, Sumin Han, Heesuk Son, and Dongman Lee, “Human Activity Recognition using Semi-Supervised Multi-Modal DEC for Instagram Data”, PAKDD 2020.
-
-
