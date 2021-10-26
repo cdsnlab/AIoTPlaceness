@@ -1,0 +1,58 @@
+.mbtn {
+	font-size: 20pt;
+	margin: 5px;
+	border: 1px;
+	border-color: black;
+	border-style: solid;
+	background-color: white;
+}
+.black {
+	background-color: black;
+}
+.yellow {
+	background-color: yellow;
+}
+.switch-on {
+	background-color: yellow;
+}
+.skyblue {
+	background-color: skyblue;
+}
+.split {
+	height: 92%;
+	position: fixed !important;
+	z-index: 1;
+	top: 65px;
+	overflow-x: hidden;
+}
+.left {
+	left: 0;
+	width: 40%;
+}
+.right {
+	right: 0;
+	width: 60%;
+}
+
+.bbtn {
+	font-size: 20pt;
+	margin: 5px;
+	padding: 5px;
+}
+
+#target{
+	max-width: 40%;
+	max-height: 100%;
+	height: auto;
+	width: auto;
+}
+
+.chart { margin: 5px; margin: 5px auto; border: 3px solid #DDD; border-radius: 3px; }
+.node { cursor: pointer; color: #9CB5ED; border: 2px solid #C8C8C8; border-radius: 3px; }
+.node:active { 
+	box-shadow: inset 1px 1px 1px rgba(0,0,0,.1); 
+	margin: 1px 0 0 1px; 
+	border: 2px solid #D3D3CB;
+	background-color:yellow;
+}
+.node p { font-size: 20px; line-height: 20px; height: 20px; font-weight: bold; padding: 3px; margin: 5; }

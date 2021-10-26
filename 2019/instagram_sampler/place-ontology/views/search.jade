@@ -1,0 +1,22 @@
+html
+	head
+		title= _title
+		link(rel='stylesheet', href='public/css/bootstrap.css')
+		link(rel='stylesheet', href='public/search.css')
+
+		script(src="https://code.jquery.com/jquery-3.4.1.min.js")
+		script(src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js")
+		link(rel='stylesheet', href='public/css/Treant.css')
+	body(style="margin:0")
+		a.btn.btn-danger.bbtn(href='/') Back To Main Menu
+		a.btn.btn-primary.bbtn(href='/template') Template
+		a.btn.btn-success.bbtn(href='/ontology') Edit Ontology
+		div.split.left#target-result Click on any ontology to see the search result.
+		div.split.right.chart#tree-simple
+
+
+		script(src='public/js/raphael.js')
+		script(src='public/js/Treant.js')
+		script
+			|	var nStruct = JSON.parse('!{JSON.stringify(tree)}');
+		script(src='public/search.js')

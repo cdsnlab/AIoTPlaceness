@@ -1,0 +1,53 @@
+html
+	head
+		title= _title
+		link(rel='stylesheet', href='public/css/bootstrap.css')
+		link(rel='stylesheet', href='public/ontology.css')
+
+		//script(src='public/js/jquery.min.js')
+		script(src="https://code.jquery.com/jquery-3.4.1.min.js")
+		script(src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js")
+		link(rel='stylesheet', href='public/css/Treant.css')
+	body(style="margin:0")
+		h1#title Ontology Editor
+		div
+			button.btn.btn-danger.mbtn#discard Home
+			button.btn.btn-primary.mbtn#save_and_rtn Save & Go Template
+			button.btn.btn-success.mbtn.float-right#save Save
+		div#message(style="display:none;")
+			div.alert.alert-warning.alert-dismissible.fade.show Message
+				button.close
+					span#message-close &times;
+
+		div
+			div.split.left
+				textarea#ta_ontology #{text}
+			div.split.right.chart#tree-simple
+			//div#tree-simple(style="width:335px; height: 160px")
+
+
+		script(src='public/ontology.js')
+		script(src='public/js/raphael.js')
+		script(src='public/js/Treant.js')
+		script
+			|   $(function(){
+			|		var nStruct = JSON.parse('!{JSON.stringify(tree)}');
+			|		console.log(nStruct);
+			|		var simple_chart_config = {
+			|			chart: {
+			|				container: '#tree-simple',
+			|				levelSeparation: 45,
+			|				rootOrientation: "WEST",
+			|				nodeAlign: "BOTTOM",
+			|				connectors: {
+			|					type: "step",
+			|					style: {
+			|						"stroke-width": 2
+			|					}
+			|				},
+			|			},
+			|			nodeStructure: nStruct
+			|		};
+			|		console.log(simple_chart_config);
+			|		var chart = new Treant(simple_chart_config);
+			|	});

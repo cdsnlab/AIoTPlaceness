@@ -1,6 +1,0 @@
-torch
-hyperdash
-requests
-pandas
-scipy
-gensim

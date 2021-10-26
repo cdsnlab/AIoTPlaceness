@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+    <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width">
+	<title> Chart emulation </title>
+	<link rel="stylesheet" href="/public/css/Treant.css">
+	<link rel="stylesheet" href="/super-simple/super-simple.css">
+</head>
+<body>
+	
+	<div class="chart" id="OrganiseChart-simple">
+	</div>
+	
+	<script src="/public/js/raphael.js"></script>
+	<script src="/public/js/Treant.js"></script>
+	<script src="/public/js/jquery.min.js"></script>
+	<!--script src="/super-simple/super-simple.js"></script-->
+
+	<script>
+		$.getJSON("/super-simple/place-ontology.json",
+			function(data) {
+				var simple_chart_config = {
+					chart: {
+						container: "#OrganiseChart-simple"
+					},
+					
+					nodeStructure: data 
+				};
+				new Treant( simple_chart_config );
+			}
+		);
+
+	</script>
+
+</body>
+</html>

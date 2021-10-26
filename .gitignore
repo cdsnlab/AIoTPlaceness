@@ -1,3 +1,8 @@
+20200725_instagram_the_final.csv
+100000_plus_labeled_scaled_pca_normalized_image_encoded_instagram.csv
+100000_plus_labeled_scaled_text_doc2vec_instagram.csv
+*_instagram_label.csv
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

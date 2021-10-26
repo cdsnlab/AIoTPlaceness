@@ -1,0 +1,52 @@
+Namespace(batch_size=32, decay_epoch=0.0005, gpu=4, it=2, learning_rate=0.001, max_epoch=1000, model_file='modelfile/crossval_2', patience=10)
+tensorflow version: 1.15.0
+loading_data...
+trainable parameters: 1,740,422
+model compiled!
+**** training model ****
+2021-10-26 11:52:32 | epoch: 0001/1000, training time: 11.1s, inference time: 0.4s
+train loss: 0.1529, val_loss: 1.0399
+val loss decrease from inf to 1.0399, saving model to modelfile/crossval_2
+2021-10-26 11:52:57 | epoch: 0002/1000, training time: 11.5s, inference time: 0.3s
+train loss: 0.0954, val_loss: 0.7285
+val loss decrease from 1.0399 to 0.7285, saving model to modelfile/crossval_2
+2021-10-26 11:53:22 | epoch: 0003/1000, training time: 11.1s, inference time: 0.3s
+train loss: 0.0767, val_loss: 0.6325
+val loss decrease from 0.7285 to 0.6325, saving model to modelfile/crossval_2
+2021-10-26 11:53:46 | epoch: 0004/1000, training time: 10.7s, inference time: 0.3s
+train loss: 0.0672, val_loss: 0.5887
+val loss decrease from 0.6325 to 0.5887, saving model to modelfile/crossval_2
+2021-10-26 11:54:10 | epoch: 0005/1000, training time: 10.9s, inference time: 0.3s
+train loss: 0.0585, val_loss: 0.5758
+val loss decrease from 0.5887 to 0.5758, saving model to modelfile/crossval_2
+2021-10-26 11:54:34 | epoch: 0006/1000, training time: 10.5s, inference time: 0.3s
+train loss: 0.0536, val_loss: 0.5720
+val loss decrease from 0.5758 to 0.5720, saving model to modelfile/crossval_2
+2021-10-26 11:54:59 | epoch: 0007/1000, training time: 11.2s, inference time: 0.3s
+train loss: 0.0495, val_loss: 0.5720
+2021-10-26 11:55:22 | epoch: 0008/1000, training time: 10.6s, inference time: 0.3s
+train loss: 0.0456, val_loss: 0.5848
+2021-10-26 11:55:46 | epoch: 0009/1000, training time: 10.9s, inference time: 0.3s
+train loss: 0.0427, val_loss: 0.5957
+2021-10-26 11:56:09 | epoch: 0010/1000, training time: 10.3s, inference time: 0.3s
+train loss: 0.0398, val_loss: 0.6149
+2021-10-26 11:56:33 | epoch: 0011/1000, training time: 11.2s, inference time: 0.3s
+train loss: 0.0362, val_loss: 0.6426
+2021-10-26 11:56:56 | epoch: 0012/1000, training time: 10.6s, inference time: 0.3s
+train loss: 0.0329, val_loss: 0.6683
+2021-10-26 11:57:20 | epoch: 0013/1000, training time: 10.7s, inference time: 0.3s
+train loss: 0.0301, val_loss: 0.7004
+2021-10-26 11:57:43 | epoch: 0014/1000, training time: 10.8s, inference time: 0.3s
+train loss: 0.0276, val_loss: 0.7546
+2021-10-26 11:58:06 | epoch: 0015/1000, training time: 10.0s, inference time: 0.3s
+train loss: 0.0251, val_loss: 0.8133
+2021-10-26 11:58:28 | epoch: 0016/1000, training time: 10.4s, inference time: 0.3s
+train loss: 0.0226, val_loss: 0.8921
+early stop at epoch: 0016
+**** testing model ****
+loading model from modelfile/crossval_2
+model restored!
+evaluating...
+testing time: 0.3s
+test acc: 0.805
+performance in each prediction step
