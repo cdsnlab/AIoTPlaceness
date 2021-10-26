@@ -34,7 +34,7 @@ args = parser.parse_args()
 
 args.model_file = f'modelfile/crossval_{args.it}'
 
-log_file = os.path.join(f'train_log_{args.it}')
+log_file = os.path.join(f'log/train_log_{args.it}')
 log = open(log_file, 'w')
 log_string(log, str(args))
 log_string(log, f"tensorflow version: {tf.__version__}")
