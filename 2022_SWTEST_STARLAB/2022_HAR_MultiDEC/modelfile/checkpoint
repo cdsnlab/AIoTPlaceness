@@ -1,0 +1,2 @@
+model_checkpoint_path: "crossval_2"
+all_model_checkpoint_paths: "crossval_2"

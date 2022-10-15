@@ -1,0 +1,61 @@
+Namespace(batch_size=32, decay_epoch=0.0005, gpu=7, it=4, learning_rate=0.001, max_epoch=1000, model_file='modelfile/crossval_4', patience=10)
+tensorflow version: 1.15.0
+loading_data...
+trainable parameters: 1,740,292
+model compiled!
+**** training model ****
+2022-10-15 16:33:34 | epoch: 0001/1000, training time: 9.9s, inference time: 0.4s
+train loss: 0.0261, val_loss: 0.7071
+val loss decrease from inf to 0.7071, saving model to modelfile/crossval_4
+2022-10-15 16:33:56 | epoch: 0002/1000, training time: 10.3s, inference time: 0.4s
+train loss: 0.0165, val_loss: 0.4614
+val loss decrease from 0.7071 to 0.4614, saving model to modelfile/crossval_4
+2022-10-15 16:34:20 | epoch: 0003/1000, training time: 9.9s, inference time: 0.4s
+train loss: 0.0132, val_loss: 0.3616
+val loss decrease from 0.4614 to 0.3616, saving model to modelfile/crossval_4
+2022-10-15 16:34:45 | epoch: 0004/1000, training time: 10.4s, inference time: 0.4s
+train loss: 0.0113, val_loss: 0.3099
+val loss decrease from 0.3616 to 0.3099, saving model to modelfile/crossval_4
+2022-10-15 16:35:09 | epoch: 0005/1000, training time: 10.5s, inference time: 0.4s
+train loss: 0.0099, val_loss: 0.2740
+val loss decrease from 0.3099 to 0.2740, saving model to modelfile/crossval_4
+2022-10-15 16:35:33 | epoch: 0006/1000, training time: 10.4s, inference time: 0.4s
+train loss: 0.0088, val_loss: 0.2468
+val loss decrease from 0.2740 to 0.2468, saving model to modelfile/crossval_4
+2022-10-15 16:35:57 | epoch: 0007/1000, training time: 10.7s, inference time: 0.4s
+train loss: 0.0079, val_loss: 0.2265
+val loss decrease from 0.2468 to 0.2265, saving model to modelfile/crossval_4
+2022-10-15 16:36:21 | epoch: 0008/1000, training time: 10.3s, inference time: 0.4s
+train loss: 0.0073, val_loss: 0.2219
+val loss decrease from 0.2265 to 0.2219, saving model to modelfile/crossval_4
+2022-10-15 16:36:46 | epoch: 0009/1000, training time: 10.3s, inference time: 0.4s
+train loss: 0.0066, val_loss: 0.2144
+val loss decrease from 0.2219 to 0.2144, saving model to modelfile/crossval_4
+2022-10-15 16:37:10 | epoch: 0010/1000, training time: 10.5s, inference time: 0.4s
+train loss: 0.0057, val_loss: 0.2149
+2022-10-15 16:37:33 | epoch: 0011/1000, training time: 9.9s, inference time: 0.3s
+train loss: 0.0053, val_loss: 0.2227
+2022-10-15 16:37:56 | epoch: 0012/1000, training time: 10.8s, inference time: 0.3s
+train loss: 0.0046, val_loss: 0.2337
+2022-10-15 16:38:19 | epoch: 0013/1000, training time: 10.3s, inference time: 0.4s
+train loss: 0.0041, val_loss: 0.2439
+2022-10-15 16:38:43 | epoch: 0014/1000, training time: 10.3s, inference time: 0.3s
+train loss: 0.0036, val_loss: 0.2893
+2022-10-15 16:39:05 | epoch: 0015/1000, training time: 9.9s, inference time: 0.3s
+train loss: 0.0033, val_loss: 0.2888
+2022-10-15 16:39:29 | epoch: 0016/1000, training time: 10.5s, inference time: 0.3s
+train loss: 0.0033, val_loss: 0.3135
+2022-10-15 16:39:54 | epoch: 0017/1000, training time: 10.0s, inference time: 0.3s
+train loss: 0.0034, val_loss: 0.3512
+2022-10-15 16:40:18 | epoch: 0018/1000, training time: 10.3s, inference time: 0.4s
+train loss: 0.0032, val_loss: 0.3704
+2022-10-15 16:40:41 | epoch: 0019/1000, training time: 9.9s, inference time: 0.3s
+train loss: 0.0032, val_loss: 0.3794
+early stop at epoch: 0019
+**** testing model ****
+loading model from modelfile/crossval_4
+model restored!
+evaluating...
+testing time: 0.3s
+test acc: 0.847
+performance in each prediction step
