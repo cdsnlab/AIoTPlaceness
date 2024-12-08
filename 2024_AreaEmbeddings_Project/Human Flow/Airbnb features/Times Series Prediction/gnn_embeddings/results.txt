@@ -1,0 +1,504 @@
+-----------------------
+Checkpoint: gat_gemma_nolist_raw_ver_seqlen6_best_checkpoint.pth
+Mode: 1m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1515, MAE: 0.1969, RMSE: 0.3892, MAPE: 811.4238
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0149, MAE: 0.0985, RMSE: 0.1220, MAPE: 90.3425
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.4230, MAE: 0.3903, RMSE: 0.6504, MAPE: 2249.2864
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0165, MAE: 0.1020, RMSE: 0.1286, MAPE: 94.6421
+-----------------------
+-----------------------
+Checkpoint: gat_gemma_nolist_raw_ver_seqlen6_best_checkpoint.pth
+Mode: 4m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1424, MAE: 0.1875, RMSE: 0.3773, MAPE: 668.3770
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0202, MAE: 0.1134, RMSE: 0.1422, MAPE: 103.9407
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.3882, MAE: 0.3406, RMSE: 0.6231, MAPE: 1800.4763
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0186, MAE: 0.1085, RMSE: 0.1365, MAPE: 100.7140
+-----------------------
+-----------------------
+Checkpoint: gat_gemma_nolist_raw_ver_seqlen6_best_checkpoint.pth
+Mode: 6m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1382, MAE: 0.1779, RMSE: 0.3717, MAPE: 349.6227
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0128, MAE: 0.0914, RMSE: 0.1132, MAPE: 83.8315
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.3890, MAE: 0.3551, RMSE: 0.6237, MAPE: 884.0954
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0127, MAE: 0.0872, RMSE: 0.1125, MAPE: 80.9413
+-----------------------
+-----------------------
+Checkpoint: gat_gemma_nolist_refine_ver_seqlen6_best_checkpoint.pth
+Mode: 1m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1484, MAE: 0.1904, RMSE: 0.3852, MAPE: 681.4611
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0154, MAE: 0.1000, RMSE: 0.1241, MAPE: 91.7216
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.4154, MAE: 0.3765, RMSE: 0.6445, MAPE: 1864.8854
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0142, MAE: 0.0946, RMSE: 0.1192, MAPE: 87.7764
+-----------------------
+-----------------------
+Checkpoint: gat_gemma_nolist_refine_ver_seqlen6_best_checkpoint.pth
+Mode: 4m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1532, MAE: 0.2003, RMSE: 0.3914, MAPE: 732.1477
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0203, MAE: 0.1131, RMSE: 0.1425, MAPE: 103.7176
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.4207, MAE: 0.3819, RMSE: 0.6486, MAPE: 1994.4166
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0186, MAE: 0.1060, RMSE: 0.1365, MAPE: 98.3086
+-----------------------
+-----------------------
+Checkpoint: gat_gemma_nolist_refine_ver_seqlen6_best_checkpoint.pth
+Mode: 6m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1466, MAE: 0.1914, RMSE: 0.3829, MAPE: 523.9044
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0204, MAE: 0.1124, RMSE: 0.1428, MAPE: 103.0550
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.4033, MAE: 0.3606, RMSE: 0.6350, MAPE: 1374.6898
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0161, MAE: 0.1012, RMSE: 0.1267, MAPE: 93.9686
+-----------------------
+-----------------------
+Checkpoint: gat_llma_nolist_raw_ver_seqlen6_best_checkpoint.pth
+Mode: 1m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1631, MAE: 0.2010, RMSE: 0.4039, MAPE: 932.0251
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0187, MAE: 0.1079, RMSE: 0.1366, MAPE: 98.8876
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.4548, MAE: 0.3955, RMSE: 0.6744, MAPE: 2604.8909
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0159, MAE: 0.0996, RMSE: 0.1261, MAPE: 92.2971
+-----------------------
+-----------------------
+Checkpoint: gat_llma_nolist_raw_ver_seqlen6_best_checkpoint.pth
+Mode: 4m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1652, MAE: 0.2142, RMSE: 0.4064, MAPE: 894.4595
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0280, MAE: 0.1325, RMSE: 0.1674, MAPE: 121.4838
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.4411, MAE: 0.3846, RMSE: 0.6642, MAPE: 2445.6138
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0264, MAE: 0.1255, RMSE: 0.1623, MAPE: 116.2809
+-----------------------
+-----------------------
+Checkpoint: gat_llma_nolist_raw_ver_seqlen6_best_checkpoint.pth
+Mode: 6m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1846, MAE: 0.2242, RMSE: 0.4296, MAPE: 1056.6023
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0223, MAE: 0.1154, RMSE: 0.1493, MAPE: 105.8195
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.5032, MAE: 0.4292, RMSE: 0.7094, MAPE: 2945.0742
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0282, MAE: 0.1280, RMSE: 0.1680, MAPE: 118.9132
+-----------------------
+-----------------------
+Checkpoint: gcn_gemma_nolist_raw_ver_seqlen6_best_checkpoint.pth
+Mode: 1m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1368, MAE: 0.1761, RMSE: 0.3698, MAPE: 514.3724
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0205, MAE: 0.1116, RMSE: 0.1430, MAPE: 102.3016
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.3792, MAE: 0.3386, RMSE: 0.6158, MAPE: 1368.1212
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0107, MAE: 0.0783, RMSE: 0.1032, MAPE: 72.6942
+-----------------------
+-----------------------
+Checkpoint: gcn_gemma_nolist_raw_ver_seqlen6_best_checkpoint.pth
+Mode: 4m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1538, MAE: 0.1852, RMSE: 0.3921, MAPE: 551.3993
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0114, MAE: 0.0812, RMSE: 0.1068, MAPE: 74.4296
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.4366, MAE: 0.3813, RMSE: 0.6608, MAPE: 1493.3188
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0133, MAE: 0.0932, RMSE: 0.1153, MAPE: 86.4493
+-----------------------
+-----------------------
+Checkpoint: gcn_gemma_nolist_raw_ver_seqlen6_best_checkpoint.pth
+Mode: 6m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1324, MAE: 0.1715, RMSE: 0.3638, MAPE: 595.0887
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0154, MAE: 0.0974, RMSE: 0.1240, MAPE: 89.2619
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.3673, MAE: 0.3268, RMSE: 0.6061, MAPE: 1612.2556
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0144, MAE: 0.0904, RMSE: 0.1198, MAPE: 83.7482
+-----------------------
+-----------------------
+Checkpoint: gcn_gemma_nolist_refine_ver_seqlen6_best_checkpoint.pth
+Mode: 1m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1512, MAE: 0.1960, RMSE: 0.3888, MAPE: 610.4660
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0197, MAE: 0.1074, RMSE: 0.1404, MAPE: 98.4777
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.4212, MAE: 0.3895, RMSE: 0.6490, MAPE: 1648.5179
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0127, MAE: 0.0911, RMSE: 0.1128, MAPE: 84.4023
+-----------------------
+-----------------------
+Checkpoint: gcn_gemma_nolist_refine_ver_seqlen6_best_checkpoint.pth
+Mode: 4m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1335, MAE: 0.1654, RMSE: 0.3653, MAPE: 559.3202
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0133, MAE: 0.0912, RMSE: 0.1152, MAPE: 83.6461
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.3707, MAE: 0.3057, RMSE: 0.6088, MAPE: 1501.7703
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0164, MAE: 0.0993, RMSE: 0.1281, MAPE: 92.5444
+-----------------------
+-----------------------
+Checkpoint: gcn_gemma_nolist_refine_ver_seqlen6_best_checkpoint.pth
+Mode: 6m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1492, MAE: 0.1957, RMSE: 0.3863, MAPE: 471.8449
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0176, MAE: 0.1038, RMSE: 0.1328, MAPE: 95.1893
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.4126, MAE: 0.3791, RMSE: 0.6424, MAPE: 1223.6882
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0174, MAE: 0.1042, RMSE: 0.1320, MAPE: 96.6574
+-----------------------
+-----------------------
+Checkpoint: gcn_llma_nolist_raw_ver_seqlen6_best_checkpoint.pth
+Mode: 1m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1447, MAE: 0.1839, RMSE: 0.3804, MAPE: 541.4136
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0198, MAE: 0.1088, RMSE: 0.1407, MAPE: 99.7831
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.4005, MAE: 0.3494, RMSE: 0.6328, MAPE: 1437.8778
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0138, MAE: 0.0934, RMSE: 0.1176, MAPE: 86.5800
+-----------------------
+-----------------------
+Checkpoint: gcn_llma_nolist_raw_ver_seqlen6_best_checkpoint.pth
+Mode: 4m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1401, MAE: 0.1934, RMSE: 0.3743, MAPE: 447.0457
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0223, MAE: 0.1088, RMSE: 0.1493, MAPE: 99.7397
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.3737, MAE: 0.3476, RMSE: 0.6113, MAPE: 1126.3361
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0242, MAE: 0.1238, RMSE: 0.1557, MAPE: 115.0612
+-----------------------
+-----------------------
+Checkpoint: gcn_llma_nolist_raw_ver_seqlen6_best_checkpoint.pth
+Mode: 6m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1461, MAE: 0.1905, RMSE: 0.3822, MAPE: 562.7246
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0164, MAE: 0.0966, RMSE: 0.1280, MAPE: 88.5935
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.3993, MAE: 0.3587, RMSE: 0.6319, MAPE: 1491.3965
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0225, MAE: 0.1163, RMSE: 0.1500, MAPE: 108.1841
+-----------------------
+-----------------------
+Checkpoint: gat_llama_mixed_raw_ver_seqlen6_best_checkpoint.pth
+Mode: 1m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1596, MAE: 0.2128, RMSE: 0.3995, MAPE: 599.2153
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0179, MAE: 0.1007, RMSE: 0.1337, MAPE: 92.3115
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.4355, MAE: 0.4149, RMSE: 0.6599, MAPE: 1591.2759
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0255, MAE: 0.1229, RMSE: 0.1596, MAPE: 114.0585
+-----------------------
+-----------------------
+Checkpoint: gat_llama_mixed_raw_ver_seqlen6_best_checkpoint.pth
+Mode: 4m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1396, MAE: 0.1824, RMSE: 0.3736, MAPE: 555.9530
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0193, MAE: 0.1089, RMSE: 0.1389, MAPE: 99.8790
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.3843, MAE: 0.3407, RMSE: 0.6199, MAPE: 1477.3842
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0152, MAE: 0.0976, RMSE: 0.1234, MAPE: 90.5958
+-----------------------
+-----------------------
+Checkpoint: gat_llama_mixed_raw_ver_seqlen6_best_checkpoint.pth
+Mode: 6m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1377, MAE: 0.1807, RMSE: 0.3711, MAPE: 431.6442
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0185, MAE: 0.1043, RMSE: 0.1359, MAPE: 95.5928
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.3769, MAE: 0.3335, RMSE: 0.6139, MAPE: 1102.5410
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0178, MAE: 0.1043, RMSE: 0.1333, MAPE: 96.7985
+-----------------------
+-----------------------
+Checkpoint: gat_llama_mixed_refine_ver_seqlen6_best_checkpoint.pth
+Mode: 1m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1467, MAE: 0.1840, RMSE: 0.3831, MAPE: 660.5781
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0139, MAE: 0.0920, RMSE: 0.1180, MAPE: 84.3855
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.4142, MAE: 0.3748, RMSE: 0.6436, MAPE: 1817.8623
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0121, MAE: 0.0853, RMSE: 0.1100, MAPE: 79.4865
+-----------------------
+-----------------------
+Checkpoint: gat_llama_mixed_refine_ver_seqlen6_best_checkpoint.pth
+Mode: 4m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1508, MAE: 0.1891, RMSE: 0.3883, MAPE: 488.4315
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0155, MAE: 0.0956, RMSE: 0.1245, MAPE: 87.6920
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.4131, MAE: 0.3526, RMSE: 0.6427, MAPE: 1266.9160
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0238, MAE: 0.1191, RMSE: 0.1541, MAPE: 110.6865
+-----------------------
+-----------------------
+Checkpoint: gat_llama_mixed_refine_ver_seqlen6_best_checkpoint.pth
+Mode: 6m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1460, MAE: 0.1929, RMSE: 0.3821, MAPE: 521.3107
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0166, MAE: 0.1048, RMSE: 0.1288, MAPE: 96.1302
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.4101, MAE: 0.3887, RMSE: 0.6404, MAPE: 1388.8075
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0114, MAE: 0.0850, RMSE: 0.1069, MAPE: 78.9942
+-----------------------
+-----------------------
+Checkpoint: gat_llama_nolist_refine_ver_seqlen6_best_checkpoint.pth
+Mode: 1m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1580, MAE: 0.2068, RMSE: 0.3975, MAPE: 603.9839
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0127, MAE: 0.0860, RMSE: 0.1125, MAPE: 78.8599
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.4238, MAE: 0.3795, RMSE: 0.6510, MAPE: 1589.3134
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0375, MAE: 0.1549, RMSE: 0.1936, MAPE: 143.7784
+-----------------------
+-----------------------
+Checkpoint: gat_llama_nolist_refine_ver_seqlen6_best_checkpoint.pth
+Mode: 4m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1671, MAE: 0.2282, RMSE: 0.4088, MAPE: 598.0992
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0281, MAE: 0.1312, RMSE: 0.1677, MAPE: 120.2661
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.4272, MAE: 0.3916, RMSE: 0.6536, MAPE: 1523.5651
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0461, MAE: 0.1618, RMSE: 0.2148, MAPE: 150.4663
+-----------------------
+-----------------------
+Checkpoint: gat_llama_nolist_refine_ver_seqlen6_best_checkpoint.pth
+Mode: 6m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1446, MAE: 0.1877, RMSE: 0.3802, MAPE: 400.7736
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0184, MAE: 0.1063, RMSE: 0.1357, MAPE: 97.4307
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.3977, MAE: 0.3518, RMSE: 0.6306, MAPE: 1007.2864
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0177, MAE: 0.1050, RMSE: 0.1330, MAPE: 97.6035
+-----------------------
+-----------------------
+Checkpoint: gat_llama_onlylist_raw_ver_seqlen6_best_checkpoint.pth
+Mode: 1m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1492, MAE: 0.1890, RMSE: 0.3863, MAPE: 582.4551
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0154, MAE: 0.0966, RMSE: 0.1240, MAPE: 88.5819
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.4171, MAE: 0.3748, RMSE: 0.6458, MAPE: 1570.0765
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0151, MAE: 0.0956, RMSE: 0.1230, MAPE: 88.7070
+-----------------------
+-----------------------
+Checkpoint: gat_llama_onlylist_raw_ver_seqlen6_best_checkpoint.pth
+Mode: 4m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1515, MAE: 0.1945, RMSE: 0.3893, MAPE: 620.4427
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0253, MAE: 0.1202, RMSE: 0.1589, MAPE: 110.1838
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.4047, MAE: 0.3448, RMSE: 0.6362, MAPE: 1641.0543
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0246, MAE: 0.1186, RMSE: 0.1568, MAPE: 110.0900
+-----------------------
+-----------------------
+Checkpoint: gat_llama_onlylist_raw_ver_seqlen6_best_checkpoint.pth
+Mode: 6m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1525, MAE: 0.1943, RMSE: 0.3905, MAPE: 401.8694
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0196, MAE: 0.1103, RMSE: 0.1402, MAPE: 101.1685
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.4188, MAE: 0.3624, RMSE: 0.6471, MAPE: 1002.3713
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0191, MAE: 0.1100, RMSE: 0.1382, MAPE: 102.0682
+-----------------------
+-----------------------
+Checkpoint: gcn_llama_mixed_raw_ver_seqlen6_best_checkpoint.pth
+Mode: 1m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1511, MAE: 0.2046, RMSE: 0.3888, MAPE: 621.5688
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0327, MAE: 0.1405, RMSE: 0.1810, MAPE: 128.7861
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.3990, MAE: 0.3569, RMSE: 0.6316, MAPE: 1627.7977
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0217, MAE: 0.1165, RMSE: 0.1473, MAPE: 108.1226
+-----------------------
+-----------------------
+Checkpoint: gcn_llama_mixed_raw_ver_seqlen6_best_checkpoint.pth
+Mode: 4m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1406, MAE: 0.1978, RMSE: 0.3750, MAPE: 390.2599
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0239, MAE: 0.1256, RMSE: 0.1547, MAPE: 115.1967
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.3813, MAE: 0.3672, RMSE: 0.6175, MAPE: 961.6586
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0167, MAE: 0.1007, RMSE: 0.1293, MAPE: 93.9246
+-----------------------
+-----------------------
+Checkpoint: gcn_llama_mixed_raw_ver_seqlen6_best_checkpoint.pth
+Mode: 6m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1390, MAE: 0.1842, RMSE: 0.3728, MAPE: 556.3195
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0140, MAE: 0.0918, RMSE: 0.1182, MAPE: 84.1723
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.3757, MAE: 0.3328, RMSE: 0.6130, MAPE: 1465.7081
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0273, MAE: 0.1279, RMSE: 0.1654, MAPE: 119.0782
+-----------------------
+-----------------------
+Checkpoint: gcn_llama_mixed_refine_ver_seqlen6_best_checkpoint.pth
+Mode: 1m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1453, MAE: 0.1899, RMSE: 0.3812, MAPE: 642.3618
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0136, MAE: 0.0934, RMSE: 0.1164, MAPE: 85.6116
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.4060, MAE: 0.3742, RMSE: 0.6372, MAPE: 1746.8064
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0164, MAE: 0.1020, RMSE: 0.1282, MAPE: 94.6674
+-----------------------
+-----------------------
+Checkpoint: gcn_llama_mixed_refine_ver_seqlen6_best_checkpoint.pth
+Mode: 4m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1350, MAE: 0.1809, RMSE: 0.3674, MAPE: 410.9559
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0209, MAE: 0.1152, RMSE: 0.1446, MAPE: 105.6596
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.3707, MAE: 0.3358, RMSE: 0.6088, MAPE: 1042.0415
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0134, MAE: 0.0916, RMSE: 0.1158, MAPE: 85.1668
+-----------------------
+-----------------------
+Checkpoint: gcn_llama_mixed_refine_ver_seqlen6_best_checkpoint.pth
+Mode: 6m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1448, MAE: 0.1930, RMSE: 0.3805, MAPE: 529.9539
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0199, MAE: 0.1046, RMSE: 0.1411, MAPE: 95.8625
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.3960, MAE: 0.3673, RMSE: 0.6293, MAPE: 1394.3679
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0184, MAE: 0.1072, RMSE: 0.1356, MAPE: 99.6311
+-----------------------
+-----------------------
+Checkpoint: gcn_llama_nolist_refine_ver_seqlen6_best_checkpoint.pth
+Mode: 1m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1415, MAE: 0.1916, RMSE: 0.3762, MAPE: 569.1546
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0198, MAE: 0.1110, RMSE: 0.1406, MAPE: 101.7593
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.3828, MAE: 0.3496, RMSE: 0.6187, MAPE: 1499.2007
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0219, MAE: 0.1142, RMSE: 0.1481, MAPE: 106.5040
+-----------------------
+-----------------------
+Checkpoint: gcn_llama_nolist_refine_ver_seqlen6_best_checkpoint.pth
+Mode: 4m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1572, MAE: 0.2089, RMSE: 0.3965, MAPE: 778.0707
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0273, MAE: 0.1330, RMSE: 0.1653, MAPE: 121.9744
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.4226, MAE: 0.3772, RMSE: 0.6501, MAPE: 2103.7979
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0218, MAE: 0.1165, RMSE: 0.1476, MAPE: 108.4398
+-----------------------
+-----------------------
+Checkpoint: gcn_llama_nolist_refine_ver_seqlen6_best_checkpoint.pth
+Mode: 6m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1484, MAE: 0.1861, RMSE: 0.3853, MAPE: 556.0913
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0121, MAE: 0.0860, RMSE: 0.1102, MAPE: 78.8090
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.4227, MAE: 0.3911, RMSE: 0.6502, MAPE: 1514.2428
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0105, MAE: 0.0811, RMSE: 0.1025, MAPE: 75.2221
+-----------------------
+-----------------------
+Checkpoint: gcn_llama_onlylist_raw_ver_seqlen6_best_checkpoint.pth
+Mode: 1m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1361, MAE: 0.1837, RMSE: 0.3690, MAPE: 631.1446
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0161, MAE: 0.1005, RMSE: 0.1270, MAPE: 92.1875
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.3752, MAE: 0.3452, RMSE: 0.6125, MAPE: 1703.4261
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0171, MAE: 0.1054, RMSE: 0.1309, MAPE: 97.8202
+-----------------------
+-----------------------
+Checkpoint: gcn_llama_onlylist_raw_ver_seqlen6_best_checkpoint.pth
+Mode: 4m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1471, MAE: 0.1895, RMSE: 0.3835, MAPE: 744.9855
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0167, MAE: 0.1014, RMSE: 0.1292, MAPE: 92.9861
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.4058, MAE: 0.3568, RMSE: 0.6370, MAPE: 2039.6263
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0187, MAE: 0.1104, RMSE: 0.1369, MAPE: 102.3439
+-----------------------
+-----------------------
+Checkpoint: gcn_llama_onlylist_raw_ver_seqlen6_best_checkpoint.pth
+Mode: 6m, SeqLen: 6
+Combined Metrics (6, 6, 424, 3):
+MSE: 0.1534, MAE: 0.2059, RMSE: 0.3917, MAPE: 638.1600
+Metrics for Feature 1 (6, 6, 424, 1):
+MSE: 0.0257, MAE: 0.1279, RMSE: 0.1604, MAPE: 117.2424
+Metrics for Feature 2 (6, 6, 424, 1):
+MSE: 0.4130, MAE: 0.3718, RMSE: 0.6426, MAPE: 1687.5969
+Metrics for Feature 3 (6, 6, 424, 1):
+MSE: 0.0215, MAE: 0.1179, RMSE: 0.1466, MAPE: 109.6409
+-----------------------
