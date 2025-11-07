@@ -19,6 +19,7 @@
    - 2020 Enhancements
    - 2022 STARLAB Integration
    - 2024 Area Embeddings Project
+   - 2025 STARLAB Integration
 7. [Troubleshooting and FAQs](#troubleshooting-and-faqs)
 8. [Citation Guidelines](#citation-guidelines)
 9. [Acknowledgments](#acknowledgments)
@@ -88,6 +89,7 @@ AIoTPlaceness-master/
 |-- 2020
 |-- 2022_SWTEST_STARLAB
 |-- 2024_AreaEmbeddings_Project
+|-- 2025_SWTEST_STRLAB
 |-- LICENSE
 |-- README.md
 |-- ST-MFGCRN
@@ -99,7 +101,8 @@ AIoTPlaceness-master/
 2. **2020/**: Includes enhancements for multimodal data integration.
 3. **2022_SWTEST_STARLAB/**: Collaboration with STARLAB for improved robotics integration.
 4. **2024_AreaEmbeddings_Project/**: The latest developments focusing on area embeddings.
-5. **ST-MFGCRN/**: Contains implementations of spatial-temporal graph convolutional recurrent networks.
+5. **2022_SWTEST_STARLAB/**: Collaboration with STARLAB for improved urban data prediction integration.
+6. **ST-MFGCRN/**: Contains implementations of spatial-temporal graph convolutional recurrent networks.
 
 ---
 
